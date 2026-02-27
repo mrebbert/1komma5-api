@@ -1,9 +1,9 @@
 # onekommafive
+> **!!!DANGER! This is 100% vibe coded and very experimental!!!**
 
 Unofficial Python client for the [1KOMMA5°](https://1komma5grad.com) Heartbeat API — the home energy management platform behind heat pumps, solar inverters, battery storage, and EV chargers.
 
 > **Unofficial.** This library reverse-engineers the mobile app's API. It may break without notice if 1KOMMA5° changes their backend.
-> **!!!DANGER! This is 100% vibe coded and very experimental!!!**
 ## Features
 
 - OAuth2 + PKCE authentication (matches the mobile app flow), with automatic token refresh
