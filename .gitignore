@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Test & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Environment / secrets
+.env
+.env.*
+
+# Debug / exploration scripts (not part of the public library)
+debug_*.py
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# macOS
+.DS_Store
+
+# Claude Code session data
+.claude/
