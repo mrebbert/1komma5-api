@@ -1,4 +1,4 @@
-# onekommafive
+# 1Komma5° 
 > **!!!DANGER! This is 100% vibe coded and very experimental!!!**
 
 Unofficial Python client for the [1KOMMA5°](https://1komma5grad.com) Heartbeat API — the home energy management platform behind heat pumps, solar inverters, battery storage, and EV chargers.
