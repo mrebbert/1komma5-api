@@ -184,9 +184,8 @@ class TestEmsSettings:
 class TestMarketPrices:
     """Verify the market-prices chart endpoint.
 
-    The ``from``/``to`` parameters are date-only values, so tests use a
-    multi-day window to ensure the API has data to return regardless of the
-    time of day the tests run.
+    The v4 API requires ISO 8601 ZonedDateTime strings for ``from``/``to``
+    and a mandatory resolution (``'1h'`` or ``'15m'``).
     """
 
     def test_returns_market_prices_instance(self, systems) -> None:
@@ -196,8 +195,8 @@ class TestMarketPrices:
             end=today - datetime.timedelta(days=1),
         )
         assert isinstance(result, MarketPrices)
-        assert len(result.prices) >= 1, (
-            "Expected price data for a 2-day historical window; API returned no entries."
+        assert len(result.prices) >= 24, (
+            "Expected ≥24 hourly price entries for a 1-day window; API returned fewer."
         )
 
     def test_prices_have_valid_values(self, systems) -> None:

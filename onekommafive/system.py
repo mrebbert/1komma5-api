@@ -9,7 +9,7 @@ import requests
 
 from .errors import RequestError
 from .ev_charger import EVCharger
-from .models import EmsSettings, LiveOverview, MarketPrices
+from .models import ChargingMode, EmsSettings, LiveOverview, MarketPrices, SystemInfo
 
 if TYPE_CHECKING:
     from .client import Client
@@ -38,6 +38,24 @@ class System:
         """Return the unique system identifier (UUID)."""
         return self._data["id"]
 
+    def info(self) -> SystemInfo:
+        """Return static metadata for this system.
+
+        Fetches the full system detail from ``/api/v2/systems/{id}`` so that
+        all fields (e.g. ``energyTraderActive``) are available.
+
+        Returns:
+            A :class:`~onekommafive.models.SystemInfo` instance.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        url = f"{self._client.HEARTBEAT_API}/api/v2/systems/{self.id()}"
+        response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
+        if response.status_code != 200:
+            raise RequestError(f"Failed to get system info: {response.text}")
+        return SystemInfo.from_dict(response.json())
+
     # ------------------------------------------------------------------
     # Live data
     # ------------------------------------------------------------------
@@ -52,7 +70,7 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/live-overview"
+        url = f"{self._client.HEARTBEAT_API}/api/v3/systems/{self.id()}/live-overview"
         response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
         if response.status_code != 200:
             raise RequestError(f"Failed to get live overview: {response.text}")
@@ -61,6 +79,29 @@ class System:
     # ------------------------------------------------------------------
     # EV chargers
     # ------------------------------------------------------------------
+
+    def get_displayed_ev_charging_modes(self) -> list[ChargingMode]:
+        """Fetch the EV charging modes that are available for this site.
+
+        Returns:
+            A list of enabled :class:`~onekommafive.models.ChargingMode` values.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        url = (
+            f"{self._client.HEARTBEAT_API}"
+            f"/api/v1/sites/{self.id()}/assets/evs/displayed-ev-charging-modes"
+        )
+        response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
+        if response.status_code != 200:
+            raise RequestError(f"Failed to get displayed EV charging modes: {response.text}")
+        data = response.json()
+        return [
+            ChargingMode(entry["type"])
+            for entry in data.get("displayedEvChargingModes", [])
+            if not entry.get("disabled", False)
+        ]
 
     def get_ev_chargers(self) -> list[EVCharger]:
         """Retrieve all EV charger devices registered to this system.
@@ -130,17 +171,15 @@ class System:
         self,
         start: datetime.datetime,
         end: datetime.datetime,
-        resolution: str | None = None,
+        resolution: str = "1h",
     ) -> MarketPrices:
         """Fetch market electricity prices for a given date range.
 
         Args:
             start: The start of the requested interval (inclusive).
             end: The end of the requested interval (inclusive).
-            resolution: Data resolution string, e.g. ``"1h"`` for hourly data.
-                When omitted the API returns one aggregated entry per day, which
-                allows multi-day ranges.  When set to ``"1h"`` the range must
-                span at most one day.
+            resolution: Data resolution string; must be ``"1h"`` or ``"15m"``.
+                Defaults to ``"1h"``.
 
         Returns:
             A :class:`~onekommafive.models.MarketPrices` instance.
@@ -150,14 +189,13 @@ class System:
         """
         url = (
             f"{self._client.HEARTBEAT_API}"
-            f"/api/v2/systems/{self.id()}/charts/market-prices"
+            f"/api/v4/systems/{self.id()}/charts/market-prices"
         )
         params: dict[str, str] = {
-            "from": start.strftime("%Y-%m-%d"),
-            "to": end.strftime("%Y-%m-%d"),
+            "from": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "to": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "resolution": resolution,
         }
-        if resolution is not None:
-            params["resolution"] = resolution
         response = requests.get(
             url=url,
             params=params,

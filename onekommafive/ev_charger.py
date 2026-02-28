@@ -41,12 +41,83 @@ class EVCharger:
 
     def name(self) -> str | None:
         """Return the human-readable name configured in the app, or ``None``."""
-        profile = self._data.get("profile", {})
-        return profile.get("name")
+        return (self._data.get("profile") or {}).get("name")
+
+    def manufacturer(self) -> str | None:
+        """Return the vehicle manufacturer name (whitespace-stripped), or ``None``."""
+        value = (self._data.get("profile") or {}).get("manufacturer")
+        return value.strip() if value else None
+
+    def model(self) -> str | None:
+        """Return the vehicle model name, or ``None``."""
+        return (self._data.get("profile") or {}).get("model")
+
+    def capacity_wh(self) -> float | None:
+        """Return the battery capacity in Wh, or ``None``."""
+        cap = (self._data.get("profile") or {}).get("capacity")
+        return float(cap["value"]) if cap else None
+
+    def min_charging_current_a(self) -> float | None:
+        """Return the minimum charging current in A, or ``None``."""
+        node = (self._data.get("profile") or {}).get("minChargingCurrent")
+        return float(node["value"]) if node else None
+
+    def safety_range_km(self) -> float | None:
+        """Return the safety range buffer in km, or ``None``."""
+        node = (self._data.get("profile") or {}).get("safetyRange")
+        return float(node["value"]) if node else None
+
+    def assigned_charger_id(self) -> str | None:
+        """Return the ID of the physical wallbox assigned to this vehicle, or ``None``."""
+        return self._data.get("assignedChargerId")
+
+    def manual_soc_timestamp(self) -> str | None:
+        """Return the ISO-8601 timestamp of the last manual SoC update, or ``None``."""
+        return self._data.get("manualSocTimestamp")
+
+    def updated_at(self) -> str | None:
+        """Return the ISO-8601 timestamp of the last record update, or ``None``."""
+        return self._data.get("updatedAt")
 
     def charging_mode(self) -> ChargingMode:
         """Return the currently active :class:`~onekommafive.models.ChargingMode`."""
         return ChargingMode(self._data["chargeSettings"]["chargingMode"])
+
+    def charging_mode_updated_at(self) -> str | None:
+        """Return the ISO-8601 timestamp when the charging mode was last changed, or ``None``."""
+        return (self._data.get("chargeSettings") or {}).get("chargingModeUpdatedAt")
+
+    def default_soc(self) -> float | None:
+        """Return the default target SoC as a percentage (0–100), or ``None``."""
+        val = (self._data.get("chargeSettings") or {}).get("defaultSoc")
+        return float(val * 100) if val is not None else None
+
+    def target_soc(self) -> float | None:
+        """Return the user-selected target SoC as a percentage (0–100), or ``None``."""
+        val = (self._data.get("chargeSettings") or {}).get("targetSoc")
+        return float(val * 100) if val is not None else None
+
+    def primary_schedule_days(self) -> list[str]:
+        """Return the list of days (e.g. ``['MONDAY', 'FRIDAY']``) in the primary schedule."""
+        return (self._data.get("chargeSettings") or {}).get("primaryScheduleDays") or []
+
+    def primary_schedule_departure_time(self) -> str | None:
+        """Return the primary departure time as ``'HH:MM'``, or ``None``."""
+        return (self._data.get("chargeSettings") or {}).get("primaryScheduleDepartureTime")
+
+    def primary_schedule_departure_soc(self) -> float | None:
+        """Return the primary schedule target departure SoC as a percentage (0–100), or ``None``."""
+        val = (self._data.get("chargeSettings") or {}).get("primaryScheduleDepartureSoc")
+        return float(val * 100) if val is not None else None
+
+    def secondary_schedule_departure_time(self) -> str | None:
+        """Return the secondary departure time as ``'HH:MM'``, or ``None``."""
+        return (self._data.get("chargeSettings") or {}).get("secondaryScheduleDepartureTime")
+
+    def secondary_schedule_departure_soc(self) -> float | None:
+        """Return the secondary schedule target departure SoC as a percentage (0–100), or ``None``."""
+        val = (self._data.get("chargeSettings") or {}).get("secondaryScheduleDepartureSoc")
+        return float(val * 100) if val is not None else None
 
     def current_soc(self) -> float | None:
         """Return the manually set target state-of-charge as a percentage (0–100).

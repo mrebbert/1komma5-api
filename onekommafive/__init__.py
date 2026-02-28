@@ -22,7 +22,7 @@ Typical usage::
 from .client import Client
 from .errors import ApiError, AuthenticationError, RequestError
 from .ev_charger import EVCharger
-from .models import ChargingMode, EmsSettings, LiveOverview, MarketPrices, User
+from .models import ChargingMode, EmsManualDevice, EmsSettings, LiveOverview, MarketPrices, SystemInfo, User
 from .system import System
 from .systems import Systems
 
@@ -33,8 +33,10 @@ __all__ = [
     "EVCharger",
     "ChargingMode",
     "LiveOverview",
+    "EmsManualDevice",
     "EmsSettings",
     "MarketPrices",
+    "SystemInfo",
     "User",
     "ApiError",
     "AuthenticationError",

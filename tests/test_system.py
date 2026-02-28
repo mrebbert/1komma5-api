@@ -9,11 +9,12 @@ import pytest
 
 from onekommafive.errors import RequestError
 from onekommafive.ev_charger import EVCharger
-from onekommafive.models import EmsSettings, LiveOverview, MarketPrices
+from onekommafive.models import EmsSettings, LiveOverview, MarketPrices, SystemInfo
 from onekommafive.system import System
 from tests.fixtures import (
     FAKE_SYSTEM_ID,
     make_client,
+    make_displayed_ev_charging_modes_data,
     make_ems_settings_data,
     make_ev_data,
     make_live_overview_data,
@@ -23,7 +24,8 @@ from tests.fixtures import (
 
 _BASE = "https://heartbeat.1komma5grad.com"
 _SYSTEM_BASE = f"{_BASE}/api/v1/systems/{FAKE_SYSTEM_ID}"
-_SYSTEM_BASE_V2 = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}"
+_SYSTEM_BASE_V3 = f"{_BASE}/api/v3/systems/{FAKE_SYSTEM_ID}"
+_SYSTEM_BASE_V4 = f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"
 
 
 def _make_system() -> System:
@@ -43,6 +45,23 @@ class TestSystemIdentity:
         system = _make_system()
         assert FAKE_SYSTEM_ID in repr(system)
 
+    @resp_lib.activate
+    def test_info_returns_system_info_instance(self) -> None:
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}",
+            json=make_system_data(FAKE_SYSTEM_ID),
+            status=200,
+        )
+        info = _make_system().info()
+        assert isinstance(info, SystemInfo)
+        assert info.id == FAKE_SYSTEM_ID
+        assert info.name == "My Home System"
+        assert info.status == "ACTIVE"
+        assert info.address_city == "Hamburg"
+        assert info.energy_trader_active is True
+        assert info.electricity_contract_active is True
+
 
 # ---------------------------------------------------------------------------
 # Live overview
@@ -55,7 +74,7 @@ class TestGetLiveOverview:
     def test_returns_live_overview_instance(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE}/live-overview",
+            f"{_SYSTEM_BASE_V3}/live-overview",
             json=make_live_overview_data(),
             status=200,
         )
@@ -73,7 +92,7 @@ class TestGetLiveOverview:
         """Systems without batteries should still return a valid LiveOverview."""
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE}/live-overview",
+            f"{_SYSTEM_BASE_V3}/live-overview",
             json={"liveHeroView": {"production": {"value": 1000.0, "unit": "W"}}},
             status=200,
         )
@@ -87,12 +106,50 @@ class TestGetLiveOverview:
     def test_raises_on_server_error(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE}/live-overview",
+            f"{_SYSTEM_BASE_V3}/live-overview",
             json={"error": "unavailable"},
             status=503,
         )
         with pytest.raises(RequestError, match="Failed to get live overview"):
             _make_system().get_live_overview()
+
+
+# ---------------------------------------------------------------------------
+# Displayed EV charging modes
+# ---------------------------------------------------------------------------
+
+_SITES_BASE = f"{_BASE}/api/v1/sites/{FAKE_SYSTEM_ID}"
+
+
+class TestGetDisplayedEvChargingModes:
+    """Tests for System.get_displayed_ev_charging_modes."""
+
+    @resp_lib.activate
+    def test_returns_enabled_charging_modes(self) -> None:
+        from onekommafive.models import ChargingMode
+
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_SITES_BASE}/assets/evs/displayed-ev-charging-modes",
+            json=make_displayed_ev_charging_modes_data(),
+            status=200,
+        )
+        modes = _make_system().get_displayed_ev_charging_modes()
+
+        assert ChargingMode.SMART_CHARGE in modes
+        assert ChargingMode.SOLAR_CHARGE in modes
+        assert ChargingMode.QUICK_CHARGE not in modes  # disabled=True in fixture
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_SITES_BASE}/assets/evs/displayed-ev-charging-modes",
+            json={"error": "error"},
+            status=500,
+        )
+        with pytest.raises(RequestError, match="Failed to get displayed EV charging modes"):
+            _make_system().get_displayed_ev_charging_modes()
 
 
 # ---------------------------------------------------------------------------
@@ -239,7 +296,7 @@ class TestGetPrices:
     def test_returns_market_prices_instance(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE_V2}/charts/market-prices",
+            f"{_SYSTEM_BASE_V4}/charts/market-prices",
             json=make_price_data(),
             status=200,
         )
@@ -249,18 +306,18 @@ class TestGetPrices:
         )
 
         assert isinstance(result, MarketPrices)
-        assert result.average_price == 8.5
-        assert result.highest_price == 13.0
-        assert result.lowest_price == 1.5
-        assert result.grid_costs_total == 16.37
-        assert result.vat == 0.19
+        assert result.average_price == pytest.approx(0.085)
+        assert result.highest_price == pytest.approx(0.13)
+        assert result.lowest_price == pytest.approx(0.015)
+        assert result.grid_costs_total == pytest.approx(0.1637)
+        assert result.vat == pytest.approx(0.19)
         assert result.uses_fallback_grid_costs is False
 
     @resp_lib.activate
     def test_prices_dict_keyed_by_timestamp(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE_V2}/charts/market-prices",
+            f"{_SYSTEM_BASE_V4}/charts/market-prices",
             json=make_price_data(),
             status=200,
         )
@@ -269,15 +326,15 @@ class TestGetPrices:
             datetime.datetime(2024, 6, 2),
         )
 
-        assert result.prices["2024-06-01T00:00Z"] == 8.0
-        assert result.prices["2024-06-01T01:00Z"] == 9.0
-        assert result.prices_with_grid_costs["2024-06-01T00:00Z"] == 24.4
+        assert result.prices["2024-06-01T00:00Z"] == pytest.approx(0.08)
+        assert result.prices["2024-06-01T01:00Z"] == pytest.approx(0.09)
+        assert result.prices_with_grid_costs["2024-06-01T00:00Z"] == pytest.approx(0.244)
 
     @resp_lib.activate
-    def test_omits_resolution_param_by_default(self) -> None:
+    def test_uses_zoned_datetime_format_and_default_resolution(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE_V2}/charts/market-prices",
+            f"{_SYSTEM_BASE_V4}/charts/market-prices",
             json=make_price_data(),
             status=200,
         )
@@ -287,32 +344,32 @@ class TestGetPrices:
         )
 
         qs = resp_lib.calls[0].request.url
-        assert "from=2024-06-01" in qs
-        assert "to=2024-06-03" in qs
-        assert "resolution" not in qs
+        assert "from=2024-06-01T" in qs
+        assert "to=2024-06-03T" in qs
+        assert "resolution=1h" in qs
 
     @resp_lib.activate
     def test_passes_resolution_when_specified(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE_V2}/charts/market-prices",
+            f"{_SYSTEM_BASE_V4}/charts/market-prices",
             json=make_price_data(),
             status=200,
         )
         _make_system().get_prices(
             start=datetime.datetime(2024, 6, 1),
             end=datetime.datetime(2024, 6, 2),
-            resolution="1h",
+            resolution="15m",
         )
 
         qs = resp_lib.calls[0].request.url
-        assert "resolution=1h" in qs
+        assert "resolution=15m" in qs
 
     @resp_lib.activate
     def test_raises_on_server_error(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE_V2}/charts/market-prices",
+            f"{_SYSTEM_BASE_V4}/charts/market-prices",
             json={"error": "error"},
             status=500,
         )

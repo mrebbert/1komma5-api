@@ -11,6 +11,7 @@ from onekommafive.errors import RequestError
 from onekommafive.ev_charger import EVCharger
 from onekommafive.models import ChargingMode
 from tests.fixtures import (
+    FAKE_CHARGER_ID,
     FAKE_EV_ID,
     FAKE_SYSTEM_ID,
     make_client,
@@ -70,6 +71,63 @@ class TestEvChargerProperties:
         r = repr(charger)
         assert FAKE_EV_ID in r
         assert "SMART_CHARGE" in r
+
+    def test_manufacturer_strips_whitespace(self) -> None:
+        charger = _make_charger()
+        assert charger.manufacturer() == "Volkswagen"
+
+    def test_model_returns_model_name(self) -> None:
+        assert _make_charger().model() == "Id.4"
+
+    def test_capacity_wh_returns_float(self) -> None:
+        assert _make_charger().capacity_wh() == pytest.approx(77000.0)
+
+    def test_min_charging_current_a(self) -> None:
+        assert _make_charger().min_charging_current_a() == pytest.approx(2.0)
+
+    def test_safety_range_km(self) -> None:
+        assert _make_charger().safety_range_km() == pytest.approx(0.0)
+
+    def test_assigned_charger_id(self) -> None:
+        assert _make_charger().assigned_charger_id() == FAKE_CHARGER_ID
+
+    def test_manual_soc_timestamp(self) -> None:
+        assert _make_charger().manual_soc_timestamp() == "2026-02-27T17:49:55.213Z"
+
+    def test_updated_at(self) -> None:
+        assert _make_charger().updated_at() == "2026-02-28T07:35:39.367Z"
+
+    def test_charging_mode_updated_at(self) -> None:
+        assert _make_charger().charging_mode_updated_at() == "2026-02-28T07:35:39.367Z"
+
+    def test_default_soc_as_percentage(self) -> None:
+        assert _make_charger().default_soc() == pytest.approx(35.0)
+
+    def test_target_soc_as_percentage(self) -> None:
+        assert _make_charger().target_soc() == pytest.approx(80.0)
+
+    def test_primary_schedule_days_empty_list(self) -> None:
+        assert _make_charger().primary_schedule_days() == []
+
+    def test_primary_schedule_departure_time(self) -> None:
+        assert _make_charger().primary_schedule_departure_time() == "12:00"
+
+    def test_primary_schedule_departure_soc_as_percentage(self) -> None:
+        assert _make_charger().primary_schedule_departure_soc() == pytest.approx(100.0)
+
+    def test_secondary_schedule_fields_none_when_not_set(self) -> None:
+        charger = _make_charger()
+        assert charger.secondary_schedule_departure_time() is None
+        assert charger.secondary_schedule_departure_soc() is None
+
+    def test_manufacturer_none_when_profile_absent(self) -> None:
+        client = make_client()
+        system = MagicMock()
+        system.id.return_value = FAKE_SYSTEM_ID
+        data = {"id": FAKE_EV_ID, "chargeSettings": {"chargingMode": "QUICK_CHARGE"}}
+        charger = EVCharger(client, system, data)
+        assert charger.manufacturer() is None
+        assert charger.capacity_wh() is None
 
 
 # ---------------------------------------------------------------------------
