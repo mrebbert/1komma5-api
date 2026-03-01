@@ -46,7 +46,8 @@ print(f"{info.name} — {info.address_city}, {info.status}")
 # Live overview (API v3)
 ov = system.get_live_overview()
 print(f"PV: {ov.pv_power} W  Battery: {ov.battery_power} W ({ov.battery_soc:.1f}%)")
-print(f"Grid: {ov.grid_power} W  Consumption: {ov.consumption_power} W")
+print(f"Grid: {ov.grid_power} W  (import {ov.grid_consumption_power} W  export {ov.grid_feed_in_power} W)")
+print(f"Consumption: {ov.consumption_power} W")
 print(f"Heat pumps: {ov.heat_pumps_power} W  EV chargers: {ov.ev_chargers_power} W")
 print(f"Self-sufficiency: {ov.self_sufficiency:.0%}")
 
@@ -112,7 +113,7 @@ System:       xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 Status:       ONLINE
 PV power:     +1837 W
 Battery:      +4802 W  SoC 61.0%
-Grid:         +5914 W
+Grid:         +5914 W  (import +5914 W  export +0 W)
 Consumption:  +2950 W
 Household:    +1900 W
 EV chargers:  +0 W
@@ -180,7 +181,7 @@ Manual device settings:
 | Class | Description |
 |-------|-------------|
 | `SystemInfo` | System metadata (address, status, feature flags) |
-| `LiveOverview` | Real-time power snapshot (W), incl. smart devices and self-sufficiency |
+| `LiveOverview` | Real-time power snapshot (W), incl. net grid power, separate import/export, smart devices and self-sufficiency |
 | `MarketPrices` | Spot prices, grid costs and VAT per slot (EUR/kWh) |
 | `EmsSettings` | EMS mode, Time-of-Use flag, per-device manual overrides |
 | `EmsManualDevice` | One device entry in the EMS manual settings |

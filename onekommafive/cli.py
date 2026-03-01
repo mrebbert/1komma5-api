@@ -2,7 +2,7 @@
 """Simple CLI for the 1KOMMA5° Heartbeat API.
 
 Usage:
-    python cli.py live
+    python cli.py live             # net grid power + separate import/export
     python cli.py prices [--resolution 1h|15m]
     python cli.py ev
     python cli.py ev-modes
