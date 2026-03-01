@@ -126,6 +126,8 @@ class TestLiveOverview:
         assert overview.battery_power == 500.0
         assert overview.battery_soc == pytest.approx(80.0)
         assert overview.grid_power == pytest.approx(-500.0)
+        assert overview.grid_consumption_power == pytest.approx(0.0)
+        assert overview.grid_feed_in_power == pytest.approx(500.0)
         assert overview.consumption_power == 2000.0
         assert overview.raw is data
 
@@ -137,6 +139,8 @@ class TestLiveOverview:
         assert overview.battery_power is None
         assert overview.battery_soc is None
         assert overview.grid_power is None
+        assert overview.grid_consumption_power is None
+        assert overview.grid_feed_in_power is None
         assert overview.consumption_power is None
         assert overview.timestamp is None
         assert overview.status is None
@@ -203,6 +207,19 @@ class TestLiveOverview:
         }
         overview = LiveOverview.from_dict(data)
         assert overview.grid_power == pytest.approx(3000.0)
+
+    def test_grid_consumption_and_feed_in_are_separate(self) -> None:
+        data = {
+            "liveHeroView": {
+                "gridConsumption": {"value": 1200.0, "unit": "W"},
+                "gridFeedIn": {"value": 300.0, "unit": "W"},
+            },
+        }
+        overview = LiveOverview.from_dict(data)
+        assert overview.grid_consumption_power == pytest.approx(1200.0)
+        assert overview.grid_feed_in_power == pytest.approx(300.0)
+        # net: import − export
+        assert overview.grid_power == pytest.approx(900.0)
 
 
 class TestSystemInfo:

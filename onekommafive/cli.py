@@ -86,7 +86,7 @@ def cmd_live(args: argparse.Namespace) -> None:
     print(f"Status:       {ov.status or '—'}")
     print(f"PV power:     {_w(ov.pv_power)}")
     print(f"Battery:      {_w(ov.battery_power)}  SoC {_pct(ov.battery_soc)}")
-    print(f"Grid:         {_w(ov.grid_power)}")
+    print(f"Grid:         {_w(ov.grid_power)}  (import {_w(ov.grid_consumption_power)}  export {_w(ov.grid_feed_in_power)})")
     print(f"Consumption:  {_w(ov.consumption_power)}")
     print(f"Household:    {_w(ov.household_power)}")
     if ov.ev_chargers_power is not None:

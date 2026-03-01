@@ -140,6 +140,15 @@ class TestCmdLive:
         _run("live")
         assert "0.0%" in capsys.readouterr().out  # fixture selfSufficiency = 0.0
 
+    def test_prints_grid_import_and_export(self, mock_system, capsys) -> None:
+        mock_system.get_live_overview.return_value = LiveOverview.from_dict(
+            make_live_overview_data()
+        )
+        _run("live")
+        out = capsys.readouterr().out
+        assert "import" in out
+        assert "export" in out
+
 
 # ---------------------------------------------------------------------------
 # prices

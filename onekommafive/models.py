@@ -294,6 +294,12 @@ class LiveOverview:
     grid_power: float | None
     """Power imported from (positive) or exported to (negative) the grid, in W."""
 
+    grid_consumption_power: float | None
+    """Raw grid import power (always ≥ 0), in W (``gridConsumption`` in the API)."""
+
+    grid_feed_in_power: float | None
+    """Raw grid export / feed-in power (always ≥ 0), in W (``gridFeedIn`` in the API)."""
+
     consumption_power: float | None
     """Total site consumption power (all loads combined), in W."""
 
@@ -356,6 +362,8 @@ class LiveOverview:
             battery_power=battery_power,
             battery_soc=soc_frac * 100 if soc_frac is not None else None,
             grid_power=grid_power,
+            grid_consumption_power=grid_import,
+            grid_feed_in_power=grid_export,
             consumption_power=consumption,
             household_power=_power(cards.get("household")),
             self_sufficiency=hero.get("selfSufficiency"),
