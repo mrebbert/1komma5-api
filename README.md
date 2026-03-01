@@ -201,6 +201,12 @@ Integration tests (require credentials, read-only):
 ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... pytest tests/test_integration.py -v
 ```
 
+## Related projects
+
+### [1komma5-ha](https://github.com/mrebbert/1komma5-ha)
+
+A Home Assistant integration built on top of this library. Exposes your 1KOMMA5° system as sensors, switches and controls directly in Home Assistant.
+
 ## Credits
 
 This project would not exist without the prior work of the Home Assistant community.
