@@ -98,13 +98,13 @@ Parameter:
 
 | Parameter | Wert |
 |-----------|------|
-| `startDate` | ISO-8601-Zeitstempel, z. B. `2026-03-01T00:00:00.000Z` |
-| `endDate` | ISO-8601-Zeitstempel, z. B. `2026-03-01T23:59:59.999Z` |
+| `from` | ISO-8601-Zeitstempel, z. B. `2026-03-01T00:00:00.000Z` |
+| `to` | ISO-8601-Zeitstempel, z. B. `2026-03-01T23:59:59.999Z` |
 | `resolution` | `1h` oder `15m` |
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v4/systems/$ONEKOMMAFIVE_SYSTEM/charts/market-prices?startDate=2026-03-01T00:00:00.000Z&endDate=2026-03-01T23:59:59.999Z&resolution=1h" | jq .
+  'https://heartbeat.1komma5grad.com/api/v4/systems/'"$ONEKOMMAFIVE_SYSTEM"'/charts/market-prices?from=2026-03-01T00%3A00%3A00.000Z&to=2026-03-01T23%3A59%3A59.999Z&resolution=1h' | jq .
 ```
 
 ---
