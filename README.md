@@ -10,7 +10,7 @@ Unofficial Python client for the [1KOMMA5°](https://1komma5grad.com) Heartbeat 
 - OAuth2 + PKCE authentication (matches the mobile app flow), with automatic token refresh
 - System metadata (address, status, features) — `SystemInfo`
 - Live power snapshot (PV, battery, grid, consumption, heat pumps, EV chargers, ACs, self-sufficiency) — API v3
-- EV charger state and control (charging mode, target SoC, schedule, vehicle profile)
+- EV charger state and control (charging mode, current SoC, target SoC, departure time, vehicle profile)
 - Available EV charging modes per site
 - EMS settings (auto/manual, Time-of-Use, per-device manual overrides for EV charger, battery, heat pump)
 - Market electricity prices with grid costs and VAT — API v4, EUR/kWh, `1h` or `15m` resolution
@@ -71,6 +71,8 @@ for ev in system.get_ev_chargers():
 from onekommafive.models import ChargingMode
 ev = system.get_ev_chargers()[0]
 ev.set_charging_mode(ChargingMode.SOLAR_CHARGE)
+ev.set_target_soc(90.0)               # Zielladezustand 90 %
+ev.set_primary_departure_time("07:30")  # tägliche Abfahrtzeit
 
 # EMS settings
 settings = system.get_ems_settings()
