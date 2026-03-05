@@ -8,7 +8,10 @@ version = "0.1.5"
 description = "Python API client for the 1KOMMA5° Heartbeat API"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
+authors = [
+    { name = "Markus Rebbert", email = "code@rebbert.de" },
+]
 keywords = ["1komma5", "heartbeat", "energy", "home-automation", "api-client"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -35,7 +38,9 @@ dev = [
 1k5 = "onekommafive.cli:main"
 
 [project.urls]
+Homepage = "https://github.com/mrebbert/1komma5-api"
 Repository = "https://github.com/mrebbert/1komma5-api"
+Changelog = "https://github.com/mrebbert/1komma5-api/releases"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
