@@ -295,6 +295,78 @@ class TestCmdSetEvMode:
 
 
 # ---------------------------------------------------------------------------
+# set-ev-target-soc
+# ---------------------------------------------------------------------------
+
+class TestCmdSetEvTargetSoc:
+    def _ev(self, ev_id: str = FAKE_EV_ID) -> MagicMock:
+        ev = MagicMock()
+        ev.id.return_value = ev_id
+        return ev
+
+    def test_sets_target_soc_on_first_charger(self, mock_system, capsys) -> None:
+        ev = self._ev()
+        mock_system.get_ev_chargers.return_value = [ev]
+        _run("set-ev-target-soc", "90")
+        ev.set_target_soc.assert_called_once_with(90.0)
+        assert "90%" in capsys.readouterr().out
+
+    def test_selects_charger_by_id(self, mock_system) -> None:
+        ev1 = self._ev("ev-aaa")
+        ev2 = self._ev("ev-bbb")
+        mock_system.get_ev_chargers.return_value = [ev1, ev2]
+        _run("set-ev-target-soc", "80", "--ev", "ev-bbb")
+        ev1.set_target_soc.assert_not_called()
+        ev2.set_target_soc.assert_called_once_with(80.0)
+
+    def test_exits_on_invalid_soc_value(self, mock_system) -> None:
+        mock_system.get_ev_chargers.return_value = [self._ev()]
+        with pytest.raises(SystemExit):
+            _run("set-ev-target-soc", "not-a-number")
+
+    def test_exits_on_out_of_range_soc(self, mock_system) -> None:
+        mock_system.get_ev_chargers.return_value = [self._ev()]
+        with pytest.raises(SystemExit):
+            _run("set-ev-target-soc", "110")
+
+    def test_exits_when_no_chargers(self, mock_system) -> None:
+        mock_system.get_ev_chargers.return_value = []
+        with pytest.raises(SystemExit):
+            _run("set-ev-target-soc", "80")
+
+
+# ---------------------------------------------------------------------------
+# set-ev-departure
+# ---------------------------------------------------------------------------
+
+class TestCmdSetEvDeparture:
+    def _ev(self, ev_id: str = FAKE_EV_ID) -> MagicMock:
+        ev = MagicMock()
+        ev.id.return_value = ev_id
+        return ev
+
+    def test_sets_departure_on_first_charger(self, mock_system, capsys) -> None:
+        ev = self._ev()
+        mock_system.get_ev_chargers.return_value = [ev]
+        _run("set-ev-departure", "07:30")
+        ev.set_primary_departure_time.assert_called_once_with("07:30")
+        assert "07:30" in capsys.readouterr().out
+
+    def test_selects_charger_by_id(self, mock_system) -> None:
+        ev1 = self._ev("ev-aaa")
+        ev2 = self._ev("ev-bbb")
+        mock_system.get_ev_chargers.return_value = [ev1, ev2]
+        _run("set-ev-departure", "06:00", "--ev", "ev-bbb")
+        ev1.set_primary_departure_time.assert_not_called()
+        ev2.set_primary_departure_time.assert_called_once_with("06:00")
+
+    def test_exits_when_no_chargers(self, mock_system) -> None:
+        mock_system.get_ev_chargers.return_value = []
+        with pytest.raises(SystemExit):
+            _run("set-ev-departure", "07:30")
+
+
+# ---------------------------------------------------------------------------
 # ems
 # ---------------------------------------------------------------------------
 

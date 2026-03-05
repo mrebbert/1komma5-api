@@ -102,6 +102,10 @@ export ONEKOMMAFIVE_SYSTEM="<system-uuid>"
 1k5 ev-modes                        Available EV charging modes for this site
 1k5 set-ev-mode SOLAR_CHARGE        Set charging mode on first EV charger
 1k5 set-ev-mode QUICK_CHARGE --ev <id>  Set mode on a specific charger
+1k5 set-ev-target-soc 90            Set target SoC to 90 % on first EV charger
+1k5 set-ev-target-soc 80 --ev <id>  Set target SoC on a specific charger
+1k5 set-ev-departure 07:30          Set primary departure time on first EV charger
+1k5 set-ev-departure 06:00 --ev <id>  Set departure time on a specific charger
 1k5 ems                             EMS settings (mode, ToU, device overrides)
 1k5 set-ems auto                    Enable automatic EMS optimisation
 1k5 set-ems manual                  Enable manual EMS override

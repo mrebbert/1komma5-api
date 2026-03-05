@@ -7,6 +7,8 @@ Usage:
     python cli.py ev
     python cli.py ev-modes
     python cli.py set-ev-mode <mode> [--ev <ev_id>]
+    python cli.py set-ev-target-soc <soc> [--ev <ev_id>]
+    python cli.py set-ev-departure <HH:MM> [--ev <ev_id>]
     python cli.py ems
     python cli.py set-ems auto|manual
 
@@ -205,6 +207,39 @@ def cmd_set_ev_mode(args: argparse.Namespace) -> None:
     print(f"EV {target.id()}: charging mode set to {mode.value}")
 
 
+def _resolve_ev(args):
+    """Return the targeted EVCharger from args (--ev or first charger)."""
+    client = _client()
+    system = _system(client)
+    chargers = system.get_ev_chargers()
+    if not chargers:
+        sys.exit("Error: no EV chargers registered on this system")
+    if args.ev:
+        ev = next((e for e in chargers if e.id() == args.ev), None)
+        if ev is None:
+            sys.exit(f"Error: EV charger {args.ev!r} not found")
+        return ev
+    return chargers[0]
+
+
+def cmd_set_ev_target_soc(args: argparse.Namespace) -> None:
+    try:
+        soc = float(args.soc)
+    except ValueError:
+        sys.exit(f"Error: invalid SoC value {args.soc!r} — must be a number between 0 and 100")
+    if not 0.0 <= soc <= 100.0:
+        sys.exit(f"Error: SoC must be between 0 and 100, got {soc}")
+    ev = _resolve_ev(args)
+    ev.set_target_soc(soc)
+    print(f"EV {ev.id()}: target SoC set to {soc:.0f}%")
+
+
+def cmd_set_ev_departure(args: argparse.Namespace) -> None:
+    ev = _resolve_ev(args)
+    ev.set_primary_departure_time(args.time)
+    print(f"EV {ev.id()}: primary departure time set to {args.time}")
+
+
 def cmd_ems(args: argparse.Namespace) -> None:
     client = _client()
     system = _system(client)
@@ -298,6 +333,18 @@ def main() -> None:
         help="EV charger ID (default: first charger)",
     )
 
+    set_soc_p = sub.add_parser("set-ev-target-soc", help="Set EV target state-of-charge")
+    set_soc_p.add_argument("soc", metavar="SOC", help="Target SoC in percent (0–100)")
+    set_soc_p.add_argument(
+        "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
+    )
+
+    set_dep_p = sub.add_parser("set-ev-departure", help="Set EV primary departure time")
+    set_dep_p.add_argument("time", metavar="HH:MM", help="Departure time, e.g. 07:30")
+    set_dep_p.add_argument(
+        "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
+    )
+
     sub.add_parser("ems", help="EMS mode status")
 
     set_ems_p = sub.add_parser("set-ems", help="Set EMS operating mode")
@@ -315,6 +362,8 @@ def main() -> None:
         "ev": cmd_ev,
         "ev-modes": cmd_ev_modes,
         "set-ev-mode": cmd_set_ev_mode,
+        "set-ev-target-soc": cmd_set_ev_target_soc,
+        "set-ev-departure": cmd_set_ev_departure,
         "ems": cmd_ems,
         "set-ems": cmd_set_ems,
     }[args.command](args)
