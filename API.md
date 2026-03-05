@@ -134,6 +134,20 @@ curl -s -X PATCH \
   -H "Content-Type: application/json" \
   -d '{"manualSoc": 0.8}' \
   "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+
+# Zielladezustand setzen (Dezimalwert 0.0–1.0)
+curl -s -X PATCH \
+  -H "Authorization: Bearer $BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"chargeSettings": {"targetSoc": 0.9}}' \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+
+# Tägliche Abfahrtzeit setzen (Format HH:MM)
+curl -s -X PATCH \
+  -H "Authorization: Bearer $BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"chargeSettings": {"primaryScheduleDepartureTime": "07:30"}}' \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
 ```
 
 ---
