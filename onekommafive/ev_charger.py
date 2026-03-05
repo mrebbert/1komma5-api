@@ -200,5 +200,66 @@ class EVCharger:
 
         self._data["manualSoc"] = soc_decimal
 
+    def set_target_soc(self, soc: float) -> None:
+        """Set the target state-of-charge for SMART_CHARGE mode.
+
+        No-ops silently when *soc* matches the current target.
+
+        Args:
+            soc: Target SoC as a percentage between 0 and 100 (inclusive).
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        if self.target_soc() == soc:
+            return
+
+        soc_decimal = soc / 100.0
+        url = (
+            f"{self._client.HEARTBEAT_API}"
+            f"/api/v1/systems/{self._system.id()}"
+            f"/devices/evs/{self.id()}"
+        )
+        response = requests.patch(
+            url=url,
+            json={"chargeSettings": {"targetSoc": soc_decimal}},
+            headers=self._client._auth_headers(),
+            timeout=30,
+        )
+        if response.status_code != 200:
+            raise RequestError(f"Failed to set target state of charge: {response.text}")
+
+        self._data["chargeSettings"]["targetSoc"] = soc_decimal
+
+    def set_primary_departure_time(self, time: str) -> None:
+        """Set the primary schedule departure time.
+
+        No-ops silently when *time* matches the current departure time.
+
+        Args:
+            time: Departure time as ``'HH:MM'``, e.g. ``'06:00'``.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        if self.primary_schedule_departure_time() == time:
+            return
+
+        url = (
+            f"{self._client.HEARTBEAT_API}"
+            f"/api/v1/systems/{self._system.id()}"
+            f"/devices/evs/{self.id()}"
+        )
+        response = requests.patch(
+            url=url,
+            json={"chargeSettings": {"primaryScheduleDepartureTime": time}},
+            headers=self._client._auth_headers(),
+            timeout=30,
+        )
+        if response.status_code != 200:
+            raise RequestError(f"Failed to set primary departure time: {response.text}")
+
+        self._data["chargeSettings"]["primaryScheduleDepartureTime"] = time
+
     def __repr__(self) -> str:
         return f"EVCharger(id={self.id()!r}, name={self.name()!r}, mode={self.charging_mode().value!r})"

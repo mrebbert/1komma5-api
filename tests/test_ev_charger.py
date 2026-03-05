@@ -238,3 +238,83 @@ class TestSetCurrentSoc:
         charger = _make_charger(charging_mode="SMART_CHARGE")
         with pytest.raises(RequestError, match="Failed to set state of charge"):
             charger.set_current_soc(60.0)
+
+
+# ---------------------------------------------------------------------------
+# set_target_soc
+# ---------------------------------------------------------------------------
+
+class TestSetTargetSoc:
+    """Tests for EVCharger.set_target_soc."""
+
+    @resp_lib.activate
+    def test_sends_patch_with_decimal_soc(self) -> None:
+        resp_lib.add(resp_lib.PATCH, _BASE_URL, json={}, status=200)
+
+        charger = _make_charger()
+        charger.set_target_soc(90.0)
+
+        import json
+        body = json.loads(resp_lib.calls[0].request.body)
+        assert body["chargeSettings"]["targetSoc"] == pytest.approx(0.9)
+
+    @resp_lib.activate
+    def test_updates_internal_state_after_success(self) -> None:
+        resp_lib.add(resp_lib.PATCH, _BASE_URL, json={}, status=200)
+
+        charger = _make_charger()
+        charger.set_target_soc(90.0)
+
+        assert charger.target_soc() == pytest.approx(90.0)
+
+    def test_no_op_when_target_unchanged(self) -> None:
+        charger = _make_charger()  # fixture target_soc = 80 %
+        charger.set_target_soc(80.0)  # no HTTP call expected
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.PATCH, _BASE_URL, json={"error": "bad request"}, status=400)
+
+        charger = _make_charger()
+        with pytest.raises(RequestError, match="Failed to set target state of charge"):
+            charger.set_target_soc(90.0)
+
+
+# ---------------------------------------------------------------------------
+# set_primary_departure_time
+# ---------------------------------------------------------------------------
+
+class TestSetPrimaryDepartureTime:
+    """Tests for EVCharger.set_primary_departure_time."""
+
+    @resp_lib.activate
+    def test_sends_patch_with_time_string(self) -> None:
+        resp_lib.add(resp_lib.PATCH, _BASE_URL, json={}, status=200)
+
+        charger = _make_charger()
+        charger.set_primary_departure_time("07:30")
+
+        import json
+        body = json.loads(resp_lib.calls[0].request.body)
+        assert body["chargeSettings"]["primaryScheduleDepartureTime"] == "07:30"
+
+    @resp_lib.activate
+    def test_updates_internal_state_after_success(self) -> None:
+        resp_lib.add(resp_lib.PATCH, _BASE_URL, json={}, status=200)
+
+        charger = _make_charger()
+        charger.set_primary_departure_time("07:30")
+
+        assert charger.primary_schedule_departure_time() == "07:30"
+
+    def test_no_op_when_time_unchanged(self) -> None:
+        charger = _make_charger()  # fixture departure time = "12:00"
+        charger.set_primary_departure_time("12:00")  # no HTTP call expected
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.PATCH, _BASE_URL, json={"error": "bad request"}, status=400)
+
+        charger = _make_charger()
+        with pytest.raises(RequestError, match="Failed to set primary departure time"):
+            charger.set_primary_departure_time("07:30")
