@@ -1,9 +1,23 @@
-# 1Komma5° 
-> **!!!DANGER! This is 100% vibe coded and very experimental!!!**
+# 1Komma5°
 
 Unofficial Python client for the [1KOMMA5°](https://1komma5grad.com) Heartbeat API — the home energy management platform behind heat pumps, solar inverters, battery storage, and EV chargers.
 
-> **Unofficial.** This library reverse-engineers the mobile app's API. It may break without notice if 1KOMMA5° changes their backend.
+## Disclaimer
+
+This project is 100% vibe coded. I do not have the means to test this integration broadly across different hardware configurations — a lot of it is "it works for me". Use at your own risk.
+
+This project is not affiliated with or endorsed by 1KOMMA5°. The API is undocumented and was reverse-engineered from the mobile app. It may change without notice.
+
+My personal setup, on which this library has been tested:
+
+| Component | Model |
+|-----------|-------|
+| Hybrid Inverter | Sungrow SH6.0RT-V112 |
+| Battery | Sungrow SBR256 |
+| Wallbox | go-e homeFix 11 kW |
+| EV | Volkswagen ID.4 |
+| Heat pump | Stiebel Eltron WPL-A 10 HK 400 Premium |
+| Smart meter | DTSU666 |
 
 ## Features
 
