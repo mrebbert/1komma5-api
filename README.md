@@ -1,5 +1,9 @@
 # 1Komma5°
 
+[![Tests](https://github.com/mrebbert/1komma5-api/actions/workflows/tests.yml/badge.svg)](https://github.com/mrebbert/1komma5-api/actions/workflows/tests.yml)
+[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+
 Unofficial Python client for the [1KOMMA5°](https://1komma5grad.com) Heartbeat API — the home energy management platform behind heat pumps, solar inverters, battery storage, and EV chargers.
 
 ## Disclaimer
