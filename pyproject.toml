@@ -9,7 +9,7 @@ description = "Python API client for the 1KOMMA5° Heartbeat API"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-license-files = ["LICENSE"]
+license-files = ["LICEN[CS]E*"]
 authors = [
     { name = "Markus Rebbert", email = "code@rebbert.de" },
 ]
