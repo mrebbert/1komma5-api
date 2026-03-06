@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "onekommafive"
-version = "0.1.9"
+version = "0.1.10"
 description = "Python API client for the 1KOMMA5° Heartbeat API"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "PyJWT[cryptography]>=2.8",
+    "cryptography>=41",
     "requests>=2.31",
 ]
 
