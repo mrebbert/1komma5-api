@@ -43,7 +43,7 @@ My personal setup, on which this library has been tested:
 ## Installation
 
 ```bash
-pip install .
+pip install onekommafive
 
 # with dev dependencies (pytest, responses, …)
 pip install ".[dev]"
