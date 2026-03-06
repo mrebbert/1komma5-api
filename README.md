@@ -1,6 +1,7 @@
 # 1Komma5°
 
 [![Tests](https://github.com/mrebbert/1komma5-api/actions/workflows/tests.yml/badge.svg)](https://github.com/mrebbert/1komma5-api/actions/workflows/tests.yml)
+[![PyPI](https://img.shields.io/pypi/v/onekommafive)](https://pypi.org/project/onekommafive/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
