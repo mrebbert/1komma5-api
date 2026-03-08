@@ -201,6 +201,93 @@ def make_price_data() -> dict:
     }
 
 
+def make_energy_data() -> dict:
+    """Return an energy response matching the real API shape (v2/v3).
+
+    Timeseries is nested under ``timestampedProductionAndConsumption.data``.
+    """
+    return {
+        "updatedAt": "2026-03-08T14:00:00Z",
+        "energyProduced": {"value": 30.76, "unit": "kWh"},
+        "selfSufficiencyPercent": 0.61,
+        "grid": {
+            "feedIn": {"value": 6.76, "unit": "kWh"},
+            "supply": {"value": 10.33, "unit": "kWh"},
+        },
+        "battery": {
+            "charge": {"value": 22.42, "unit": "kWh"},
+            "discharge": {"value": 14.58, "unit": "kWh"},
+        },
+        "consumption": {
+            "direct": {"value": 4.60, "unit": "kWh"},
+            "self": None,
+            "total": {"value": 26.50, "unit": "kWh"},
+            "consumers": {
+                "ev": {"value": 0, "unit": "kWh"},
+                "heatPump": {"value": 8.0, "unit": "kWh"},
+                "ac": None,
+                "household": {"value": 2.5, "unit": "kWh"},
+                "battery": {"value": 22.42, "unit": "kWh"},
+            },
+            "consumersTotal": {
+                "ev": {"value": 5.0, "unit": "kWh"},
+                "heatPump": {"value": 12.0, "unit": "kWh"},
+                "ac": None,
+                "household": {"value": 13.5, "unit": "kWh"},
+            },
+        },
+        "heartbeatSavings": {"value": 6.48, "unit": "€"},
+        "productionSurplus": None,
+        "timestampedProductionAndConsumption": {
+            "data": {
+                "2026-03-08T12:00Z": {
+                    "production": 5.008,
+                    "consumption": {
+                        "household": 0.267,
+                        "householdTotal": 0.602,
+                        "ev": 0.0,
+                        "evCharge": 0.0,
+                        "heatPump": 0.0,
+                        "heatPumpTotal": 0.0,
+                        "ac": None,
+                        "acTotal": None,
+                        "battery": 4.688,
+                        "direct": 0.267,
+                    },
+                    "gridSupply": 0.334,
+                    "gridFeedIn": 0.053,
+                    "batteryStateOfCharge": 0.536,
+                    "batteryCharge": 4.688,
+                    "batteryDischarge": 0.0,
+                },
+                "2026-03-08T13:00Z": {
+                    "production": 3.5,
+                    "consumption": {
+                        "household": 0.5,
+                        "householdTotal": 1.0,
+                        "ev": 1.0,
+                        "evCharge": 1.5,
+                        "heatPump": 0.0,
+                        "heatPumpTotal": 0.0,
+                        "ac": None,
+                        "acTotal": None,
+                        "battery": 2.0,
+                        "direct": 1.5,
+                    },
+                    "gridSupply": 0.5,
+                    "gridFeedIn": 0.0,
+                    "batteryStateOfCharge": 0.62,
+                    "batteryCharge": 2.0,
+                    "batteryDischarge": 0.0,
+                },
+            },
+            "metadata": {
+                "units": {"production": "kW", "gridSupply": "kW", "gridFeedIn": "kW"},
+            },
+        },
+    }
+
+
 def make_displayed_ev_charging_modes_data() -> dict:
     """Return a minimal displayed-ev-charging-modes response payload."""
     return {

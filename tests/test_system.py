@@ -9,13 +9,14 @@ import pytest
 
 from onekommafive.errors import RequestError
 from onekommafive.ev_charger import EVCharger
-from onekommafive.models import EmsSettings, LiveOverview, MarketPrices, SystemInfo
+from onekommafive.models import EmsSettings, EnergyData, LiveOverview, MarketPrices, SystemInfo
 from onekommafive.system import System
 from tests.fixtures import (
     FAKE_SYSTEM_ID,
     make_client,
     make_displayed_ev_charging_modes_data,
     make_ems_settings_data,
+    make_energy_data,
     make_ev_data,
     make_live_overview_data,
     make_price_data,
@@ -24,6 +25,7 @@ from tests.fixtures import (
 
 _BASE = "https://heartbeat.1komma5grad.com"
 _SYSTEM_BASE = f"{_BASE}/api/v1/systems/{FAKE_SYSTEM_ID}"
+_SYSTEM_BASE_V2 = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V3 = f"{_BASE}/api/v3/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V4 = f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"
 
@@ -377,4 +379,128 @@ class TestGetPrices:
             _make_system().get_prices(
                 datetime.datetime(2024, 6, 1),
                 datetime.datetime(2024, 6, 2),
+            )
+
+
+# ---------------------------------------------------------------------------
+# Energy today
+# ---------------------------------------------------------------------------
+
+class TestGetEnergyToday:
+    @resp_lib.activate
+    def test_returns_energy_data_instance(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V2}/energy-today", json=make_energy_data(), status=200)
+        result = _make_system().get_energy_today()
+        assert isinstance(result, EnergyData)
+
+    @resp_lib.activate
+    def test_scalar_totals_parsed(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V2}/energy-today", json=make_energy_data(), status=200)
+        result = _make_system().get_energy_today()
+        assert result.energy_produced_kwh == pytest.approx(30.76)
+        assert result.self_sufficiency == pytest.approx(0.61)
+        assert result.grid_supply_kwh == pytest.approx(10.33)
+        assert result.grid_feed_in_kwh == pytest.approx(6.76)
+        assert result.battery_charge_kwh == pytest.approx(22.42)
+        assert result.battery_discharge_kwh == pytest.approx(14.58)
+        assert result.consumption_total_kwh == pytest.approx(26.50)
+        assert result.savings_eur == pytest.approx(6.48)
+        assert result.updated_at == "2026-03-08T14:00:00Z"
+
+    @resp_lib.activate
+    def test_consumers_and_consumers_total_parsed(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V2}/energy-today", json=make_energy_data(), status=200)
+        result = _make_system().get_energy_today()
+        # direct from PV
+        assert result.consumption_household_kwh == pytest.approx(2.5)
+        assert result.consumption_heat_pump_kwh == pytest.approx(8.0)
+        assert result.consumption_ac_kwh is None
+        # total (from all sources)
+        assert result.consumption_household_total_kwh == pytest.approx(13.5)
+        assert result.consumption_ev_total_kwh == pytest.approx(5.0)
+        assert result.consumption_heat_pump_total_kwh == pytest.approx(12.0)
+        assert result.consumption_ac_total_kwh is None
+
+    @resp_lib.activate
+    def test_timeseries_nested_under_data_key(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V2}/energy-today", json=make_energy_data(), status=200)
+        result = _make_system().get_energy_today()
+        assert len(result.timeseries) == 2
+        slot = result.timeseries["2026-03-08T12:00Z"]
+        assert slot.production == pytest.approx(5.008)
+        assert slot.grid_supply == pytest.approx(0.334)
+        assert slot.grid_feed_in == pytest.approx(0.053)
+        assert slot.battery_soc == pytest.approx(0.536)
+        assert slot.battery_charge == pytest.approx(4.688)
+        assert slot.consumption_household == pytest.approx(0.267)
+        assert slot.consumption_household_total == pytest.approx(0.602)
+        assert slot.consumption_ac is None
+        assert slot.consumption_ac_total is None
+
+    @resp_lib.activate
+    def test_default_resolution_is_1h(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V2}/energy-today", json=make_energy_data(), status=200)
+        _make_system().get_energy_today()
+        assert "resolution=1h" in resp_lib.calls[0].request.url
+
+    @resp_lib.activate
+    def test_passes_resolution_15m(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V2}/energy-today", json=make_energy_data(), status=200)
+        _make_system().get_energy_today(resolution="15m")
+        assert "resolution=15m" in resp_lib.calls[0].request.url
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V2}/energy-today", json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get energy today"):
+            _make_system().get_energy_today()
+
+
+# ---------------------------------------------------------------------------
+# Energy historical
+# ---------------------------------------------------------------------------
+
+class TestGetEnergyHistorical:
+    @resp_lib.activate
+    def test_returns_energy_data_instance(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V3}/energy-historical", json=make_energy_data(), status=200)
+        result = _make_system().get_energy_historical(
+            from_date=datetime.date(2026, 3, 8), to_date=datetime.date(2026, 3, 8)
+        )
+        assert isinstance(result, EnergyData)
+        assert result.energy_produced_kwh == pytest.approx(30.76)
+
+    @resp_lib.activate
+    def test_passes_date_and_resolution_params(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V3}/energy-historical", json=make_energy_data(), status=200)
+        _make_system().get_energy_historical(
+            from_date=datetime.date(2026, 3, 1), to_date=datetime.date(2026, 3, 2)
+        )
+        url = resp_lib.calls[0].request.url
+        assert "from=2026-03-01" in url
+        assert "to=2026-03-02" in url
+        assert "resolution=1h" in url
+
+    @resp_lib.activate
+    def test_passes_resolution_15m(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V3}/energy-historical", json=make_energy_data(), status=200)
+        _make_system().get_energy_historical(
+            from_date=datetime.date(2026, 3, 8), to_date=datetime.date(2026, 3, 8), resolution="15m"
+        )
+        assert "resolution=15m" in resp_lib.calls[0].request.url
+
+    @resp_lib.activate
+    def test_timeseries_parsed(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V3}/energy-historical", json=make_energy_data(), status=200)
+        result = _make_system().get_energy_historical(
+            from_date=datetime.date(2026, 3, 8), to_date=datetime.date(2026, 3, 8)
+        )
+        assert len(result.timeseries) == 2
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V3}/energy-historical", json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get historical energy data"):
+            _make_system().get_energy_historical(
+                from_date=datetime.date(2026, 3, 8), to_date=datetime.date(2026, 3, 8)
             )

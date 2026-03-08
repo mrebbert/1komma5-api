@@ -142,6 +142,68 @@ def cmd_prices(args: argparse.Namespace) -> None:
         print(f"{ts:<25}  {spot:>9.4f}  {grid:>9.4f}  {all_in:>9.4f}")
 
 
+def cmd_energy_today(args: argparse.Namespace) -> None:
+    client = _client()
+    system = _system(client)
+    ed = system.get_energy_today(resolution=args.resolution)
+    _print_energy(system.id(), ed, args.resolution)
+
+
+def cmd_energy_historical(args: argparse.Namespace) -> None:
+    import datetime as dt
+    try:
+        from_date = dt.date.fromisoformat(args.from_date)
+        to_date = dt.date.fromisoformat(args.to_date)
+    except ValueError as e:
+        sys.exit(f"Error: invalid date — {e}")
+    client = _client()
+    system = _system(client)
+    ed = system.get_energy_historical(from_date=from_date, to_date=to_date, resolution=args.resolution)
+    _print_energy(system.id(), ed, args.resolution)
+
+
+def _print_energy(system_id: str, ed, resolution: str) -> None:
+    suf = f"  (self-suff. {ed.self_sufficiency * 100:.0f}%)" if ed.self_sufficiency is not None else ""
+    print(f"System:        {system_id}")
+    if ed.updated_at:
+        print(f"Updated:       {ed.updated_at}")
+    print(f"Resolution:    {resolution}")
+    print()
+    print(f"{'PV produced:':28} {_kwh(ed.energy_produced_kwh)}{suf}")
+    print(f"{'Grid supply:':28} {_kwh(ed.grid_supply_kwh)}")
+    print(f"{'Grid feed-in:':28} {_kwh(ed.grid_feed_in_kwh)}")
+    print(f"{'Battery charge:':28} {_kwh(ed.battery_charge_kwh)}")
+    print(f"{'Battery discharge:':28} {_kwh(ed.battery_discharge_kwh)}")
+    print(f"{'Total consumption:':28} {_kwh(ed.consumption_total_kwh)}")
+    if ed.consumption_household_total_kwh is not None:
+        print(f"{'  Household:':28} {_kwh(ed.consumption_household_total_kwh)}")
+    if ed.consumption_ev_total_kwh is not None:
+        print(f"{'  EV:':28} {_kwh(ed.consumption_ev_total_kwh)}")
+    if ed.consumption_heat_pump_total_kwh is not None:
+        print(f"{'  Heat pump:':28} {_kwh(ed.consumption_heat_pump_total_kwh)}")
+    if ed.consumption_ac_total_kwh is not None:
+        print(f"{'  AC:':28} {_kwh(ed.consumption_ac_total_kwh)}")
+    if ed.savings_eur is not None:
+        print(f"{'Savings:':28} {ed.savings_eur:.2f} €")
+    if ed.timeseries:
+        print()
+        print(f"{'Timestamp':<25}  {'PV':>6}  {'Grid+':>6}  {'Grid-':>6}  {'Bat%':>5}  {'Bat kW':>7}  kW")
+        print("-" * 68)
+        for ts in sorted(ed.timeseries):
+            slot = ed.timeseries[ts]
+            pv = f"{slot.production:.3f}" if slot.production is not None else "—"
+            gs = f"{slot.grid_supply:.3f}" if slot.grid_supply is not None else "—"
+            gf = f"{slot.grid_feed_in:.3f}" if slot.grid_feed_in is not None else "—"
+            soc = f"{slot.battery_soc * 100:.1f}%" if slot.battery_soc is not None else "—"
+            bat_kw: float | None = None
+            if slot.battery_charge is not None and slot.battery_charge > 0:
+                bat_kw = slot.battery_charge
+            elif slot.battery_discharge is not None and slot.battery_discharge > 0:
+                bat_kw = -slot.battery_discharge
+            bat = f"{bat_kw:+.3f}" if bat_kw is not None else "—"
+            print(f"{ts:<25}  {pv:>6}  {gs:>6}  {gf:>6}  {soc:>5}  {bat:>7}")
+
+
 def cmd_ev(args: argparse.Namespace) -> None:
     client = _client()
     system = _system(client)
@@ -280,6 +342,10 @@ def cmd_set_ems(args: argparse.Namespace) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
+def _kwh(value: float | None) -> str:
+    return f"{value:.2f} kWh" if value is not None else "—"
+
+
 def _w(value: float | None) -> str:
     if value is None:
         return "—"
@@ -345,6 +411,20 @@ def main() -> None:
         "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
     )
 
+    energy_today_p = sub.add_parser("energy-today", help="Energy production and consumption for today")
+    energy_today_p.add_argument(
+        "--resolution", metavar="RES", default="1h", choices=["1h", "15m"],
+        help="Data resolution: '1h' (default) or '15m'",
+    )
+
+    energy_hist_p = sub.add_parser("energy-historical", help="Historical energy data for a date range")
+    energy_hist_p.add_argument("--from", dest="from_date", metavar="YYYY-MM-DD", required=True, help="Start date")
+    energy_hist_p.add_argument("--to", dest="to_date", metavar="YYYY-MM-DD", required=True, help="End date")
+    energy_hist_p.add_argument(
+        "--resolution", metavar="RES", default="1h", choices=["1h", "15m"],
+        help="Data resolution: '1h' (default) or '15m'",
+    )
+
     sub.add_parser("ems", help="EMS mode status")
 
     set_ems_p = sub.add_parser("set-ems", help="Set EMS operating mode")
@@ -364,6 +444,8 @@ def main() -> None:
         "set-ev-mode": cmd_set_ev_mode,
         "set-ev-target-soc": cmd_set_ev_target_soc,
         "set-ev-departure": cmd_set_ev_departure,
+        "energy-today": cmd_energy_today,
+        "energy-historical": cmd_energy_historical,
         "ems": cmd_ems,
         "set-ems": cmd_set_ems,
     }[args.command](args)

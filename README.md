@@ -29,6 +29,7 @@ My personal setup, on which this library has been tested:
 - OAuth2 + PKCE authentication (matches the mobile app flow), with automatic token refresh
 - System metadata (address, status, features) — `SystemInfo`
 - Live power snapshot (PV, battery, grid, consumption, heat pumps, EV chargers, ACs, self-sufficiency) — API v3
+- Energy summary and timeseries for today or any historical date range — API v2/v3, `1h` or `15m` resolution
 - EV charger state and control (charging mode, current SoC, target SoC, departure time, vehicle profile)
 - Available EV charging modes per site
 - EMS settings (auto/manual, Time-of-Use, per-device manual overrides for EV charger, battery, heat pump)
@@ -78,6 +79,18 @@ print(f"Avg spot: {mp.average_price:.4f}  +grid: {mp.average_price_with_grid_cos
 for ts, price in sorted(mp.prices.items()):
     print(f"  {ts}  spot {price:.4f}  all-in {mp.prices_with_grid_costs_and_vat[ts]:.4f} EUR/kWh")
 
+# Energy today (API v2) — resolution "1h" or "15m"
+ed = system.get_energy_today(resolution="1h")
+print(f"Produced: {ed.energy_produced_kwh:.2f} kWh  Self-sufficiency: {ed.self_sufficiency:.0%}")
+print(f"Grid supply: {ed.grid_supply_kwh:.2f} kWh  Feed-in: {ed.grid_feed_in_kwh:.2f} kWh")
+for ts, slot in ed.timeseries.items():
+    print(f"  {ts}  PV {slot.production} kW  Bat SoC {slot.battery_soc:.0%}")
+
+# Historical energy (API v3) — any date range, resolution "1h" or "15m"
+yesterday = datetime.date.today() - datetime.timedelta(days=1)
+ed = system.get_energy_historical(from_date=yesterday, to_date=yesterday, resolution="1h")
+print(f"Yesterday produced: {ed.energy_produced_kwh:.2f} kWh")
+
 # Available EV charging modes for this site
 modes = system.get_displayed_ev_charging_modes()
 print("Available modes:", [m.value for m in modes])
@@ -113,21 +126,26 @@ export ONEKOMMAFIVE_SYSTEM="<system-uuid>"
 ```
 
 ```
-1k5 info                            System metadata (address, status, features)
-1k5 live                            Live power overview
-1k5 prices                          Market prices for today (hourly, EUR/kWh)
-1k5 prices --resolution 15m         15-minute resolution
-1k5 ev                              EV charger status and schedule
-1k5 ev-modes                        Available EV charging modes for this site
-1k5 set-ev-mode SOLAR_CHARGE        Set charging mode on first EV charger
-1k5 set-ev-mode QUICK_CHARGE --ev <id>  Set mode on a specific charger
-1k5 set-ev-target-soc 90            Set target SoC to 90 % on first EV charger
-1k5 set-ev-target-soc 80 --ev <id>  Set target SoC on a specific charger
-1k5 set-ev-departure 07:30          Set primary departure time on first EV charger
-1k5 set-ev-departure 06:00 --ev <id>  Set departure time on a specific charger
-1k5 ems                             EMS settings (mode, ToU, device overrides)
-1k5 set-ems auto                    Enable automatic EMS optimisation
-1k5 set-ems manual                  Enable manual EMS override
+1k5 info                                 System metadata (address, status, features)
+1k5 live                                 Live power overview
+1k5 energy-today                         Energy summary and timeseries for today (hourly)
+1k5 energy-today --resolution 15m        15-minute resolution
+1k5 energy-historical --from YYYY-MM-DD --to YYYY-MM-DD
+                                         Historical energy for a date range (hourly)
+1k5 energy-historical --from ... --to ... --resolution 15m
+1k5 prices                               Market prices for today (hourly, EUR/kWh)
+1k5 prices --resolution 15m             15-minute resolution
+1k5 ev                                   EV charger status and schedule
+1k5 ev-modes                             Available EV charging modes for this site
+1k5 set-ev-mode SOLAR_CHARGE             Set charging mode on first EV charger
+1k5 set-ev-mode QUICK_CHARGE --ev <id>   Set mode on a specific charger
+1k5 set-ev-target-soc 90                 Set target SoC to 90 % on first EV charger
+1k5 set-ev-target-soc 80 --ev <id>       Set target SoC on a specific charger
+1k5 set-ev-departure 07:30               Set primary departure time on first EV charger
+1k5 set-ev-departure 06:00 --ev <id>     Set departure time on a specific charger
+1k5 ems                                  EMS settings (mode, ToU, device overrides)
+1k5 set-ems auto                         Enable automatic EMS optimisation
+1k5 set-ems manual                       Enable manual EMS override
 ```
 
 Example output:
@@ -176,6 +194,22 @@ Timestamp                   Spot      + Grid    All-in
 2026-02-28T01:00Z          0.0747      0.2123      0.2526
 ...
 
+$ 1k5 energy-today
+System:       xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Produced:     30.76 kWh
+Consumed:     26.50 kWh
+Self-suff.:   61.0%
+Grid supply:  10.33 kWh    Feed-in:  6.76 kWh
+Bat charge:   22.42 kWh    Bat discharge:  14.58 kWh
+Savings:      6.48 €
+EV total:     5.00 kWh     Heat pump total:  12.00 kWh
+Household:    13.50 kWh
+
+Timestamp                     PV     Grid+    Grid-    Bat%   Bat kW
+----------------------------------------------------------------------
+2026-03-08T12:00Z           5.008    0.334    0.053   53.6%   +4.688
+2026-03-08T13:00Z           3.500    0.500    0.000   62.0%   +2.000
+
 $ 1k5 ems
 System:       xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 EMS mode:     AUTO
@@ -196,6 +230,8 @@ Manual device settings:
 | List / get systems | v2 |
 | System detail | v2 |
 | Live power overview | **v3** |
+| Energy today | v2 |
+| Energy historical | **v3** |
 | Market prices | **v4** |
 | EV chargers (read / set) | v1 |
 | Available EV charging modes | v1 |
@@ -207,6 +243,8 @@ Manual device settings:
 |-------|-------------|
 | `SystemInfo` | System metadata (address, status, feature flags) |
 | `LiveOverview` | Real-time power snapshot (W), incl. net grid power, separate import/export, smart devices and self-sufficiency |
+| `EnergyData` | Energy summary (kWh totals, self-sufficiency, savings) and per-slot timeseries |
+| `EnergySlot` | One timeseries slot — PV production, per-device consumption (kW), grid flows, battery SoC and charge/discharge |
 | `MarketPrices` | Spot prices, grid costs and VAT per slot (EUR/kWh) |
 | `EmsSettings` | EMS mode, Time-of-Use flag, per-device manual overrides |
 | `EmsManualDevice` | One device entry in the EMS manual settings |

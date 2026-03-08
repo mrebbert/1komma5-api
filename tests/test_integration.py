@@ -22,7 +22,7 @@ import pytest
 
 from onekommafive import Client, Systems
 from onekommafive.errors import AuthenticationError
-from onekommafive.models import ChargingMode, EmsSettings, LiveOverview, MarketPrices, User
+from onekommafive.models import ChargingMode, EmsSettings, EnergyData, LiveOverview, MarketPrices, User
 
 # ---------------------------------------------------------------------------
 # Credential fixtures – tests are skipped when env vars are absent
@@ -253,3 +253,93 @@ class TestEvChargers:
             soc = charger.current_soc()
             if soc is not None:
                 assert 0.0 <= soc <= 100.0
+
+
+# ---------------------------------------------------------------------------
+# Energy today
+# ---------------------------------------------------------------------------
+
+class TestEnergyToday:
+    def test_returns_energy_data_instance(self, systems) -> None:
+        result = systems[0].get_energy_today()
+        assert isinstance(result, EnergyData)
+
+    def test_energy_produced_is_non_negative(self, systems) -> None:
+        result = systems[0].get_energy_today()
+        if result.energy_produced_kwh is not None:
+            assert result.energy_produced_kwh >= 0.0
+
+    def test_self_sufficiency_in_valid_range(self, systems) -> None:
+        result = systems[0].get_energy_today()
+        if result.self_sufficiency is not None:
+            assert 0.0 <= result.self_sufficiency <= 1.0
+
+    def test_timeseries_is_populated(self, systems) -> None:
+        result = systems[0].get_energy_today()
+        assert isinstance(result.timeseries, dict)
+        assert len(result.timeseries) > 0
+
+    def test_timeseries_slot_fields(self, systems) -> None:
+        result = systems[0].get_energy_today()
+        for ts, slot in result.timeseries.items():
+            assert isinstance(ts, str)
+            if slot.production is not None:
+                assert slot.production >= 0.0
+            if slot.battery_soc is not None:
+                assert 0.0 <= slot.battery_soc <= 1.0
+
+    def test_resolution_15m_returns_more_slots(self, systems) -> None:
+        hourly = systems[0].get_energy_today(resolution="1h")
+        quarter = systems[0].get_energy_today(resolution="15m")
+        assert len(quarter.timeseries) >= len(hourly.timeseries)
+
+    def test_consumers_total_present(self, systems) -> None:
+        result = systems[0].get_energy_today()
+        # At least one consumersTotal field should be populated
+        totals = [
+            result.consumption_household_total_kwh,
+            result.consumption_ev_total_kwh,
+            result.consumption_heat_pump_total_kwh,
+        ]
+        assert any(v is not None for v in totals)
+
+
+# ---------------------------------------------------------------------------
+# Energy historical
+# ---------------------------------------------------------------------------
+
+class TestEnergyHistorical:
+    def test_returns_energy_data_instance(self, systems) -> None:
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        assert isinstance(result, EnergyData)
+
+    def test_energy_produced_is_non_negative(self, systems) -> None:
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        if result.energy_produced_kwh is not None:
+            assert result.energy_produced_kwh >= 0.0
+
+    def test_timeseries_is_populated(self, systems) -> None:
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        assert isinstance(result.timeseries, dict)
+        assert len(result.timeseries) > 0
+
+    def test_resolution_15m_same_day(self, systems) -> None:
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday, resolution="15m")
+        assert isinstance(result, EnergyData)
+        assert len(result.timeseries) > 0
+
+    def test_slot_battery_soc_in_valid_range(self, systems) -> None:
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        for slot in result.timeseries.values():
+            if slot.battery_soc is not None:
+                assert 0.0 <= slot.battery_soc <= 1.0
+
+    def test_raw_payload_is_populated(self, systems) -> None:
+        yesterday = datetime.date.today() - datetime.timedelta(days=1)
+        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        assert isinstance(result.raw, dict) and len(result.raw) > 0

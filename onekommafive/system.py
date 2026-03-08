@@ -9,7 +9,7 @@ import requests
 
 from .errors import RequestError
 from .ev_charger import EVCharger
-from .models import ChargingMode, EmsSettings, LiveOverview, MarketPrices, SystemInfo
+from .models import ChargingMode, EmsSettings, EnergyData, LiveOverview, MarketPrices, SystemInfo
 
 if TYPE_CHECKING:
     from .client import Client
@@ -117,6 +117,70 @@ class System:
         if response.status_code != 200:
             raise RequestError(f"Failed to get EV chargers: {response.text}")
         return [EVCharger(self._client, self, ev) for ev in response.json()]
+
+    # ------------------------------------------------------------------
+    # Energy data
+    # ------------------------------------------------------------------
+
+    def get_energy_today(self, resolution: str = "1h") -> EnergyData:
+        """Fetch energy production and consumption data for today.
+
+        Args:
+            resolution: Data resolution; ``"1h"`` (default) or ``"15m"``.
+
+        Returns:
+            An :class:`~onekommafive.models.EnergyData` instance.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        url = f"{self._client.HEARTBEAT_API}/api/v2/systems/{self.id()}/energy-today"
+        response = requests.get(
+            url=url,
+            params={"resolution": resolution},
+            headers=self._client._auth_headers(),
+            timeout=30,
+        )
+        if response.status_code != 200:
+            raise RequestError(f"Failed to get energy today: {response.text}")
+        return EnergyData.from_dict(response.json())
+
+    def get_energy_historical(
+        self,
+        from_date: datetime.date,
+        to_date: datetime.date,
+        resolution: str = "1h",
+    ) -> EnergyData:
+        """Fetch historical energy data for a date range.
+
+        For ``resolution="15m"`` ``from_date`` and ``to_date`` must be the same day.
+        For ``resolution="1h"`` ``to_date`` may be at most one day after ``from_date``.
+
+        Args:
+            from_date: Start date (inclusive).
+            to_date: End date (inclusive).
+            resolution: Data resolution; ``"1h"`` (default) or ``"15m"``.
+
+        Returns:
+            An :class:`~onekommafive.models.EnergyData` instance.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        url = f"{self._client.HEARTBEAT_API}/api/v3/systems/{self.id()}/energy-historical"
+        response = requests.get(
+            url=url,
+            params={
+                "from": from_date.isoformat(),
+                "to": to_date.isoformat(),
+                "resolution": resolution,
+            },
+            headers=self._client._auth_headers(),
+            timeout=30,
+        )
+        if response.status_code != 200:
+            raise RequestError(f"Failed to get historical energy data: {response.text}")
+        return EnergyData.from_dict(response.json())
 
     # ------------------------------------------------------------------
     # EMS

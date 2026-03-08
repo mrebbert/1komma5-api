@@ -88,6 +88,79 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ---
 
+### Energie heute (v2)
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/energy-today` |
+
+Parameter:
+
+| Parameter | Wert |
+|-----------|------|
+| `resolution` | `1h` (Standard) oder `15m` |
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  'https://heartbeat.1komma5grad.com/api/v2/systems/'"$ONEKOMMAFIVE_SYSTEM"'/energy-today?resolution=1h' | jq .
+```
+
+Antwortstruktur (Auszug):
+
+```json
+{
+  "energyProduced": {"value": 30.76, "unit": "kWh"},
+  "selfSufficiencyPercent": 0.61,
+  "consumption": {
+    "consumersTotal": {
+      "ev": {"value": 5.0, "unit": "kWh"},
+      "heatPump": {"value": 12.0, "unit": "kWh"},
+      "household": {"value": 13.5, "unit": "kWh"},
+      "ac": null
+    }
+  },
+  "timestampedProductionAndConsumption": {
+    "data": {
+      "2026-03-08T12:00Z": {
+        "production": 5.008,
+        "consumption": {"household": 0.267, "ev": 0.0, "battery": 4.688, ...},
+        "gridSupply": 0.334,
+        "gridFeedIn": 0.053,
+        "batteryStateOfCharge": 0.536,
+        "batteryCharge": 4.688,
+        "batteryDischarge": 0.0
+      }
+    },
+    "metadata": {"units": {"production": "kW", "gridSupply": "kW", "gridFeedIn": "kW"}}
+  }
+}
+```
+
+---
+
+### Energie historisch (v3)
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v3/systems/$ONEKOMMAFIVE_SYSTEM/energy-historical` |
+
+Parameter:
+
+| Parameter | Wert |
+|-----------|------|
+| `from` | Datum ISO-8601, z. B. `2026-03-07` |
+| `to` | Datum ISO-8601, z. B. `2026-03-07` |
+| `resolution` | `1h` (Standard) oder `15m` (nur für einen einzelnen Tag) |
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  'https://heartbeat.1komma5grad.com/api/v3/systems/'"$ONEKOMMAFIVE_SYSTEM"'/energy-historical?from=2026-03-07&to=2026-03-07&resolution=1h' | jq .
+```
+
+Gleiche Antwortstruktur wie `energy-today`.
+
+---
+
 ### Marktpreise (v4)
 
 | Methode | URL |
