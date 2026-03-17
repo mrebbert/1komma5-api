@@ -251,6 +251,15 @@ Manual device settings:
 | `EVCharger` | EV charger state, vehicle profile, schedule and controls |
 | `ChargingMode` | `SMART_CHARGE` / `QUICK_CHARGE` / `SOLAR_CHARGE` |
 
+## API version monitoring
+
+[`scripts/probe_versions.py`](scripts/probe_versions.md) probes all known endpoints for newer API versions than the ones currently used in the client. Run it after a 1KOMMA5° app update to catch version bumps early.
+
+```bash
+ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... \
+PYTHONPATH=. ./venv/bin/python scripts/probe_versions.py
+```
+
 ## Running tests
 
 ```bash

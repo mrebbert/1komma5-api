@@ -380,9 +380,13 @@ Alle Preise als **String** (EUR/kWh). Zeitstempel in UTC. `gridConsumption`/`gri
 
 ### Wetter (v1)
 
+Liefert eine Wettervorhersage für den Standort der Anlage – Tagesübersicht für heute/morgen sowie eine feingranulare 3-Stunden-Prognose für 48 Stunden. Dient primär der PV-Ertragsprognose und Ladeplanung.
+
 | Methode | URL |
 |---------|-----|
 | `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/weather` |
+
+Keine Query-Parameter erforderlich.
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
@@ -394,30 +398,48 @@ Antwortstruktur:
 ```json
 {
   "today": {
-    "temperatureCelsius": 17.9,
-    "precipitationMm": 0,
-    "precipitationProbability": 1,
-    "sunshineMinutes": 677.8,
-    "sunrise": "2026-03-08T06:04Z",
-    "sunset":  "2026-03-08T17:27Z",
-    "weatherSymbolId": 2
+    "temperatureCelsius": 16.1,       // Tageshöchsttemperatur
+    "precipitationMm": 5.2,           // Gesamtniederschlag in mm
+    "precipitationProbability": 86.5, // float, 0–100 %
+    "sunshineMinutes": 383.7,         // Sonnenscheindauer in Minuten (Vorhersage, kann >600 sein)
+    "sunrise": "2026-03-11T05:57Z",   // ISO8601, UTC
+    "sunset":  "2026-03-11T17:32Z",
+    "weatherSymbolId": 5              // Wettersymbol-Code (s. u.)
   },
-  "tomorrow": { ... },
+  "tomorrow": { ... },                // identische Struktur
   "fineGrainedForecasts": [
     {
-      "periodStart": "2026-03-08T12:00Z",
-      "windSpeed": 1.4,
-      "temperatureCelsius": 14.9,
-      "weatherSymbolId": 2,
-      "sunshineMinutes": 60,
-      "precipitationMm": 0,
-      "precipitationProbability": 1
+      "periodStart": "2026-03-11T15:00Z", // Beginn des 3h-Slots, UTC
+      "windSpeed": 3.8,                   // m/s
+      "temperatureCelsius": 10.2,
+      "weatherSymbolId": 5,
+      "sunshineMinutes": 0,               // Sonnenschein im Slot (max. ~60 min bei 3h)
+      "precipitationMm": 1.07,
+      "precipitationProbability": 51.4    // float, 0–100 %
     }
   ]
 }
 ```
 
-`fineGrainedForecasts` enthält 3-Stunden-Slots für 48 h. Nacht-`weatherSymbolId` = Tag-ID + 100 (z. B. `2` → `102`).
+`fineGrainedForecasts` enthält 3-Stunden-Slots für 48 h. Alle Zeitstempel in UTC.
+
+#### Wettersymbol-IDs
+
+Nacht-IDs folgen dem Muster **Tag-ID + 100** (z. B. `5` → `105`). Nacht-Symbole erscheinen in `fineGrainedForecasts`-Slots nach Sonnenuntergang.
+
+| Tag-ID | Nacht-ID | Bedeutung |
+|--------|----------|-----------|
+| `1` | `101` | Sonnig / klar |
+| `2` | `102` | Heiter (leicht bewölkt) |
+| `3` | `103` | Wechselnd bewölkt |
+| `4` | `104` | Bedeckt / stark bewölkt |
+| `5` | `105` | Regen |
+| `8` | `108` | Leicht bewölkt mit Schauern |
+| `15` | `115` | Starker Regen / Schauer |
+
+Alle Werte durch Beobachtung abgeleitet, nicht offiziell dokumentiert.
+
+Hinweis: Symbol `2` (heiter) kann auch bei niedrigem `sunshineMinutes`-Wert (z. B. 43 min) vergeben werden – es beschreibt aufgelockerte Bewölkung, nicht zwingend viel Sonnenschein.
 
 ---
 
