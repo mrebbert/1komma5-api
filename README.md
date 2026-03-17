@@ -253,7 +253,7 @@ Manual device settings:
 
 ## API version monitoring
 
-[`scripts/probe_versions.py`](scripts/probe_versions.md) probes all known endpoints for newer API versions than the ones currently used in the client. Run it after a 1KOMMA5° app update to catch version bumps early.
+[`scripts/probe_versions.md`](scripts/probe_versions.md) probes all known endpoints for newer API versions than the ones currently used in the client. Run it after a 1KOMMA5° app update to catch version bumps early.
 
 ```bash
 ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... \
