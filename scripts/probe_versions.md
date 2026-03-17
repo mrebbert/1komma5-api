@@ -17,12 +17,12 @@ Run this script after a 1KOMMA5° app update to catch API version bumps before t
 # With username + password (token is obtained automatically)
 ONEKOMMAFIVE_USERNAME=user@example.com \
 ONEKOMMAFIVE_PASSWORD=s3cr3t \
-PYTHONPATH=. ./venv/bin/python scripts/probe_versions.py
+PYTHONPATH=. python scripts/probe_versions.py
 
 # With an existing Bearer token
 BEARER_TOKEN=<jwt> \
 ONEKOMMAFIVE_SYSTEM=<system-uuid> \
-PYTHONPATH=. ./venv/bin/python scripts/probe_versions.py
+PYTHONPATH=. python scripts/probe_versions.py
 ```
 
 ## Example output — nothing new

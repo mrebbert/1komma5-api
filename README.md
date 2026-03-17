@@ -257,7 +257,7 @@ Manual device settings:
 
 ```bash
 ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... \
-PYTHONPATH=. ./venv/bin/python scripts/probe_versions.py
+PYTHONPATH=. python scripts/probe_versions.py
 ```
 
 ## Running tests
