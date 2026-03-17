@@ -51,7 +51,7 @@ class TestSystemIdentity:
     def test_info_returns_system_info_instance(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}",
+            f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}",
             json=make_system_data(FAKE_SYSTEM_ID),
             status=200,
         )

@@ -95,7 +95,7 @@ Antwortstruktur (Auszug):
 | Methode | URL |
 |---------|-----|
 | `GET` | `https://heartbeat.1komma5grad.com/api/v2/systems` |
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM` |
+| `GET` | `https://heartbeat.1komma5grad.com/api/v4/systems/$ONEKOMMAFIVE_SYSTEM` |
 
 ```bash
 # Alle Systeme auflisten
@@ -104,7 +104,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 # Einzelnes System
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM | jq .
+  https://heartbeat.1komma5grad.com/api/v4/systems/$ONEKOMMAFIVE_SYSTEM | jq .
 ```
 
 Antwortstruktur Liste:
@@ -139,7 +139,7 @@ Antwortstruktur Liste:
 }
 ```
 
-Der Einzelabruf enthält zusätzlich `energyTraderActive` und `electricityContractActive`, aber keine `deviceGateways`.
+Der Einzelabruf (v4) enthält keine `deviceGateways`. Die Felder `energyTraderActive` und `electricityContractActive` waren in v2 vorhanden, sind in v4 entfallen.
 
 ---
 

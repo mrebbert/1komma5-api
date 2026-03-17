@@ -41,8 +41,7 @@ class System:
     def info(self) -> SystemInfo:
         """Return static metadata for this system.
 
-        Fetches the full system detail from ``/api/v2/systems/{id}`` so that
-        all fields (e.g. ``energyTraderActive``) are available.
+        Fetches the full system detail from ``/api/v4/systems/{id}``.
 
         Returns:
             A :class:`~onekommafive.models.SystemInfo` instance.
@@ -50,7 +49,7 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = f"{self._client.HEARTBEAT_API}/api/v2/systems/{self.id()}"
+        url = f"{self._client.HEARTBEAT_API}/api/v4/systems/{self.id()}"
         response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
         if response.status_code != 200:
             raise RequestError(f"Failed to get system info: {response.text}")

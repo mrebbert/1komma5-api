@@ -228,7 +228,7 @@ Manual device settings:
 | Endpoint | API version |
 |----------|-------------|
 | List / get systems | v2 |
-| System detail | v2 |
+| System detail | **v4** |
 | Live power overview | **v3** |
 | Energy today | v2 |
 | Energy historical | **v3** |

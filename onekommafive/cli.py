@@ -74,8 +74,10 @@ def cmd_info(args: argparse.Namespace) -> None:
         print(f"Coordinates:  {si.address_latitude:.4f}, {si.address_longitude:.4f}")
     print(f"Customer ID:  {si.customer_id or '—'}")
     print(f"Dynamic Pulse:        {'yes' if si.dynamic_pulse_compatible else 'no'}")
-    print(f"Energy trading:       {'yes' if si.energy_trader_active else 'no'}")
-    print(f"Electricity contract: {'yes' if si.electricity_contract_active else 'no'}")
+    if si.energy_trader_active is not None:
+        print(f"Energy trading:       {'yes' if si.energy_trader_active else 'no'}")
+    if si.electricity_contract_active is not None:
+        print(f"Electricity contract: {'yes' if si.electricity_contract_active else 'no'}")
     print(f"Created:      {si.created_at or '—'}")
     print(f"Updated:      {si.updated_at or '—'}")
 

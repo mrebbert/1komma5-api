@@ -9,7 +9,7 @@ from typing import Any
 class SystemInfo:
     """Static metadata for a 1KOMMA5° system (site).
 
-    Populated from the ``GET /api/v2/systems/{id}`` response which is fetched
+    Populated from the ``GET /api/v4/systems/{id}`` response which is fetched
     once when the system is loaded.  Use :meth:`~onekommafive.System.info` to
     obtain an instance.
     """
@@ -50,11 +50,11 @@ class SystemInfo:
     dynamic_pulse_compatible: bool
     """Whether the system supports Dynamic Pulse (dynamic tariff optimisation)."""
 
-    energy_trader_active: bool
-    """Whether the energy trading feature is active for this system."""
+    energy_trader_active: bool | None
+    """Whether the energy trading feature is active for this system (not available in API v4+)."""
 
-    electricity_contract_active: bool
-    """Whether an electricity contract is active for this system."""
+    electricity_contract_active: bool | None
+    """Whether an electricity contract is active for this system (not available in API v4+)."""
 
     created_at: str | None
     """ISO 8601 timestamp when the system was created."""
@@ -81,8 +81,8 @@ class SystemInfo:
             address_longitude=data.get("addressLongitude"),
             customer_id=data.get("customerId"),
             dynamic_pulse_compatible=bool(data.get("dynamicPulseCompatible", False)),
-            energy_trader_active=bool(data.get("energyTraderActive", False)),
-            electricity_contract_active=bool(data.get("electricityContractActive", False)),
+            energy_trader_active=bool(data["energyTraderActive"]) if "energyTraderActive" in data else None,
+            electricity_contract_active=bool(data["electricityContractActive"]) if "electricityContractActive" in data else None,
             created_at=data.get("createdAt"),
             updated_at=data.get("updatedAt"),
             raw=data,
