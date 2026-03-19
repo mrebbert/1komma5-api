@@ -9,6 +9,7 @@ Usage:
     python cli.py set-ev-mode <mode> [--ev <ev_id>]
     python cli.py set-ev-target-soc <soc> [--ev <ev_id>]
     python cli.py set-ev-departure <HH:MM> [--ev <ev_id>]
+    python cli.py optimizations [--from YYYY-MM-DD[THH:MM]] [--to YYYY-MM-DD[THH:MM]]
     python cli.py ems
     python cli.py set-ems auto|manual
 
@@ -331,6 +332,49 @@ def cmd_ems(args: argparse.Namespace) -> None:
                 print(f"  {dev.type}")
 
 
+def _parse_dt(value: str, end_of_day: bool) -> "datetime.datetime":
+    """Parse a date or datetime string; fill missing time with start/end of day."""
+    import datetime as dt
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+        try:
+            parsed = dt.datetime.strptime(value, fmt)
+            if fmt == "%Y-%m-%d":
+                if end_of_day:
+                    parsed = parsed.replace(hour=23, minute=59, second=59)
+            return parsed
+        except ValueError:
+            continue
+    raise ValueError(f"unrecognised date/time format: {value!r}  (expected YYYY-MM-DD or YYYY-MM-DD HH:MM)")
+
+
+def cmd_optimizations(args: argparse.Namespace) -> None:
+    import datetime as dt
+    today = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    try:
+        start = _parse_dt(args.from_date, end_of_day=False) if args.from_date else today
+        end = _parse_dt(args.to_date, end_of_day=True) if args.to_date else today.replace(hour=23, minute=59, second=59)
+    except ValueError as e:
+        sys.exit(f"Error: invalid date — {e}")
+
+    client = _client()
+    system = _system(client)
+    result = system.get_optimizations(start=start, end=end)
+
+    print(f"System:  {system.id()}")
+    print(f"Period:  {start.date()} – {end.date()}")
+    print(f"Events:  {len(result.events)}")
+    if not result.events:
+        return
+    print()
+    print(f"{'Timestamp':<22}  {'Asset':<8}  {'Decision':<26}  {'Price':>9}  {'SoC':>4}")
+    print("-" * 80)
+    for ev in sorted(result.events, key=lambda e: e.timestamp):
+        soc = f"{ev.state_of_charge}%" if ev.state_of_charge is not None else "—"
+        price = f"{ev.market_price:.2f}" if ev.market_price is not None else "—"
+        ts = ev.from_time[:19].replace("T", " ")
+        print(f"{ts:<22}  {ev.asset:<8}  {ev.decision:<26}  {price:>9}  {soc:>4}")
+
+
 def cmd_set_ems(args: argparse.Namespace) -> None:
     auto = args.mode == "auto"
     client = _client()
@@ -427,6 +471,16 @@ def main() -> None:
         help="Data resolution: '1h' (default) or '15m'",
     )
 
+    opt_p = sub.add_parser("optimizations", help="AI optimisation decisions for a date range")
+    opt_p.add_argument(
+        "--from", dest="from_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
+        help="Start date/time (default: today 00:00)",
+    )
+    opt_p.add_argument(
+        "--to", dest="to_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
+        help="End date/time (default: today 23:59)",
+    )
+
     sub.add_parser("ems", help="EMS mode status")
 
     set_ems_p = sub.add_parser("set-ems", help="Set EMS operating mode")
@@ -448,6 +502,7 @@ def main() -> None:
         "set-ev-departure": cmd_set_ev_departure,
         "energy-today": cmd_energy_today,
         "energy-historical": cmd_energy_historical,
+        "optimizations": cmd_optimizations,
         "ems": cmd_ems,
         "set-ems": cmd_set_ems,
     }[args.command](args)

@@ -9,7 +9,7 @@ import requests
 
 from .errors import RequestError
 from .ev_charger import EVCharger
-from .models import ChargingMode, EmsSettings, EnergyData, LiveOverview, MarketPrices, SystemInfo
+from .models import ChargingMode, EmsSettings, EnergyData, LiveOverview, MarketPrices, OptimizationEvents, SystemInfo
 
 if TYPE_CHECKING:
     from .client import Client
@@ -268,6 +268,43 @@ class System:
         if response.status_code != 200:
             raise RequestError(f"Failed to get prices: {response.text}")
         return MarketPrices.from_dict(response.json())
+
+    # ------------------------------------------------------------------
+    # AI optimisations
+    # ------------------------------------------------------------------
+
+    def get_optimizations(
+        self,
+        start: datetime.datetime,
+        end: datetime.datetime,
+    ) -> OptimizationEvents:
+        """Fetch AI optimisation decisions for a time range.
+
+        Args:
+            start: Start of the requested interval (inclusive).
+            end: End of the requested interval (inclusive).
+
+        Returns:
+            An :class:`~onekommafive.models.OptimizationEvents` instance.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        url = f"{self._client.HEARTBEAT_API}/api/v1/heartbeat-ai/optimizations"
+        params: dict[str, str] = {
+            "siteId": self.id(),
+            "from": start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            "to": end.strftime("%Y-%m-%dT%H:%M:%S.999Z"),
+        }
+        response = requests.get(
+            url=url,
+            params=params,
+            headers=self._client._auth_headers(),
+            timeout=30,
+        )
+        if response.status_code != 200:
+            raise RequestError(f"Failed to get optimizations: {response.text}")
+        return OptimizationEvents.from_dict(response.json())
 
     def __repr__(self) -> str:
         return f"System(id={self.id()!r})"
