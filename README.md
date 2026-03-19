@@ -34,6 +34,7 @@ My personal setup, on which this library has been tested:
 - Available EV charging modes per site
 - EMS settings (auto/manual, Time-of-Use, per-device manual overrides for EV charger, battery, heat pump)
 - Market electricity prices with grid costs and VAT — API v4, EUR/kWh, `1h` or `15m` resolution
+- AI optimisation decisions (battery and EV charging actions with market price context)
 - Built-in CLI (`1k5`) for quick terminal access
 
 ## Requirements
@@ -112,6 +113,14 @@ print(f"EMS auto mode: {settings.auto_mode}  ToU: {settings.time_of_use_enabled}
 for dev in settings.manual_devices:
     print(f"  {dev.type}: {dev.raw}")
 system.set_ems_mode(auto=True)
+
+# AI optimisation decisions
+import datetime
+start = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+end = start.replace(hour=23, minute=59, second=59)
+opt = system.get_optimizations(start=start, end=end)
+for ev in opt.events:
+    print(f"{ev.from_time}  {ev.asset:<8}  {ev.decision}  {ev.market_price:.2f} EUR/MWh  SoC {ev.state_of_charge}%")
 ```
 
 ## CLI
@@ -143,6 +152,10 @@ export ONEKOMMAFIVE_SYSTEM="<system-uuid>"
 1k5 set-ev-target-soc 80 --ev <id>       Set target SoC on a specific charger
 1k5 set-ev-departure 07:30               Set primary departure time on first EV charger
 1k5 set-ev-departure 06:00 --ev <id>     Set departure time on a specific charger
+1k5 optimizations                        AI optimisation decisions for today
+1k5 optimizations --from 2026-03-19      Decisions for a specific day
+1k5 optimizations --from 2026-03-19T08:00 --to 2026-03-19T20:00
+                                         Decisions for a time window
 1k5 ems                                  EMS settings (mode, ToU, device overrides)
 1k5 set-ems auto                         Enable automatic EMS optimisation
 1k5 set-ems manual                       Enable manual EMS override
@@ -210,6 +223,22 @@ Timestamp                     PV     Grid+    Grid-    Bat%   Bat kW
 2026-03-08T12:00Z           5.008    0.334    0.053   53.6%   +4.688
 2026-03-08T13:00Z           3.500    0.500    0.000   62.0%   +2.000
 
+$ 1k5 optimizations
+System:  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Period:  2026-03-19 – 2026-03-19
+Events:  25
+
+Timestamp               Asset     Decision                    Price    SoC
+--------------------------------------------------------------------------------
+2026-03-19 00:00:00     BATTERY   BATTERY_NO_DISCHARGE        29.79     55%
+2026-03-19 00:00:00     EV        EV_CHARGE_FROM_GRID         29.79     55%
+2026-03-19 01:00:00     BATTERY   BATTERY_NO_DISCHARGE        29.90     55%
+2026-03-19 10:00:00     BATTERY   BATTERY_CHARGE_FROM_GRID    18.82     24%
+2026-03-19 12:00:00     BATTERY   BATTERY_CHARGE_FROM_GRID    16.37     63%
+2026-03-19 14:00:00     BATTERY   BATTERY_CHARGE_FROM_GRID    21.46     92%
+2026-03-19 16:00:00     BATTERY   BATTERY_NO_DISCHARGE        28.44     87%
+2026-03-19 22:30:00     BATTERY   BATTERY_NO_DISCHARGE        31.97      —
+
 $ 1k5 ems
 System:       xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 EMS mode:     AUTO
@@ -236,6 +265,7 @@ Manual device settings:
 | EV chargers (read / set) | v1 |
 | Available EV charging modes | v1 |
 | EMS (read / set) | v1 |
+| AI optimisation decisions | v1 |
 
 ## Models
 
@@ -249,6 +279,8 @@ Manual device settings:
 | `EmsSettings` | EMS mode, Time-of-Use flag, per-device manual overrides |
 | `EmsManualDevice` | One device entry in the EMS manual settings |
 | `EVCharger` | EV charger state, vehicle profile, schedule and controls |
+| `OptimizationEvents` | AI optimisation decisions for a time range |
+| `OptimizationEvent` | A single decision (asset, action, market price, SoC) |
 | `ChargingMode` | `SMART_CHARGE` / `QUICK_CHARGE` / `SOLAR_CHARGE` |
 
 ## API version monitoring
