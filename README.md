@@ -35,6 +35,7 @@ My personal setup, on which this library has been tested:
 - EMS settings (auto/manual, Time-of-Use, per-device manual overrides for EV charger, battery, heat pump)
 - Market electricity prices with grid costs and VAT — API v4, EUR/kWh, `1h` or `15m` resolution
 - AI optimisation decisions (battery and EV charging actions with market price context)
+- Weather forecast: daily summary (today/tomorrow) and 3-hour slots for 48 h — with named weather symbols
 - Built-in CLI (`1k5`) for quick terminal access
 
 ## Requirements
@@ -114,6 +115,14 @@ for dev in settings.manual_devices:
     print(f"  {dev.type}: {dev.raw}")
 system.set_ems_mode(auto=True)
 
+# Weather forecast
+from onekommafive.models import WEATHER_SYMBOLS
+w = system.get_weather()
+print(f"Heute:  {w.today.weather_description}  {w.today.temperature_celsius} °C  Sonne: {w.today.sunshine_minutes:.0f} min")
+print(f"Morgen: {w.tomorrow.weather_description}  {w.tomorrow.temperature_celsius} °C")
+for slot in w.forecasts:
+    print(f"  {slot.period_start}  {slot.weather_description}  {slot.temperature_celsius} °C  {slot.precipitation_mm} mm")
+
 # AI optimisation decisions
 import datetime
 start = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
@@ -137,6 +146,8 @@ export ONEKOMMAFIVE_SYSTEM="<system-uuid>"
 ```
 1k5 info                                 System metadata (address, status, features)
 1k5 live                                 Live power overview
+1k5 weather                              Weather forecast (today + tomorrow)
+1k5 weather --forecasts                  + 3-hour slots for the next 48 h
 1k5 energy-today                         Energy summary and timeseries for today (hourly)
 1k5 energy-today --resolution 15m        15-minute resolution
 1k5 energy-historical --from YYYY-MM-DD --to YYYY-MM-DD
@@ -223,6 +234,23 @@ Timestamp                     PV     Grid+    Grid-    Bat%   Bat kW
 2026-03-08T12:00Z           5.008    0.334    0.053   53.6%   +4.688
 2026-03-08T13:00Z           3.500    0.500    0.000   62.0%   +2.000
 
+$ 1k5 weather
+System:   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Heute:    Regen                         16.1 °C  ☀ 6.4 h  🌧 5.2 mm (87%)  ↑2026-03-11 05:57  ↓2026-03-11 17:32
+Morgen:   Heiter                        14.3 °C  ☀ 4.1 h  🌧 1.0 mm (20%)  ↑2026-03-12 05:55  ↓2026-03-12 17:34
+
+$ 1k5 weather --forecasts
+System:   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Heute:    Regen                         16.1 °C  ☀ 6.4 h  🌧 5.2 mm (87%)  ↑2026-03-11 05:57  ↓2026-03-11 17:32
+Morgen:   Heiter                        14.3 °C  ☀ 4.1 h  🌧 1.0 mm (20%)  ↑2026-03-12 05:55  ↓2026-03-12 17:34
+
+Zeit (UTC)           Wetter                         Temp    Wind      Regen   Prob   Sonne
+--------------------------------------------------------------------------------------------
+2026-03-11 15:00     Regen                          10.2°C  3.8 m/s   1.1 mm   51%   0 min
+2026-03-11 18:00     Regen (Nacht)                   8.5°C  2.9 m/s   0.5 mm   40%   0 min
+2026-03-11 21:00     Klar (Nacht)                    7.1°C  1.8 m/s   0.0 mm    5%   0 min
+...
+
 $ 1k5 optimizations
 System:  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 Period:  2026-03-19 – 2026-03-19
@@ -266,6 +294,7 @@ Manual device settings:
 | Available EV charging modes | v1 |
 | EMS (read / set) | v1 |
 | AI optimisation decisions | v1 |
+| Weather forecast | v1 |
 
 ## Models
 
@@ -281,6 +310,10 @@ Manual device settings:
 | `EVCharger` | EV charger state, vehicle profile, schedule and controls |
 | `OptimizationEvents` | AI optimisation decisions for a time range |
 | `OptimizationEvent` | A single decision (asset, action, market price, SoC) |
+| `WeatherData` | Weather forecast: daily summaries + 3-hour slots |
+| `WeatherDay` | Daily summary (temp, sunshine, precipitation, sunrise/sunset, symbol) |
+| `WeatherSlot` | One 3-hour forecast slot (temp, wind, precipitation, sunshine, symbol) |
+| `WEATHER_SYMBOLS` | Dict mapping symbol IDs to descriptions (incl. night variants) |
 | `ChargingMode` | `SMART_CHARGE` / `QUICK_CHARGE` / `SOLAR_CHARGE` |
 
 ## API version monitoring

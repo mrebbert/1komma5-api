@@ -9,7 +9,7 @@ import requests
 
 from .errors import RequestError
 from .ev_charger import EVCharger
-from .models import ChargingMode, EmsSettings, EnergyData, LiveOverview, MarketPrices, OptimizationEvents, SystemInfo
+from .models import ChargingMode, EmsSettings, EnergyData, LiveOverview, MarketPrices, OptimizationEvents, SystemInfo, WeatherData
 
 if TYPE_CHECKING:
     from .client import Client
@@ -268,6 +268,28 @@ class System:
         if response.status_code != 200:
             raise RequestError(f"Failed to get prices: {response.text}")
         return MarketPrices.from_dict(response.json())
+
+    # ------------------------------------------------------------------
+    # Weather
+    # ------------------------------------------------------------------
+
+    def get_weather(self) -> WeatherData:
+        """Fetch the weather forecast for this system's site location.
+
+        Returns daily summaries for today and tomorrow plus 3-hour slots
+        covering the next 48 hours.
+
+        Returns:
+            A :class:`~onekommafive.models.WeatherData` instance.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        url = f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/weather"
+        response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
+        if response.status_code != 200:
+            raise RequestError(f"Failed to get weather: {response.text}")
+        return WeatherData.from_dict(response.json())
 
     # ------------------------------------------------------------------
     # AI optimisations

@@ -3,6 +3,8 @@
 
 Usage:
     python cli.py live             # net grid power + separate import/export
+    python cli.py weather          # weather forecast (today/tomorrow + optional 3h slots)
+    python cli.py weather --forecasts
     python cli.py prices [--resolution 1h|15m]
     python cli.py ev
     python cli.py ev-modes
@@ -332,6 +334,41 @@ def cmd_ems(args: argparse.Namespace) -> None:
                 print(f"  {dev.type}")
 
 
+def cmd_weather(args: argparse.Namespace) -> None:
+    from onekommafive.models import WEATHER_SYMBOLS
+    client = _client()
+    system = _system(client)
+    w = system.get_weather()
+
+    def _day_label(d) -> str:
+        symbol = WEATHER_SYMBOLS.get(d.weather_symbol_id, f"Symbol {d.weather_symbol_id}") if d.weather_symbol_id else "—"
+        sun_h = f"{d.sunshine_minutes / 60:.1f} h" if d.sunshine_minutes is not None else "—"
+        rain = f"{d.precipitation_mm:.1f} mm" if d.precipitation_mm is not None else "—"
+        prob = f"{d.precipitation_probability:.0f}%" if d.precipitation_probability is not None else "—"
+        temp = f"{d.temperature_celsius:.1f} °C" if d.temperature_celsius is not None else "—"
+        rise = d.sunrise[:16].replace("T", " ") if d.sunrise else "—"
+        sset = d.sunset[:16].replace("T", " ") if d.sunset else "—"
+        return f"{symbol:<28}  {temp}  ☀ {sun_h}  🌧 {rain} ({prob})  ↑{rise}  ↓{sset}"
+
+    print(f"System:   {system.id()}")
+    print(f"Heute:    {_day_label(w.today)}")
+    print(f"Morgen:   {_day_label(w.tomorrow)}")
+
+    if args.forecasts and w.forecasts:
+        print()
+        print(f"{'Zeit (UTC)':<18}  {'Wetter':<28}  {'Temp':>6}  {'Wind':>6}  {'Regen':>8}  {'Prob':>5}  {'Sonne':>6}")
+        print("-" * 92)
+        for slot in w.forecasts:
+            ts = slot.period_start[:16].replace("T", " ")
+            desc = WEATHER_SYMBOLS.get(slot.weather_symbol_id, f"Symbol {slot.weather_symbol_id}") if slot.weather_symbol_id else "—"
+            temp = f"{slot.temperature_celsius:.1f}°C" if slot.temperature_celsius is not None else "—"
+            wind = f"{slot.wind_speed:.1f} m/s" if slot.wind_speed is not None else "—"
+            rain = f"{slot.precipitation_mm:.1f} mm" if slot.precipitation_mm is not None else "—"
+            prob = f"{slot.precipitation_probability:.0f}%" if slot.precipitation_probability is not None else "—"
+            sun = f"{slot.sunshine_minutes:.0f} min" if slot.sunshine_minutes is not None else "—"
+            print(f"{ts:<18}  {desc:<28}  {temp:>6}  {wind:>6}  {rain:>8}  {prob:>5}  {sun:>6}")
+
+
 def _parse_dt(value: str, end_of_day: bool) -> "datetime.datetime":
     """Parse a date or datetime string; fill missing time with start/end of day."""
     import datetime as dt
@@ -427,6 +464,12 @@ def main() -> None:
         help="Data resolution: '1h' (default) or '15m'",
     )
 
+    weather_p = sub.add_parser("weather", help="Weather forecast for the site location")
+    weather_p.add_argument(
+        "--forecasts", action="store_true",
+        help="Show 3-hour forecast slots for the next 48 h",
+    )
+
     sub.add_parser("ev", help="EV charger status")
 
     sub.add_parser("ev-modes", help="Available EV charging modes for this site")
@@ -494,6 +537,7 @@ def main() -> None:
     {
         "info": cmd_info,
         "live": cmd_live,
+        "weather": cmd_weather,
         "prices": cmd_prices,
         "ev": cmd_ev,
         "ev-modes": cmd_ev_modes,
