@@ -125,7 +125,9 @@ def probe(token: str, system_id: str, path_template: str, current_ver: str) -> l
             if r.status_code not in (404, 405, 401, 403):
                 hits.append((v, r.status_code))
         except requests.RequestException:
-            pass
+            # Network errors (timeout, refused, DNS) during probing are expected
+            # when a version doesn't exist on a different host/route — skip silently.
+            continue
     return hits
 
 

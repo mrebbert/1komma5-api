@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any
 import requests
 
 from .errors import RequestError
-from .ev_charger import EVCharger
 from .models import (
     ChargingMode,
     EmsSettings,
@@ -22,6 +21,7 @@ from .models import (
 
 if TYPE_CHECKING:
     from .client import Client
+    from .ev_charger import EVCharger
 
 
 class System:
@@ -120,6 +120,8 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
+        from .ev_charger import EVCharger
+
         url = f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/devices/evs"
         response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
         if response.status_code != 200:
