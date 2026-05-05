@@ -14,12 +14,11 @@ import secrets
 from typing import Any
 
 import jwt
-from jwt import PyJWKClient
 import requests
+from jwt import PyJWKClient
 
 from .errors import AuthenticationError, RequestError
 from .models import User
-
 
 # ---------------------------------------------------------------------------
 # Constants

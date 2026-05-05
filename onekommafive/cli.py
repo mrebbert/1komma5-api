@@ -369,7 +369,7 @@ def cmd_weather(args: argparse.Namespace) -> None:
             print(f"{ts:<18}  {desc:<28}  {temp:>6}  {wind:>6}  {rain:>8}  {prob:>5}  {sun:>6}")
 
 
-def _parse_dt(value: str, end_of_day: bool) -> "datetime.datetime":
+def _parse_dt(value: str, end_of_day: bool) -> datetime.datetime:
     """Parse a date or datetime string; fill missing time with start/end of day."""
     import datetime as dt
     for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"):

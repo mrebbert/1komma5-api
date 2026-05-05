@@ -338,6 +338,22 @@ Integration tests (require credentials, read-only):
 ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... pytest tests/test_integration.py -v
 ```
 
+## Linting and pre-commit
+
+Lint with [ruff](https://docs.astral.sh/ruff/):
+
+```bash
+ruff check .
+```
+
+Install the [pre-commit](https://pre-commit.com/) hooks once after cloning:
+
+```bash
+pre-commit install
+```
+
+The hooks run ruff and a few basic checks on every commit. CI also runs ruff and CodeQL on every push and pull request.
+
 ## Related projects
 
 ### [1komma5-ha](https://github.com/mrebbert/1komma5-ha)

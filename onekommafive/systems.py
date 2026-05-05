@@ -34,7 +34,7 @@ class Systems:
             print(system.id(), overview.pv_power)
     """
 
-    def __init__(self, client: "Client") -> None:
+    def __init__(self, client: Client) -> None:
         self._client = client
 
     def get_systems(self) -> list[System]:

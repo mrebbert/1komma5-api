@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import responses as resp_lib
 import pytest
+import responses as resp_lib
 
 from onekommafive.errors import RequestError
 from onekommafive.ev_charger import EVCharger
@@ -16,7 +16,6 @@ from tests.fixtures import (
     FAKE_SYSTEM_ID,
     make_client,
     make_ev_data,
-    make_system_data,
 )
 
 _BASE_URL = (

@@ -6,7 +6,6 @@ from unittest.mock import MagicMock
 
 from onekommafive.client import Client
 
-
 # ---------------------------------------------------------------------------
 # A valid (but non-expiring) fake token set – no real signature verification
 # happens in unit tests because we mock _decode_token / _is_token_expiring.
