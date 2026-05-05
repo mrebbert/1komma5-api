@@ -9,7 +9,16 @@ import requests
 
 from .errors import RequestError
 from .ev_charger import EVCharger
-from .models import ChargingMode, EmsSettings, EnergyData, LiveOverview, MarketPrices, OptimizationEvents, SystemInfo, WeatherData
+from .models import (
+    ChargingMode,
+    EmsSettings,
+    EnergyData,
+    LiveOverview,
+    MarketPrices,
+    OptimizationEvents,
+    SystemInfo,
+    WeatherData,
+)
 
 if TYPE_CHECKING:
     from .client import Client
@@ -26,7 +35,7 @@ class System:
         data: Raw system dictionary as returned by the Heartbeat API.
     """
 
-    def __init__(self, client: "Client", data: dict[str, Any]) -> None:
+    def __init__(self, client: Client, data: dict[str, Any]) -> None:
         self._client = client
         self._data = data
 

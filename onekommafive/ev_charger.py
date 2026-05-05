@@ -26,7 +26,7 @@ class EVCharger:
         data: Raw device dictionary as returned by the Heartbeat API.
     """
 
-    def __init__(self, client: "Client", system: "System", data: dict[str, Any]) -> None:
+    def __init__(self, client: Client, system: System, data: dict[str, Any]) -> None:
         self._client = client
         self._system = system
         self._data = data

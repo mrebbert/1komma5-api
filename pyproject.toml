@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "onekommafive"
-version = "0.1.16"
+version = "0.1.17"
 description = "Python API client for the 1KOMMA5° Heartbeat API"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -31,9 +31,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pre-commit>=3.5",
     "pytest>=8.0",
     "pytest-mock>=3.12",
     "responses>=0.25",
+    "ruff>=0.8",
 ]
 
 [project.scripts]
@@ -49,7 +51,11 @@ Issues = "https://github.com/mrebbert/1komma5-api/issues"
 testpaths = ["tests"]
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"onekommafive/__init__.py" = ["E501"]
+"onekommafive/cli.py" = ["E501"]

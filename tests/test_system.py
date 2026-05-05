@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import datetime
 
-import responses as resp_lib
 import pytest
+import responses as resp_lib
 
 from onekommafive.errors import RequestError
 from onekommafive.ev_charger import EVCharger

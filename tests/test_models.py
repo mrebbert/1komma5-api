@@ -276,7 +276,7 @@ class TestEmsSettings:
         assert settings.auto_mode is True
 
     def test_from_dict_populates_top_level_fields(self) -> None:
-        from tests.fixtures import make_ems_settings_data, FAKE_SYSTEM_ID
+        from tests.fixtures import FAKE_SYSTEM_ID, make_ems_settings_data
         settings = EmsSettings.from_dict(make_ems_settings_data())
         assert settings.system_id == FAKE_SYSTEM_ID
         assert settings.created_at == "2025-01-23T08:09:40.508Z"
@@ -285,7 +285,7 @@ class TestEmsSettings:
         assert settings.time_of_use_enabled is True
 
     def test_from_dict_parses_ev_charger_device(self) -> None:
-        from tests.fixtures import make_ems_settings_data, FAKE_EV_ID
+        from tests.fixtures import FAKE_EV_ID, make_ems_settings_data
         settings = EmsSettings.from_dict(make_ems_settings_data())
         ev = next(d for d in settings.manual_devices if d.type == "EV_CHARGER")
         assert isinstance(ev, EmsManualDevice)

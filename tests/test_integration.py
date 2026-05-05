@@ -22,7 +22,14 @@ import pytest
 
 from onekommafive import Client, Systems
 from onekommafive.errors import AuthenticationError
-from onekommafive.models import ChargingMode, EmsSettings, EnergyData, LiveOverview, MarketPrices, User
+from onekommafive.models import (
+    ChargingMode,
+    EmsSettings,
+    EnergyData,
+    LiveOverview,
+    MarketPrices,
+    User,
+)
 
 # ---------------------------------------------------------------------------
 # Credential fixtures – tests are skipped when env vars are absent
@@ -147,7 +154,7 @@ class TestLiveOverview:
 
     def test_pv_power_is_numeric_or_none(self, systems) -> None:
         overview = systems[0].get_live_overview()
-        assert overview.pv_power is None or isinstance(overview.pv_power, (int, float))
+        assert overview.pv_power is None or isinstance(overview.pv_power, int | float)
 
     def test_battery_soc_in_valid_range_or_none(self, systems) -> None:
         """State-of-charge must be between 0 and 100 when a battery is present."""

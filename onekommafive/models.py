@@ -81,8 +81,14 @@ class SystemInfo:
             address_longitude=data.get("addressLongitude"),
             customer_id=data.get("customerId"),
             dynamic_pulse_compatible=bool(data.get("dynamicPulseCompatible", False)),
-            energy_trader_active=bool(data["energyTraderActive"]) if "energyTraderActive" in data else None,
-            electricity_contract_active=bool(data["electricityContractActive"]) if "electricityContractActive" in data else None,
+            energy_trader_active=(
+                bool(data["energyTraderActive"]) if "energyTraderActive" in data else None
+            ),
+            electricity_contract_active=(
+                bool(data["electricityContractActive"])
+                if "electricityContractActive" in data
+                else None
+            ),
             created_at=data.get("createdAt"),
             updated_at=data.get("updatedAt"),
             raw=data,
@@ -741,7 +747,8 @@ class OptimizationEvent:
     """ISO-8601 timestamp when the decision was recorded."""
 
     decision: str
-    """Optimisation decision, e.g. ``'BATTERY_NO_DISCHARGE'``, ``'BATTERY_CHARGE_FROM_GRID'``, ``'EV_CHARGE_FROM_GRID'``."""
+    """Optimisation decision, e.g. ``'BATTERY_NO_DISCHARGE'``,
+    ``'BATTERY_CHARGE_FROM_GRID'``, ``'EV_CHARGE_FROM_GRID'``."""
 
     asset: str
     """Asset the decision applies to, e.g. ``'BATTERY'`` or ``'EV'``."""

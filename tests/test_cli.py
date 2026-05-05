@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from onekommafive.cli import main
 from onekommafive.models import ChargingMode, EmsSettings, LiveOverview, MarketPrices, SystemInfo

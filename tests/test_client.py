@@ -3,25 +3,23 @@
 from __future__ import annotations
 
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 import responses as resp_lib
 
 from onekommafive.client import (
-    Client,
     _TOKEN_URL,
+    Client,
     _generate_code_challenge,
     _generate_code_verifier,
 )
 from onekommafive.errors import AuthenticationError, RequestError
 from tests.fixtures import (
     FAKE_ACCESS_TOKEN,
-    FAKE_REFRESH_TOKEN,
     FAKE_TOKEN_SET,
     make_client,
 )
-
 
 # ---------------------------------------------------------------------------
 # PKCE helpers
