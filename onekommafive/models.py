@@ -132,6 +132,11 @@ class MarketPrices:
 
     Returned by :meth:`~onekommafive.System.get_prices`.  All price values are
     in **EUR/kWh** as provided by the API (v4).
+
+    The summary fields ``*_with_grid_costs`` and ``*_all_in`` are set to
+    ``float("nan")`` when the API does not deliver the corresponding block
+    (``energyMarketWithGridCosts`` / ``energyMarketWithGridCostsAndVat``).
+    Use ``math.isnan(value)`` to check for missing summaries.
     """
 
     # ------------------------------------------------------------------
