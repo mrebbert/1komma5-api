@@ -23,6 +23,8 @@ htmlcov/
 
 # Debug / exploration scripts (not part of the public library)
 debug_*.py
+*.log
+result
 
 # Editor
 .idea/
@@ -34,3 +36,4 @@ debug_*.py
 
 # Claude Code session data
 .claude/
+tasks/

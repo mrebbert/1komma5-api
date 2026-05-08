@@ -31,7 +31,7 @@ import os
 import sys
 
 from onekommafive import Client, Systems
-from onekommafive.models import ChargingMode, MarketPrices
+from onekommafive.models import WEATHER_SYMBOLS, ChargingMode, MarketPrices
 
 
 def _client() -> Client:
@@ -155,10 +155,9 @@ def cmd_energy_today(args: argparse.Namespace) -> None:
 
 
 def cmd_energy_historical(args: argparse.Namespace) -> None:
-    import datetime as dt
     try:
-        from_date = dt.date.fromisoformat(args.from_date)
-        to_date = dt.date.fromisoformat(args.to_date)
+        from_date = datetime.date.fromisoformat(args.from_date)
+        to_date = datetime.date.fromisoformat(args.to_date)
     except ValueError as e:
         sys.exit(f"Error: invalid date — {e}")
     client = _client()
@@ -257,21 +256,9 @@ def cmd_set_ev_mode(args: argparse.Namespace) -> None:
         valid = ", ".join(m.value for m in ChargingMode)
         sys.exit(f"Error: invalid mode {args.mode!r}. Valid values: {valid}")
 
-    client = _client()
-    system = _system(client)
-    chargers = system.get_ev_chargers()
-    if not chargers:
-        sys.exit("Error: no EV chargers registered on this system")
-
-    if args.ev:
-        target = next((ev for ev in chargers if ev.id() == args.ev), None)
-        if target is None:
-            sys.exit(f"Error: EV charger {args.ev!r} not found")
-    else:
-        target = chargers[0]
-
-    target.set_charging_mode(mode)
-    print(f"EV {target.id()}: charging mode set to {mode.value}")
+    ev = _resolve_ev(args)
+    ev.set_charging_mode(mode)
+    print(f"EV {ev.id()}: charging mode set to {mode.value}")
 
 
 def _resolve_ev(args):
@@ -323,7 +310,7 @@ def cmd_ems(args: argparse.Namespace) -> None:
             if dev.type == "EV_CHARGER":
                 mode = dev.active_charging_mode or "—"
                 ev = dev.assigned_ev_name or dev.assigned_ev_id or "—"
-                print(f"  EV_CHARGER  {dev.charger_name or dev.id or '—'}  →  {mode}  ({ev})")
+                print(f"  EV_CHARGER  {dev.charger_name or dev.id or '—'}  ->  {mode}  ({ev})")
             elif dev.type == "BATTERY":
                 fc = "enabled" if dev.enable_forecast_charging else "disabled"
                 print(f"  BATTERY     Forecast charging: {fc}")
@@ -335,7 +322,6 @@ def cmd_ems(args: argparse.Namespace) -> None:
 
 
 def cmd_weather(args: argparse.Namespace) -> None:
-    from onekommafive.models import WEATHER_SYMBOLS
     client = _client()
     system = _system(client)
     w = system.get_weather()
@@ -348,7 +334,7 @@ def cmd_weather(args: argparse.Namespace) -> None:
         temp = f"{d.temperature_celsius:.1f} °C" if d.temperature_celsius is not None else "—"
         rise = d.sunrise[:16].replace("T", " ") if d.sunrise else "—"
         sset = d.sunset[:16].replace("T", " ") if d.sunset else "—"
-        return f"{symbol:<28}  {temp}  ☀ {sun_h}  🌧 {rain} ({prob})  ↑{rise}  ↓{sset}"
+        return f"{symbol:<28}  {temp}  Sun {sun_h}  Rain {rain} ({prob})  Rise {rise}  Set {sset}"
 
     print(f"System:   {system.id()}")
     print(f"Heute:    {_day_label(w.today)}")
@@ -371,10 +357,9 @@ def cmd_weather(args: argparse.Namespace) -> None:
 
 def _parse_dt(value: str, end_of_day: bool) -> datetime.datetime:
     """Parse a date or datetime string; fill missing time with start/end of day."""
-    import datetime as dt
     for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
         try:
-            parsed = dt.datetime.strptime(value, fmt)
+            parsed = datetime.datetime.strptime(value, fmt)
             if fmt == "%Y-%m-%d":
                 if end_of_day:
                     parsed = parsed.replace(hour=23, minute=59, second=59)
@@ -385,8 +370,7 @@ def _parse_dt(value: str, end_of_day: bool) -> datetime.datetime:
 
 
 def cmd_optimizations(args: argparse.Namespace) -> None:
-    import datetime as dt
-    today = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     try:
         start = _parse_dt(args.from_date, end_of_day=False) if args.from_date else today
         end = _parse_dt(args.to_date, end_of_day=True) if args.to_date else today.replace(hour=23, minute=59, second=59)
