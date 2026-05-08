@@ -140,14 +140,12 @@ class Client:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        response = requests.get(
-            url=f"{_IDENTITY_API}/api/v1/users/me",
-            headers=self._auth_headers(),
-            timeout=30,
+        data = self._request(
+            "GET",
+            f"{_IDENTITY_API}/api/v1/users/me",
+            error_label="Failed to get user",
         )
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get user: {response.text}")
-        return User.from_dict(response.json())
+        return User.from_dict(data)
 
     def logout(self) -> None:
         """Invalidate the current session on the Auth0 server.
@@ -177,6 +175,34 @@ class Client:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.get_token()}",
         }
+
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        params: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+        expected_status: int = 200,
+        error_label: str = "Request failed",
+    ) -> Any:
+        """Issue an authenticated HTTP request and return the parsed JSON body.
+
+        Returns ``None`` for empty response bodies (e.g. 201 Created with no body).
+        Raises :class:`RequestError` if the response status doesn't match
+        ``expected_status``.
+        """
+        response = requests.request(
+            method,
+            url,
+            params=params,
+            json=json,
+            headers=self._auth_headers(),
+            timeout=30,
+        )
+        if response.status_code != expected_status:
+            raise RequestError(f"{error_label}: {response.text}")
+        return response.json() if response.content else None
 
     # ------------------------------------------------------------------
     # Token management

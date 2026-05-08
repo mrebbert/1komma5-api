@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-import requests
-
-from .errors import RequestError
 from .models import ChargingMode
 
 if TYPE_CHECKING:
@@ -137,6 +134,14 @@ class EVCharger:
     # Mutating operations
     # ------------------------------------------------------------------
 
+    def _url(self) -> str:
+        """Return the device endpoint URL for this charger."""
+        return (
+            f"{self._client.HEARTBEAT_API}"
+            f"/api/v1/systems/{self._system.id()}"
+            f"/devices/evs/{self.id()}"
+        )
+
     def set_charging_mode(self, mode: ChargingMode) -> None:
         """Change the charging strategy of this EV charger.
 
@@ -151,20 +156,12 @@ class EVCharger:
         if self.charging_mode() == mode:
             return
 
-        url = (
-            f"{self._client.HEARTBEAT_API}"
-            f"/api/v1/systems/{self._system.id()}"
-            f"/devices/evs/{self.id()}"
-        )
-        response = requests.patch(
-            url=url,
+        self._client._request(
+            "PATCH",
+            self._url(),
             json={"chargeSettings": {"chargingMode": mode.value}},
-            headers=self._client._auth_headers(),
-            timeout=30,
+            error_label="Failed to set charging mode",
         )
-        if response.status_code != 200:
-            raise RequestError(f"Failed to set charging mode: {response.text}")
-
         self._data["chargeSettings"]["chargingMode"] = mode.value
 
     def set_current_soc(self, soc: float) -> None:
@@ -184,20 +181,12 @@ class EVCharger:
 
         soc_decimal = float(soc / 100.0) if soc > 0 else 0.0
 
-        url = (
-            f"{self._client.HEARTBEAT_API}"
-            f"/api/v1/systems/{self._system.id()}"
-            f"/devices/evs/{self.id()}"
-        )
-        response = requests.patch(
-            url=url,
+        self._client._request(
+            "PATCH",
+            self._url(),
             json={"id": self.id(), "manualSoc": soc_decimal},
-            headers=self._client._auth_headers(),
-            timeout=30,
+            error_label="Failed to set state of charge",
         )
-        if response.status_code != 200:
-            raise RequestError(f"Failed to set state of charge: {response.text}")
-
         self._data["manualSoc"] = soc_decimal
 
     def set_target_soc(self, soc: float) -> None:
@@ -215,20 +204,12 @@ class EVCharger:
             return
 
         soc_decimal = soc / 100.0
-        url = (
-            f"{self._client.HEARTBEAT_API}"
-            f"/api/v1/systems/{self._system.id()}"
-            f"/devices/evs/{self.id()}"
-        )
-        response = requests.patch(
-            url=url,
+        self._client._request(
+            "PATCH",
+            self._url(),
             json={"chargeSettings": {"targetSoc": soc_decimal}},
-            headers=self._client._auth_headers(),
-            timeout=30,
+            error_label="Failed to set target state of charge",
         )
-        if response.status_code != 200:
-            raise RequestError(f"Failed to set target state of charge: {response.text}")
-
         self._data["chargeSettings"]["targetSoc"] = soc_decimal
 
     def set_primary_departure_time(self, time: str) -> None:
@@ -245,20 +226,12 @@ class EVCharger:
         if self.primary_schedule_departure_time() == time:
             return
 
-        url = (
-            f"{self._client.HEARTBEAT_API}"
-            f"/api/v1/systems/{self._system.id()}"
-            f"/devices/evs/{self.id()}"
-        )
-        response = requests.patch(
-            url=url,
+        self._client._request(
+            "PATCH",
+            self._url(),
             json={"chargeSettings": {"primaryScheduleDepartureTime": time}},
-            headers=self._client._auth_headers(),
-            timeout=30,
+            error_label="Failed to set primary departure time",
         )
-        if response.status_code != 200:
-            raise RequestError(f"Failed to set primary departure time: {response.text}")
-
         self._data["chargeSettings"]["primaryScheduleDepartureTime"] = time
 
     def __repr__(self) -> str:

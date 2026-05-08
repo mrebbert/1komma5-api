@@ -5,9 +5,6 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING, Any
 
-import requests
-
-from .errors import RequestError
 from .models import (
     ChargingMode,
     EmsSettings,
@@ -58,11 +55,12 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = f"{self._client.HEARTBEAT_API}/api/v4/systems/{self.id()}"
-        response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get system info: {response.text}")
-        return SystemInfo.from_dict(response.json())
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v4/systems/{self.id()}",
+            error_label="Failed to get system info",
+        )
+        return SystemInfo.from_dict(data)
 
     # ------------------------------------------------------------------
     # Live data
@@ -78,11 +76,12 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = f"{self._client.HEARTBEAT_API}/api/v3/systems/{self.id()}/live-overview"
-        response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get live overview: {response.text}")
-        return LiveOverview.from_dict(response.json())
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v3/systems/{self.id()}/live-overview",
+            error_label="Failed to get live overview",
+        )
+        return LiveOverview.from_dict(data)
 
     # ------------------------------------------------------------------
     # EV chargers
@@ -97,14 +96,11 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = (
-            f"{self._client.HEARTBEAT_API}"
-            f"/api/v1/sites/{self.id()}/assets/evs/displayed-ev-charging-modes"
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v1/sites/{self.id()}/assets/evs/displayed-ev-charging-modes",
+            error_label="Failed to get displayed EV charging modes",
         )
-        response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get displayed EV charging modes: {response.text}")
-        data = response.json()
         return [
             ChargingMode(entry["type"])
             for entry in data.get("displayedEvChargingModes", [])
@@ -122,11 +118,12 @@ class System:
         """
         from .ev_charger import EVCharger
 
-        url = f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/devices/evs"
-        response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get EV chargers: {response.text}")
-        return [EVCharger(self._client, self, ev) for ev in response.json()]
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/devices/evs",
+            error_label="Failed to get EV chargers",
+        )
+        return [EVCharger(self._client, self, ev) for ev in data]
 
     # ------------------------------------------------------------------
     # Energy data
@@ -144,16 +141,13 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = f"{self._client.HEARTBEAT_API}/api/v2/systems/{self.id()}/energy-today"
-        response = requests.get(
-            url=url,
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v2/systems/{self.id()}/energy-today",
             params={"resolution": resolution},
-            headers=self._client._auth_headers(),
-            timeout=30,
+            error_label="Failed to get energy today",
         )
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get energy today: {response.text}")
-        return EnergyData.from_dict(response.json())
+        return EnergyData.from_dict(data)
 
     def get_energy_historical(
         self,
@@ -177,20 +171,17 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = f"{self._client.HEARTBEAT_API}/api/v3/systems/{self.id()}/energy-historical"
-        response = requests.get(
-            url=url,
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v3/systems/{self.id()}/energy-historical",
             params={
                 "from": from_date.isoformat(),
                 "to": to_date.isoformat(),
                 "resolution": resolution,
             },
-            headers=self._client._auth_headers(),
-            timeout=30,
+            error_label="Failed to get historical energy data",
         )
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get historical energy data: {response.text}")
-        return EnergyData.from_dict(response.json())
+        return EnergyData.from_dict(data)
 
     # ------------------------------------------------------------------
     # EMS
@@ -205,14 +196,12 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = (
-            f"{self._client.HEARTBEAT_API}"
-            f"/api/v1/systems/{self.id()}/ems/actions/get-settings"
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/ems/actions/get-settings",
+            error_label="Failed to get EMS settings",
         )
-        response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get EMS settings: {response.text}")
-        return EmsSettings.from_dict(response.json())
+        return EmsSettings.from_dict(data)
 
     def set_ems_mode(self, auto: bool) -> None:
         """Switch the energy-management system between auto and manual mode.
@@ -224,18 +213,13 @@ class System:
         Raises:
             RequestError: If the server returns a non-201 response.
         """
-        url = (
-            f"{self._client.HEARTBEAT_API}"
-            f"/api/v1/systems/{self.id()}/ems/actions/set-manual-override"
-        )
-        response = requests.post(
-            url=url,
+        self._client._request(
+            "POST",
+            f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/ems/actions/set-manual-override",
             json={"manualSettings": {}, "overrideAutoSettings": not auto},
-            headers=self._client._auth_headers(),
-            timeout=30,
+            expected_status=201,
+            error_label="Failed to set EMS mode",
         )
-        if response.status_code != 201:
-            raise RequestError(f"Failed to set EMS mode: {response.text}")
 
     # ------------------------------------------------------------------
     # Prices
@@ -261,24 +245,17 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = (
-            f"{self._client.HEARTBEAT_API}"
-            f"/api/v4/systems/{self.id()}/charts/market-prices"
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v4/systems/{self.id()}/charts/market-prices",
+            params={
+                "from": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "to": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "resolution": resolution,
+            },
+            error_label="Failed to get prices",
         )
-        params: dict[str, str] = {
-            "from": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "to": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "resolution": resolution,
-        }
-        response = requests.get(
-            url=url,
-            params=params,
-            headers=self._client._auth_headers(),
-            timeout=30,
-        )
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get prices: {response.text}")
-        return MarketPrices.from_dict(response.json())
+        return MarketPrices.from_dict(data)
 
     # ------------------------------------------------------------------
     # Weather
@@ -296,11 +273,12 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/weather"
-        response = requests.get(url=url, headers=self._client._auth_headers(), timeout=30)
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get weather: {response.text}")
-        return WeatherData.from_dict(response.json())
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/weather",
+            error_label="Failed to get weather",
+        )
+        return WeatherData.from_dict(data)
 
     # ------------------------------------------------------------------
     # AI optimisations
@@ -323,21 +301,17 @@ class System:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        url = f"{self._client.HEARTBEAT_API}/api/v1/heartbeat-ai/optimizations"
-        params: dict[str, str] = {
-            "siteId": self.id(),
-            "from": start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            "to": end.strftime("%Y-%m-%dT%H:%M:%S.999Z"),
-        }
-        response = requests.get(
-            url=url,
-            params=params,
-            headers=self._client._auth_headers(),
-            timeout=30,
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v1/heartbeat-ai/optimizations",
+            params={
+                "siteId": self.id(),
+                "from": start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "to": end.strftime("%Y-%m-%dT%H:%M:%S.999Z"),
+            },
+            error_label="Failed to get optimizations",
         )
-        if response.status_code != 200:
-            raise RequestError(f"Failed to get optimizations: {response.text}")
-        return OptimizationEvents.from_dict(response.json())
+        return OptimizationEvents.from_dict(data)
 
     def __repr__(self) -> str:
         return f"System(id={self.id()!r})"
