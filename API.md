@@ -141,6 +141,67 @@ Antwortstruktur Liste:
 
 Der Einzelabruf (v4) enthält keine `deviceGateways`. Die Felder `energyTraderActive` und `electricityContractActive` waren in v2 vorhanden, sind in v4 entfallen.
 
+#### Details (v1, erweitert)
+
+Reicher als der v4-Einzelabruf: enthält zusätzlich `empType`, `technicalContact*`, eingebetteten `customer`-Block, Smart-Meter-Status, `earliestMeasurement` sowie die installierten `deviceGateways`. Bringt außerdem `energyTraderActive` und `electricityContractActive` wieder mit, die in v4 entfallen waren.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/details` |
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/details" | jq .
+```
+
+Antwortstruktur (anonymisiert):
+
+```json
+{
+  "id": "<uuid>",
+  "empType": "GRIDX",
+  "systemName": "Mustermann",
+  "status": "ACTIVE",
+  "addressName": null,
+  "addressLine1": "Musterstraße 1",
+  "addressLine2": null,
+  "addressZipCode": "20095",
+  "addressCity": "Hamburg",
+  "addressCountry": "DE",
+  "addressLongitude": 0.0,
+  "addressLatitude": 0.0,
+  "technicalContactId": "<uuid>",
+  "technicalContactName": "1KOMMA5° <Region>",
+  "customerId": "<uuid>",
+  "customer": {
+    "id": "<uuid>",
+    "firstName": "Erika",
+    "lastName": "Mustermann",
+    "email": "user@example.com"
+  },
+  "dynamicPulseCompatible": true,
+  "energyTraderActive": true,
+  "electricityContractActive": true,
+  "hasThirdPartySmartMeter": null,
+  "thirdPartySmartMeterMeterId": null,
+  "thirdPartySmartMeterDeletedAt": null,
+  "thirdPartySmartMeterMarketLocationId": null,
+  "earliestMeasurement": "YYYY-MM-DD",
+  "createdAt": "ISO8601",
+  "updatedAt": "ISO8601",
+  "deviceGateways": [
+    {
+      "id": "<uuid>",
+      "gridxStartCode": "<hex-token>",
+      "serialNumber": "I000-000-000-000-000-X-X",
+      "installationDate": "YYYY-MM-DD"
+    }
+  ]
+}
+```
+
+Hinweis: `empType` beschreibt den Energy-Management-Provider; bisher nur der Wert `"GRIDX"` beobachtet. Die `gridxStartCode`/Serial der Gateways sind anlagenspezifische Kopplungswerte und sollten nicht protokolliert werden.
+
 ---
 
 ### Status und Assets (v2)
@@ -164,16 +225,25 @@ Antwortstruktur:
       "id": "<uuid>",
       "type": "HYBRID | HEAT_PUMP | METER | EV_CHARGER",
       "empType": "GRIDX",
+      "name": "Wallbox",
       "connectionStatus": { "status": "CONNECTED" },
       "manufacturer": "...",
       "model": "...",
       "serialnumber": "...",
       "firmware": "...",
-      "network": { "address": "<local-ip>" }
+      "network": { "address": "<local-ip>" },
+      "heatPumpMeterType": "HOUSEHOLD"
     }
   ]
 }
 ```
+
+Typ-spezifische Felder:
+
+- `name` ist bisher nur bei `EV_CHARGER`-Assets gesehen.
+- `firmware` fehlt häufig bei `METER` und `HEAT_PUMP`.
+- `heatPumpMeterType` tritt nur bei `HEAT_PUMP` auf (Werte z.B. `"HOUSEHOLD"`).
+- `serialnumber` ist im API kleingeschrieben (nicht `serialNumber`); bei `HEAT_PUMP`-Geräten kann der Wert das Format `mac_<lowercase-mac>` haben.
 
 Asset-Typen einer typischen Anlage:
 
@@ -183,6 +253,43 @@ Asset-Typen einer typischen Anlage:
 | `HEAT_PUMP` | Stiebel Eltron | WPMsystem |
 | `METER` | Chint | DTSU666 |
 | `EV_CHARGER` | go-e | HOMEfix 11kW |
+
+---
+
+### Aktive Feature-Flags (v1, customer-identity)
+
+Listet die für ein Customer/Site-Paar aktiven Feature-Codes. Anderer Host als die übrigen Endpunkte (`customer-identity` statt `heartbeat`).
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features` |
+
+`$CUSTOMER_ID` lässt sich aus dem Feld `customerId` der `/api/v1/systems/{id}/details`-Antwort gewinnen.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{
+  "features": [
+    "DYNAMIC_TARIFF",
+    "TIME_OF_USE_OPTIMIZATION",
+    "SMART_CHARGING"
+  ]
+}
+```
+
+Bekannte Feature-Codes (nicht abschließend — die Liste kann sich erweitern):
+
+| Code | Bedeutung |
+|------|-----------|
+| `DYNAMIC_TARIFF` | Dynamischer Strompreis-Tarif aktiv |
+| `TIME_OF_USE_OPTIMIZATION` | Zeitvariable Tarif-Optimierung durch das EMS |
+| `SMART_CHARGING` | EV-Smart-Charging verfügbar |
 
 ---
 

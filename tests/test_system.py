@@ -9,10 +9,19 @@ import responses as resp_lib
 
 from onekommafive.errors import RequestError
 from onekommafive.ev_charger import EVCharger
-from onekommafive.models import EmsSettings, EnergyData, LiveOverview, MarketPrices, SystemInfo
+from onekommafive.models import (
+    EmsSettings,
+    EnergyData,
+    LiveOverview,
+    MarketPrices,
+    SiteStatus,
+    SystemDetails,
+    SystemInfo,
+)
 from onekommafive.system import System
 from tests.fixtures import (
     FAKE_SYSTEM_ID,
+    make_active_features_data,
     make_client,
     make_displayed_ev_charging_modes_data,
     make_ems_settings_data,
@@ -20,14 +29,18 @@ from tests.fixtures import (
     make_ev_data,
     make_live_overview_data,
     make_price_data,
+    make_status_and_assets_data,
     make_system_data,
+    make_system_details_data,
 )
 
 _BASE = "https://heartbeat.1komma5grad.com"
+_IDENTITY_BASE = "https://customer-identity.1komma5grad.com"
 _SYSTEM_BASE = f"{_BASE}/api/v1/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V2 = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V3 = f"{_BASE}/api/v3/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V4 = f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"
+_SITE_BASE_V2 = f"{_BASE}/api/v2/sites/{FAKE_SYSTEM_ID}"
 
 
 def _make_system() -> System:
@@ -63,6 +76,74 @@ class TestSystemIdentity:
         assert info.address_city == "Hamburg"
         assert info.energy_trader_active is True
         assert info.electricity_contract_active is True
+
+
+# ---------------------------------------------------------------------------
+# System details (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetSystemDetails:
+    """Tests for System.get_details."""
+
+    @resp_lib.activate
+    def test_returns_system_details_instance(self) -> None:
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_SYSTEM_BASE}/details",
+            json=make_system_details_data(FAKE_SYSTEM_ID),
+            status=200,
+        )
+        details = _make_system().get_details()
+        assert isinstance(details, SystemDetails)
+        assert details.id == FAKE_SYSTEM_ID
+        assert details.name == "My Home System"
+        assert details.status == "ACTIVE"
+        assert details.emp_type == "GRIDX"
+        assert details.address_city == "Hamburg"
+        assert details.address_country == "DE"
+        assert details.technical_contact_name == "Example Installer"
+        assert details.customer is not None
+        assert details.customer.email == "user@example.com"
+        assert details.customer.first_name == "John"
+        assert details.energy_trader_active is True
+        assert details.electricity_contract_active is True
+        assert details.has_third_party_smart_meter is None  # API returned null
+        assert details.earliest_measurement == "2025-01-24"
+        assert len(details.device_gateways) == 1
+        gw = details.device_gateways[0]
+        assert gw.id == "gw-0001-0000-0000-0000-000000000001"
+        assert gw.serial_number == "I000-000-000-000-000-X-X"
+        assert gw.installation_date == "2025-01-24"
+
+    @resp_lib.activate
+    def test_handles_minimal_response(self) -> None:
+        """Systems with most optional fields missing should still parse."""
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_SYSTEM_BASE}/details",
+            json={"id": FAKE_SYSTEM_ID},
+            status=200,
+        )
+        details = _make_system().get_details()
+        assert details.id == FAKE_SYSTEM_ID
+        assert details.name is None
+        assert details.customer is None
+        assert details.device_gateways == []
+        assert details.energy_trader_active is None
+        assert details.electricity_contract_active is None
+        assert details.has_third_party_smart_meter is None
+        assert details.dynamic_pulse_compatible is False
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_SYSTEM_BASE}/details",
+            json={"error": "error"},
+            status=500,
+        )
+        with pytest.raises(RequestError, match="Failed to get system details"):
+            _make_system().get_details()
 
 
 # ---------------------------------------------------------------------------
@@ -504,3 +585,104 @@ class TestGetEnergyHistorical:
             _make_system().get_energy_historical(
                 from_date=datetime.date(2026, 3, 8), to_date=datetime.date(2026, 3, 8)
             )
+
+
+# ---------------------------------------------------------------------------
+# Status and assets (v2)
+# ---------------------------------------------------------------------------
+
+class TestGetStatusAndAssets:
+    """Tests for System.get_status_and_assets."""
+
+    @resp_lib.activate
+    def test_returns_site_status_instance(self) -> None:
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_SITE_BASE_V2}/status-and-assets",
+            json=make_status_and_assets_data(),
+            status=200,
+        )
+        result = _make_system().get_status_and_assets()
+        assert isinstance(result, SiteStatus)
+        assert result.status == "CONNECTED"
+        assert len(result.assets) == 4
+
+    @resp_lib.activate
+    def test_flattens_connection_and_network(self) -> None:
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_SITE_BASE_V2}/status-and-assets",
+            json=make_status_and_assets_data(),
+            status=200,
+        )
+        result = _make_system().get_status_and_assets()
+        types = {a.type for a in result.assets}
+        assert types == {"HYBRID", "HEAT_PUMP", "METER", "EV_CHARGER"}
+        for asset in result.assets:
+            assert asset.connection_status == "CONNECTED"
+            assert asset.network_address is not None
+            assert asset.emp_type == "GRIDX"
+
+    @resp_lib.activate
+    def test_extracts_optional_fields(self) -> None:
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_SITE_BASE_V2}/status-and-assets",
+            json=make_status_and_assets_data(),
+            status=200,
+        )
+        assets = {a.type: a for a in _make_system().get_status_and_assets().assets}
+        # EV charger has a name; others don't
+        assert assets["EV_CHARGER"].name == "Wallbox"
+        assert assets["HYBRID"].name is None
+        # Heat pump has heat_pump_meter_type; others don't
+        assert assets["HEAT_PUMP"].heat_pump_meter_type == "HOUSEHOLD"
+        assert assets["METER"].heat_pump_meter_type is None
+        # serial_number uses lowercase 'n' API field
+        assert assets["EV_CHARGER"].serial_number == "00000"
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(
+            resp_lib.GET,
+            f"{_SITE_BASE_V2}/status-and-assets",
+            json={"error": "error"},
+            status=500,
+        )
+        with pytest.raises(RequestError, match="Failed to get site status and assets"):
+            _make_system().get_status_and_assets()
+
+
+# ---------------------------------------------------------------------------
+# Active features (customer-identity v1)
+# ---------------------------------------------------------------------------
+
+class TestGetActiveFeatures:
+    """Tests for System.get_active_features."""
+
+    _CUSTOMER_ID = "cust-0001"
+
+    def _url(self) -> str:
+        return f"{_IDENTITY_BASE}/api/v1/customers/{self._CUSTOMER_ID}/sites/{FAKE_SYSTEM_ID}/active-features"
+
+    @resp_lib.activate
+    def test_returns_list_of_feature_codes(self) -> None:
+        resp_lib.add(resp_lib.GET, self._url(), json=make_active_features_data(), status=200)
+        features = _make_system().get_active_features(self._CUSTOMER_ID)
+        assert features == ["DYNAMIC_TARIFF", "TIME_OF_USE_OPTIMIZATION", "SMART_CHARGING"]
+
+    @resp_lib.activate
+    def test_returns_empty_list_when_no_features(self) -> None:
+        resp_lib.add(resp_lib.GET, self._url(), json={"features": []}, status=200)
+        assert _make_system().get_active_features(self._CUSTOMER_ID) == []
+
+    @resp_lib.activate
+    def test_handles_missing_features_key(self) -> None:
+        resp_lib.add(resp_lib.GET, self._url(), json={}, status=200)
+        assert _make_system().get_active_features(self._CUSTOMER_ID) == []
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._url(), json={"error": "error"}, status=500)
+        with pytest.raises(RequestError, match="Failed to get active features"):
+            _make_system().get_active_features(self._CUSTOMER_ID)

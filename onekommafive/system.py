@@ -12,6 +12,8 @@ from .models import (
     LiveOverview,
     MarketPrices,
     OptimizationEvents,
+    SiteStatus,
+    SystemDetails,
     SystemInfo,
     WeatherData,
 )
@@ -37,6 +39,20 @@ class System:
         self._data = data
 
     # ------------------------------------------------------------------
+    # URL helpers
+    # ------------------------------------------------------------------
+
+    def _systems_url(self, version: str, *parts: str) -> str:
+        """Build a Heartbeat URL under ``/api/{version}/systems/{id}/{*parts}``."""
+        base = f"{self._client.HEARTBEAT_API}/api/{version}/systems/{self.id()}"
+        return base + ("/" + "/".join(parts) if parts else "")
+
+    def _sites_url(self, version: str, *parts: str) -> str:
+        """Build a Heartbeat URL under ``/api/{version}/sites/{id}/{*parts}``."""
+        base = f"{self._client.HEARTBEAT_API}/api/{version}/sites/{self.id()}"
+        return base + ("/" + "/".join(parts) if parts else "")
+
+    # ------------------------------------------------------------------
     # Identity
     # ------------------------------------------------------------------
 
@@ -56,11 +72,77 @@ class System:
             RequestError: If the server returns a non-200 response.
         """
         data = self._client._request(
-            "GET",
-            f"{self._client.HEARTBEAT_API}/api/v4/systems/{self.id()}",
-            error_label="Failed to get system info",
+            "GET", self._systems_url("v4"), error_label="Failed to get system info",
         )
         return SystemInfo.from_dict(data)
+
+    def get_details(self) -> SystemDetails:
+        """Return extended metadata for this system.
+
+        Fetches ``/api/v1/systems/{id}/details``, which is richer than
+        :meth:`info`: it additionally exposes the energy-management provider
+        type, technical-contact details, embedded customer contact details,
+        third-party smart-meter status, the earliest available measurement
+        date, and the list of installed device gateways (e.g. GridX boxes).
+
+        Returns:
+            A :class:`~onekommafive.models.SystemDetails` instance.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        data = self._client._request(
+            "GET", self._systems_url("v1", "details"), error_label="Failed to get system details",
+        )
+        return SystemDetails.from_dict(data)
+
+    def get_status_and_assets(self) -> SiteStatus:
+        """Return the connection status and hardware asset inventory for this site.
+
+        Fetches ``/api/v2/sites/{id}/status-and-assets`` and exposes the
+        overall site status plus a list of installed assets (inverter, meter,
+        heat pump, EV charger, …).
+
+        Returns:
+            A :class:`~onekommafive.models.SiteStatus` instance.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        data = self._client._request(
+            "GET",
+            self._sites_url("v2", "status-and-assets"),
+            error_label="Failed to get site status and assets",
+        )
+        return SiteStatus.from_dict(data)
+
+    def get_active_features(self, customer_id: str) -> list[str]:
+        """Return the list of active feature flags for this site.
+
+        Calls
+        ``GET https://customer-identity.1komma5grad.com/api/v1/customers/{customer_id}/sites/{site_id}/active-features``.
+
+        Known values include ``"DYNAMIC_TARIFF"``, ``"TIME_OF_USE_OPTIMIZATION"``,
+        and ``"SMART_CHARGING"``; the full list is not officially documented and
+        new codes may appear.
+
+        Args:
+            customer_id: The customer UUID owning this site. Obtain it from
+                :meth:`get_details` (``SystemDetails.customer_id`` /
+                ``SystemDetails.customer.id``).
+
+        Returns:
+            A list of feature code strings. May be empty.
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        data = self._client._request(
+            "GET",
+            f"{self._client.IDENTITY_API}/api/v1/customers/{customer_id}/sites/{self.id()}/active-features",
+            error_label="Failed to get active features",
+        )
+        return list(data.get("features", []))
 
     # ------------------------------------------------------------------
     # Live data
@@ -77,8 +159,7 @@ class System:
             RequestError: If the server returns a non-200 response.
         """
         data = self._client._request(
-            "GET",
-            f"{self._client.HEARTBEAT_API}/api/v3/systems/{self.id()}/live-overview",
+            "GET", self._systems_url("v3", "live-overview"),
             error_label="Failed to get live overview",
         )
         return LiveOverview.from_dict(data)
@@ -98,7 +179,7 @@ class System:
         """
         data = self._client._request(
             "GET",
-            f"{self._client.HEARTBEAT_API}/api/v1/sites/{self.id()}/assets/evs/displayed-ev-charging-modes",
+            self._sites_url("v1", "assets", "evs", "displayed-ev-charging-modes"),
             error_label="Failed to get displayed EV charging modes",
         )
         return [
@@ -119,8 +200,7 @@ class System:
         from .ev_charger import EVCharger
 
         data = self._client._request(
-            "GET",
-            f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/devices/evs",
+            "GET", self._systems_url("v1", "devices", "evs"),
             error_label="Failed to get EV chargers",
         )
         return [EVCharger(self._client, self, ev) for ev in data]
@@ -142,8 +222,7 @@ class System:
             RequestError: If the server returns a non-200 response.
         """
         data = self._client._request(
-            "GET",
-            f"{self._client.HEARTBEAT_API}/api/v2/systems/{self.id()}/energy-today",
+            "GET", self._systems_url("v2", "energy-today"),
             params={"resolution": resolution},
             error_label="Failed to get energy today",
         )
@@ -172,8 +251,7 @@ class System:
             RequestError: If the server returns a non-200 response.
         """
         data = self._client._request(
-            "GET",
-            f"{self._client.HEARTBEAT_API}/api/v3/systems/{self.id()}/energy-historical",
+            "GET", self._systems_url("v3", "energy-historical"),
             params={
                 "from": from_date.isoformat(),
                 "to": to_date.isoformat(),
@@ -197,8 +275,7 @@ class System:
             RequestError: If the server returns a non-200 response.
         """
         data = self._client._request(
-            "GET",
-            f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/ems/actions/get-settings",
+            "GET", self._systems_url("v1", "ems", "actions", "get-settings"),
             error_label="Failed to get EMS settings",
         )
         return EmsSettings.from_dict(data)
@@ -215,7 +292,7 @@ class System:
         """
         self._client._request(
             "POST",
-            f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/ems/actions/set-manual-override",
+            self._systems_url("v1", "ems", "actions", "set-manual-override"),
             json={"manualSettings": {}, "overrideAutoSettings": not auto},
             expected_status=201,
             error_label="Failed to set EMS mode",
@@ -246,8 +323,7 @@ class System:
             RequestError: If the server returns a non-200 response.
         """
         data = self._client._request(
-            "GET",
-            f"{self._client.HEARTBEAT_API}/api/v4/systems/{self.id()}/charts/market-prices",
+            "GET", self._systems_url("v4", "charts", "market-prices"),
             params={
                 "from": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "to": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -274,8 +350,7 @@ class System:
             RequestError: If the server returns a non-200 response.
         """
         data = self._client._request(
-            "GET",
-            f"{self._client.HEARTBEAT_API}/api/v1/systems/{self.id()}/weather",
+            "GET", self._systems_url("v1", "weather"),
             error_label="Failed to get weather",
         )
         return WeatherData.from_dict(data)

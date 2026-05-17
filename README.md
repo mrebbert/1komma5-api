@@ -28,6 +28,9 @@ My personal setup, on which this library has been tested:
 
 - OAuth2 + PKCE authentication (matches the mobile app flow), with automatic token refresh
 - System metadata (address, status, features) — `SystemInfo`
+- Extended system metadata (customer, installer, smart meter, gateways, earliest measurement) — `SystemDetails`
+- Site status & hardware asset inventory (inverter, heat pump, meter, EV charger with manufacturer / model / serial / firmware / network) — `SiteStatus`, `Asset`
+- Active feature flags for a customer + site (e.g. `DYNAMIC_TARIFF`, `TIME_OF_USE_OPTIMIZATION`, `SMART_CHARGING`)
 - Live power snapshot (PV, battery, grid, consumption, heat pumps, EV chargers, ACs, self-sufficiency) — API v3
 - Energy summary and timeseries for today or any historical date range — API v2/v3, `1h` or `15m` resolution
 - EV charger state and control (charging mode, current SoC, target SoC, departure time, vehicle profile)
@@ -145,6 +148,10 @@ export ONEKOMMAFIVE_SYSTEM="<system-uuid>"
 
 ```
 1k5 info                                 System metadata (address, status, features)
+1k5 details                              Extended system metadata (customer, installer, gateways)
+1k5 assets                               Site connection status + installed hardware assets
+1k5 features                             Active feature flags (customer_id auto-resolved via details)
+1k5 features --customer-id <uuid>        Active feature flags for a specific customer
 1k5 live                                 Live power overview
 1k5 weather                              Weather forecast (today + tomorrow)
 1k5 weather --forecasts                  + 3-hour slots for the next 48 h
@@ -286,6 +293,9 @@ Manual device settings:
 |----------|-------------|
 | List / get systems | v2 |
 | System detail | **v4** |
+| System details (extended, with gateways/customer) | v1 |
+| Site status & assets | v2 |
+| Active feature flags (customer-identity) | v1 |
 | Live power overview | **v3** |
 | Energy today | v2 |
 | Energy historical | **v3** |
@@ -301,6 +311,11 @@ Manual device settings:
 | Class | Description |
 |-------|-------------|
 | `SystemInfo` | System metadata (address, status, feature flags) |
+| `SystemDetails` | Extended system metadata: customer, installer, smart meter, gateways, earliest measurement |
+| `SystemCustomer` | Customer contact details embedded in `SystemDetails` |
+| `DeviceGateway` | One device gateway (e.g. GridX box) installed at the site |
+| `SiteStatus` | Overall site connection status + asset inventory |
+| `Asset` | One hardware asset (inverter, heat pump, meter, EV charger) with manufacturer/model/serial/firmware/network |
 | `LiveOverview` | Real-time power snapshot (W), incl. net grid power, separate import/export, smart devices and self-sufficiency |
 | `EnergyData` | Energy summary (kWh totals, self-sufficiency, savings) and per-slot timeseries |
 | `EnergySlot` | One timeseries slot — PV production, per-device consumption (kW), grid flows, battery SoC and charge/discharge |

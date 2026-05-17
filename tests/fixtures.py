@@ -71,6 +71,118 @@ def make_system_data(system_id: str = FAKE_SYSTEM_ID) -> dict:
     }
 
 
+def make_system_details_data(system_id: str = FAKE_SYSTEM_ID) -> dict:
+    """Return a system details payload matching the /api/v1/systems/{id}/details shape.
+
+    All identifiers and personal data are fully synthetic.
+    """
+    return {
+        "id": system_id,
+        "empType": "GRIDX",
+        "systemName": "My Home System",
+        "status": "ACTIVE",
+        "addressName": None,
+        "addressLine1": "Musterstraße 1",
+        "addressLine2": None,
+        "addressZipCode": "20095",
+        "addressCity": "Hamburg",
+        "addressCountry": "DE",
+        "addressLongitude": 10.0,
+        "addressLatitude": 53.5,
+        "technicalContactId": "tc-0001",
+        "customerId": "cust-0001",
+        "dynamicPulseCompatible": True,
+        "hasThirdPartySmartMeter": None,
+        "thirdPartySmartMeterMeterId": None,
+        "thirdPartySmartMeterDeletedAt": None,
+        "thirdPartySmartMeterMarketLocationId": None,
+        "updatedAt": "2026-03-12T21:15:31.358Z",
+        "createdAt": "2025-01-23T08:09:40.042Z",
+        "technicalContactName": "Example Installer",
+        "customer": {
+            "id": "cust-0001",
+            "firstName": "John",
+            "lastName": "Doe",
+            "email": "user@example.com",
+        },
+        "energyTraderActive": True,
+        "earliestMeasurement": "2025-01-24",
+        "electricityContractActive": True,
+        "deviceGateways": [
+            {
+                "id": "gw-0001-0000-0000-0000-000000000001",
+                "gridxStartCode": "0000000000000000",
+                "serialNumber": "I000-000-000-000-000-X-X",
+                "installationDate": "2025-01-24",
+            }
+        ],
+    }
+
+
+def make_status_and_assets_data() -> dict:
+    """Return a /status-and-assets v2 response with synthetic assets covering all known types."""
+    return {
+        "status": "CONNECTED",
+        "assets": [
+            {
+                "id": "asset-hyb-0000-0000-0000-000000000001",
+                "type": "HYBRID",
+                "empType": "GRIDX",
+                "connectionStatus": {"status": "CONNECTED"},
+                "manufacturer": "Sungrow",
+                "model": "SH6.0RT-V112",
+                "serialnumber": "A00000000000",
+                "firmware": "ARM_SAPPHIRE-H_V11_V01_B",
+                "network": {"address": "192.0.2.10"},
+            },
+            {
+                "id": "asset-hp-0000-0000-0000-000000000001",
+                "type": "HEAT_PUMP",
+                "empType": "GRIDX",
+                "connectionStatus": {"status": "CONNECTED"},
+                "manufacturer": "Stiebel Eltron",
+                "model": "WPMsystem",
+                "serialnumber": "mac_00:00:00:00:00:00",
+                "network": {"address": "192.0.2.20"},
+                "heatPumpMeterType": "HOUSEHOLD",
+            },
+            {
+                "id": "asset-meter-0000-0000-0000-000000000001",
+                "type": "METER",
+                "empType": "GRIDX",
+                "connectionStatus": {"status": "CONNECTED"},
+                "manufacturer": "Chint",
+                "model": "DTSU666",
+                "serialnumber": "A00000000000",
+                "network": {"address": "192.0.2.10"},
+            },
+            {
+                "id": "asset-ev-0000-0000-0000-000000000001",
+                "type": "EV_CHARGER",
+                "empType": "GRIDX",
+                "name": "Wallbox",
+                "connectionStatus": {"status": "CONNECTED"},
+                "manufacturer": "go-e",
+                "model": "HOMEfix 11kW",
+                "serialnumber": "00000",
+                "firmware": "60.4",
+                "network": {"address": "192.0.2.30"},
+            },
+        ],
+    }
+
+
+def make_active_features_data() -> dict:
+    """Return an /active-features v1 response."""
+    return {
+        "features": [
+            "DYNAMIC_TARIFF",
+            "TIME_OF_USE_OPTIMIZATION",
+            "SMART_CHARGING",
+        ]
+    }
+
+
 def make_ev_data(
     ev_id: str = FAKE_EV_ID,
     charging_mode: str = "SMART_CHARGE",

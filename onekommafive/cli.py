@@ -2,6 +2,10 @@
 """Simple CLI for the 1KOMMA5° Heartbeat API.
 
 Usage:
+    python cli.py info             # basic system metadata (v4)
+    python cli.py details          # extended system metadata incl. gateways + customer (v1)
+    python cli.py assets           # site connection status + installed hardware assets
+    python cli.py features [--customer-id UUID]  # active feature flags
     python cli.py live             # net grid power + separate import/export
     python cli.py weather          # weather forecast (today/tomorrow + optional 3h slots)
     python cli.py weather --forecasts
@@ -83,6 +87,103 @@ def cmd_info(args: argparse.Namespace) -> None:
         print(f"Electricity contract: {'yes' if si.electricity_contract_active else 'no'}")
     print(f"Created:      {si.created_at or '—'}")
     print(f"Updated:      {si.updated_at or '—'}")
+
+
+def cmd_details(args: argparse.Namespace) -> None:
+    client = _client()
+    system = _system(client)
+    d = system.get_details()
+    addr_parts = filter(None, [
+        d.address_line1,
+        d.address_line2,
+        f"{d.address_zip_code} {d.address_city}".strip() or None,
+        d.address_country,
+    ])
+    print(f"System:       {d.id}")
+    print(f"Name:         {d.name or '—'}")
+    print(f"Status:       {d.status or '—'}")
+    print(f"EMP type:     {d.emp_type or '—'}")
+    print(f"Address:      {', '.join(addr_parts) or '—'}")
+    if d.address_latitude is not None and d.address_longitude is not None:
+        print(f"Coordinates:  {d.address_latitude:.4f}, {d.address_longitude:.4f}")
+    if d.customer is not None:
+        name = " ".join(filter(None, [d.customer.first_name, d.customer.last_name])) or "—"
+        print(f"Customer:     {name}  <{d.customer.email or '—'}>  ({d.customer.id})")
+    elif d.customer_id:
+        print(f"Customer ID:  {d.customer_id}")
+    if d.technical_contact_name or d.technical_contact_id:
+        contact = d.technical_contact_name or d.technical_contact_id
+        print(f"Installer:    {contact}")
+    print(f"Dynamic Pulse:        {'yes' if d.dynamic_pulse_compatible else 'no'}")
+    if d.energy_trader_active is not None:
+        print(f"Energy trading:       {'yes' if d.energy_trader_active else 'no'}")
+    if d.electricity_contract_active is not None:
+        print(f"Electricity contract: {'yes' if d.electricity_contract_active else 'no'}")
+    if d.has_third_party_smart_meter is not None:
+        sm = "yes" if d.has_third_party_smart_meter else "no"
+        extra = f"  (meter {d.third_party_smart_meter_meter_id})" if d.third_party_smart_meter_meter_id else ""
+        print(f"3rd-party smart meter: {sm}{extra}")
+    if d.earliest_measurement:
+        print(f"Earliest measurement: {d.earliest_measurement}")
+    print(f"Created:      {d.created_at or '—'}")
+    print(f"Updated:      {d.updated_at or '—'}")
+    if d.device_gateways:
+        print()
+        print("Device gateways:")
+        for gw in d.device_gateways:
+            print(f"  {gw.id}")
+            if gw.serial_number:
+                print(f"    Serial:        {gw.serial_number}")
+            if gw.gridx_start_code:
+                print(f"    GridX code:    {gw.gridx_start_code}")
+            if gw.installation_date:
+                print(f"    Installed:     {gw.installation_date}")
+
+
+def cmd_assets(args: argparse.Namespace) -> None:
+    client = _client()
+    system = _system(client)
+    s = system.get_status_and_assets()
+    print(f"System:       {system.id()}")
+    print(f"Site status:  {s.status or '—'}")
+    if not s.assets:
+        print("No assets registered.")
+        return
+    print()
+    for a in s.assets:
+        label = a.name or a.type
+        print(f"  {a.type:<11}  {label}")
+        if a.manufacturer or a.model:
+            print(f"    Hardware:    {a.manufacturer or '—'}  {a.model or ''}".rstrip())
+        if a.serial_number:
+            print(f"    Serial:      {a.serial_number}")
+        if a.firmware:
+            print(f"    Firmware:    {a.firmware}")
+        if a.network_address:
+            print(f"    Network:     {a.network_address}")
+        if a.heat_pump_meter_type:
+            print(f"    Meter type:  {a.heat_pump_meter_type}")
+        print(f"    Status:      {a.connection_status or '—'}  (id {a.id})")
+
+
+def cmd_features(args: argparse.Namespace) -> None:
+    client = _client()
+    system = _system(client)
+    customer_id = args.customer_id
+    if not customer_id:
+        details = system.get_details()
+        customer_id = details.customer_id
+        if not customer_id:
+            sys.exit("Error: system details do not expose a customer_id; pass --customer-id explicitly")
+    features = system.get_active_features(customer_id)
+    print(f"System:       {system.id()}")
+    print(f"Customer:     {customer_id}")
+    if not features:
+        print("No active features.")
+        return
+    print(f"Active features ({len(features)}):")
+    for f in features:
+        print(f"  {f}")
 
 
 def cmd_live(args: argparse.Namespace) -> None:
@@ -437,6 +538,15 @@ def main() -> None:
     sub.required = True
 
     sub.add_parser("info", help="System metadata (address, status, features)")
+    sub.add_parser("details", help="Extended system metadata (customer, installer, gateways)")
+    sub.add_parser("assets", help="Site connection status + installed hardware assets")
+
+    features_p = sub.add_parser("features", help="Active site feature flags (per customer + site)")
+    features_p.add_argument(
+        "--customer-id", dest="customer_id", metavar="UUID", default=None,
+        help="Customer UUID (default: looked up via system details)",
+    )
+
     sub.add_parser("live", help="Live power overview")
 
     prices_p = sub.add_parser("prices", help="Market electricity prices (yesterday) [--resolution 1h|15m]")
@@ -520,6 +630,9 @@ def main() -> None:
     args = parser.parse_args()
     {
         "info": cmd_info,
+        "details": cmd_details,
+        "assets": cmd_assets,
+        "features": cmd_features,
         "live": cmd_live,
         "weather": cmd_weather,
         "prices": cmd_prices,

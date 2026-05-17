@@ -97,6 +97,9 @@ class Client:
     #: importing the module-level constant directly.
     HEARTBEAT_API: str = HEARTBEAT_API
 
+    #: Base URL of the customer-identity API (user profile, per-site feature flags).
+    IDENTITY_API: str = _IDENTITY_API
+
     def __init__(self, username: str, password: str) -> None:
         self._username = username
         self._password = password
