@@ -32,12 +32,34 @@ SOURCE_DIR = Path(__file__).parent.parent / "onekommafive"
 # The path may contain f-string placeholders like {self.id()} — we capture them too.
 VERSION_RE = re.compile(r"/api/(v\d+)/((?:[^\s\"'])+)")
 
+# Regex: capture `_systems_url("vN", "part1", "part2", ...)` and `_sites_url(...)`
+# invocations that the System class uses since the v0.1.21 refactor — the literal
+# URL no longer appears at the call site, only the helper invocation.
+HELPER_RE = re.compile(
+    r"_(systems|sites)_url\(\s*\"(v\d+)\"((?:\s*,\s*\"[^\"]+\")*)\s*\)"
+)
+
 
 def _normalise(path: str) -> str:
-    """Replace f-string expressions and bare variable names with a stable placeholder."""
-    # {self.id()}, {self._system.id()}, {system_id}, {ev_id}, {s}, etc.
+    """Reduce a captured raw URL fragment to its stable path template.
+
+    1. Collapse f-string placeholders (``{self.id()}``, ``{system_id}``, …) to
+       the literal ``{id}`` so call sites with different variable names map to
+       the same template.
+    2. Cut at the first character outside the URL-safe alphabet so docstring
+       leakage (trailing backticks, parens, periods, commas) is dropped.
+    """
     path = re.sub(r"\{[^}]+\}", "{id}", path)
-    return path.rstrip("/")
+    m = re.match(r"[A-Za-z0-9_/\-{}]+", path)
+    return (m.group(0) if m else "").rstrip("/")
+
+
+def _record(found: dict, normalised: str, ver: str, raw: str, src_name: str) -> None:
+    """Register a discovered endpoint, keeping the highest version when duplicated."""
+    if not normalised:
+        return
+    if normalised not in found or int(ver[1:]) > int(found[normalised][0][1:]):
+        found[normalised] = (ver, raw, src_name)
 
 
 def parse_client_versions() -> dict[str, tuple[str, str, str]]:
@@ -45,12 +67,16 @@ def parse_client_versions() -> dict[str, tuple[str, str, str]]:
     Returns a dict keyed by normalised path template:
         path_template -> (version_str, raw_path, source_file)
 
-    When multiple files define the same path, the highest version wins
-    (shouldn't happen, but guards against stale copies).
+    Discovers endpoints from two patterns:
+      - inline ``/api/vN/...`` URLs (used by client.py, systems.py, ev_charger.py
+        and the three System endpoints that don't fit the systems/sites layout)
+      - ``_systems_url("vN", "p1", "p2")`` / ``_sites_url(...)`` helper calls
+        (used by System for the standard ``/api/vN/systems/{id}/...`` and
+        ``/api/vN/sites/{id}/...`` endpoints since v0.1.21)
     """
     found: dict[str, tuple[str, str, str]] = {}
-    for src in SOURCE_DIR.glob("*.py"):
-        for lineno, line in enumerate(src.read_text().splitlines(), 1):
+    for src in SOURCE_DIR.rglob("*.py"):
+        for line in src.read_text().splitlines():
             # Skip comments and docstrings (lines that are pure documentation)
             stripped = line.lstrip()
             if stripped.startswith("#") or stripped.startswith("``"):
@@ -59,11 +85,12 @@ def parse_client_versions() -> dict[str, tuple[str, str, str]]:
                 ver, rest = m.group(1), m.group(2)
                 # Strip trailing backticks, quotes, or punctuation from docstring leakage
                 rest = re.sub(r"[`\"']+$", "", rest)
-                normalised = _normalise(rest)
-                if not normalised:
-                    continue
-                if normalised not in found or int(ver[1:]) > int(found[normalised][0][1:]):
-                    found[normalised] = (ver, rest, src.name)
+                _record(found, _normalise(rest), ver, rest, src.name)
+            for m in HELPER_RE.finditer(line):
+                kind, ver, parts_str = m.group(1), m.group(2), m.group(3)
+                parts = re.findall(r'"([^"]+)"', parts_str)
+                path = f"{kind}/{{id}}" + ("/" + "/".join(parts) if parts else "")
+                _record(found, path, ver, path, src.name)
     return found
 
 
