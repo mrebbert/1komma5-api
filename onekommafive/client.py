@@ -10,7 +10,9 @@ from __future__ import annotations
 import base64
 import datetime
 import hashlib
+import json
 import secrets
+from pathlib import Path
 from typing import Any
 
 import jwt
@@ -83,6 +85,12 @@ class Client:
     Args:
         username: The e-mail address registered with the 1KOMMA5° account.
         password: The account password.
+        token_cache: Optional path to a JSON file used to persist the OAuth2
+            token set across process restarts. When provided, the client loads
+            any cached tokens on construction and writes back after every
+            successful login or refresh. The file is created with ``chmod 600``
+            and bound to ``username``; cached tokens belonging to a different
+            user are ignored.
 
     Example::
 
@@ -90,6 +98,13 @@ class Client:
 
         client = Client("user@example.com", "s3cr3t")
         token = client.get_token()   # logs in on first call
+
+        # With persistent cache (e.g. for a CLI invoked repeatedly):
+        client = Client(
+            "user@example.com",
+            "s3cr3t",
+            token_cache="~/.cache/onekommafive/cli_token.json",
+        )
     """
 
     #: Base URL of the Heartbeat REST API – exposed as a class attribute so
@@ -100,11 +115,22 @@ class Client:
     #: Base URL of the customer-identity API (user profile, per-site feature flags).
     IDENTITY_API: str = _IDENTITY_API
 
-    def __init__(self, username: str, password: str) -> None:
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        *,
+        token_cache: Path | str | None = None,
+    ) -> None:
         self._username = username
         self._password = password
         self._token_set: dict[str, Any] | None = None
         self._jwks_client = PyJWKClient(_JWKS_URL)
+        self._token_cache_path: Path | None = (
+            Path(token_cache).expanduser() if token_cache else None
+        )
+        if self._token_cache_path is not None:
+            self._load_token_cache()
 
     # ------------------------------------------------------------------
     # Public interface
@@ -232,6 +258,32 @@ class Client:
             algorithms=["RS256"],
         )
 
+    def _load_token_cache(self) -> None:
+        """Populate ``self._token_set`` from the cache file when available.
+
+        Silently ignores: missing file, unreadable file, invalid JSON, and
+        cached tokens that belong to a different username (cache files are
+        per-user; mixing them is a privacy/security hazard).
+        """
+        if self._token_cache_path is None or not self._token_cache_path.exists():
+            return
+        try:
+            data = json.loads(self._token_cache_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            return
+        if data.get("_username") != self._username:
+            return
+        self._token_set = {k: v for k, v in data.items() if not k.startswith("_")}
+
+    def _save_token_cache(self) -> None:
+        """Persist ``self._token_set`` to the cache file with ``chmod 600``."""
+        if self._token_cache_path is None or self._token_set is None:
+            return
+        self._token_cache_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {**self._token_set, "_username": self._username}
+        self._token_cache_path.write_text(json.dumps(payload))
+        self._token_cache_path.chmod(0o600)
+
     def _is_token_expiring(self, before_seconds: int) -> bool:
         """Return ``True`` when the access token expires within *before_seconds*.
 
@@ -336,6 +388,7 @@ class Client:
             raise AuthenticationError(f"Token exchange failed: {token_response.text}")
 
         self._token_set = token_response.json()
+        self._save_token_cache()
         return self._token_set["access_token"]
 
     def _refresh_token(self) -> str:
@@ -366,4 +419,5 @@ class Client:
             raise AuthenticationError(f"Token refresh failed: {response.text}")
 
         self._token_set = response.json()
+        self._save_token_cache()
         return self._token_set["access_token"]

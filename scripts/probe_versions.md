@@ -14,16 +14,21 @@ Run this script after a 1KOMMA5° app update to catch API version bumps before t
 ## Usage
 
 ```bash
-# With username + password (token is obtained automatically)
+# First run: provide credentials. Token + system ID are cached afterwards.
 ONEKOMMAFIVE_USERNAME=user@example.com \
 ONEKOMMAFIVE_PASSWORD=s3cr3t \
 PYTHONPATH=. python scripts/probe_versions.py
 
-# With an existing Bearer token
+# Subsequent runs within the JWT lifetime (~1h) need no env vars at all
+PYTHONPATH=. python scripts/probe_versions.py
+
+# Explicit override (skips the cache; e.g. for CI)
 BEARER_TOKEN=<jwt> \
 ONEKOMMAFIVE_SYSTEM=<system-uuid> \
 PYTHONPATH=. python scripts/probe_versions.py
 ```
+
+The token cache lives at `~/.cache/onekommafive/probe_token.json` (`chmod 600`). Delete it to force a fresh login.
 
 ## Example output — nothing new
 

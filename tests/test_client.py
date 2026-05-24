@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+import os
+import stat
 import time
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
@@ -237,3 +241,85 @@ class TestLogout:
         with pytest.raises(RequestError):
             client.logout()
         assert client._token_set is None
+
+
+# ---------------------------------------------------------------------------
+# Token cache (cross-process persistence)
+# ---------------------------------------------------------------------------
+
+class TestTokenCache:
+    """Tests for the optional ``token_cache`` constructor parameter."""
+
+    def test_no_cache_param_keeps_behaviour_unchanged(self, tmp_path: Path) -> None:
+        """Default (cache disabled) must not touch the filesystem."""
+        client = Client("u@example.com", "p")
+        assert client._token_cache_path is None
+        assert client._token_set is None
+
+    def test_load_populates_token_set_from_existing_file(self, tmp_path: Path) -> None:
+        cache = tmp_path / "token.json"
+        cache.write_text(json.dumps({**FAKE_TOKEN_SET, "_username": "u@example.com"}))
+
+        client = Client("u@example.com", "p", token_cache=cache)
+
+        assert client._token_set == FAKE_TOKEN_SET
+
+    def test_load_ignores_cache_for_different_user(self, tmp_path: Path) -> None:
+        """Cache files are bound to a single user; cross-user reads must be rejected."""
+        cache = tmp_path / "token.json"
+        cache.write_text(json.dumps({**FAKE_TOKEN_SET, "_username": "other@example.com"}))
+
+        client = Client("u@example.com", "p", token_cache=cache)
+
+        assert client._token_set is None
+
+    def test_load_silently_skips_missing_file(self, tmp_path: Path) -> None:
+        client = Client("u@example.com", "p", token_cache=tmp_path / "absent.json")
+        assert client._token_set is None
+
+    def test_load_silently_skips_corrupt_json(self, tmp_path: Path) -> None:
+        cache = tmp_path / "token.json"
+        cache.write_text("not-valid-json{")
+        client = Client("u@example.com", "p", token_cache=cache)
+        assert client._token_set is None
+
+    def test_expanduser_resolves_tilde_in_path(self, tmp_path: Path, monkeypatch) -> None:
+        """``~`` in the cache path must be expanded to ``$HOME``."""
+        monkeypatch.setenv("HOME", str(tmp_path))
+        client = Client("u@example.com", "p", token_cache="~/cache.json")
+        assert client._token_cache_path == tmp_path / "cache.json"
+
+    @resp_lib.activate
+    def test_save_writes_after_refresh_with_chmod_600(self, tmp_path: Path) -> None:
+        cache = tmp_path / "token.json"
+        resp_lib.add(
+            resp_lib.POST,
+            _TOKEN_URL,
+            json={"access_token": "fresh", "refresh_token": "fresh-refresh"},
+            status=200,
+        )
+        client = Client("u@example.com", "p", token_cache=cache)
+        client._token_set = FAKE_TOKEN_SET.copy()
+        client._refresh_token()
+
+        assert cache.exists()
+        data = json.loads(cache.read_text())
+        assert data["access_token"] == "fresh"
+        assert data["_username"] == "u@example.com"
+        # chmod 600 — owner read/write only
+        mode = stat.S_IMODE(os.stat(cache).st_mode)
+        assert mode == 0o600
+
+    def test_save_is_noop_without_token_set(self, tmp_path: Path) -> None:
+        cache = tmp_path / "token.json"
+        client = Client("u@example.com", "p", token_cache=cache)
+        # token_set is None — no login happened — nothing to save
+        client._save_token_cache()
+        assert not cache.exists()
+
+    def test_save_creates_parent_directories(self, tmp_path: Path) -> None:
+        cache = tmp_path / "nested" / "dir" / "token.json"
+        client = Client("u@example.com", "p", token_cache=cache)
+        client._token_set = FAKE_TOKEN_SET.copy()
+        client._save_token_cache()
+        assert cache.exists()

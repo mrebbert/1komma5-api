@@ -25,6 +25,12 @@ Credentials are read from the environment:
 
 An optional ONEKOMMAFIVE_SYSTEM env var selects a system by ID;
 otherwise the first system is used.
+
+After the first login the OAuth2 token set is cached in
+~/.cache/onekommafive/cli_token.json (chmod 600) so subsequent CLI
+invocations skip the login round-trip until the JWT expires (~1h).
+Set ONEKOMMAFIVE_NO_CACHE=1 to disable, or delete the file to force a
+fresh login.
 """
 
 from __future__ import annotations
@@ -33,9 +39,15 @@ import argparse
 import datetime
 import os
 import sys
+from pathlib import Path
 
 from onekommafive import Client, Systems
 from onekommafive.models import WEATHER_SYMBOLS, ChargingMode, MarketPrices
+
+# Token cache for the CLI: skips the OAuth2 login round-trip on subsequent
+# invocations while the JWT is still valid (~1h). Delete the file or set
+# ONEKOMMAFIVE_NO_CACHE=1 to force a fresh login.
+_CLI_TOKEN_CACHE = Path.home() / ".cache" / "onekommafive" / "cli_token.json"
 
 
 def _client() -> Client:
@@ -43,7 +55,8 @@ def _client() -> Client:
     password = os.environ.get("ONEKOMMAFIVE_PASSWORD")
     if not username or not password:
         sys.exit("Error: set ONEKOMMAFIVE_USERNAME and ONEKOMMAFIVE_PASSWORD")
-    return Client(username, password)
+    cache = None if os.environ.get("ONEKOMMAFIVE_NO_CACHE") else _CLI_TOKEN_CACHE
+    return Client(username, password, token_cache=cache)
 
 
 def _system(client: Client):

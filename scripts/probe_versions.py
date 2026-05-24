@@ -3,16 +3,25 @@
 Probe for newer API versions than currently used in the client.
 
 Usage:
+    # First run: log in once; token + system ID are cached for re-use.
     ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... python scripts/probe_versions.py
 
-Or with an existing bearer token:
+    # Subsequent runs within the JWT lifetime (~1h): no credentials needed.
+    python scripts/probe_versions.py
+
+    # CI / explicit override (skips cache):
     BEARER_TOKEN=... ONEKOMMAFIVE_SYSTEM=... python scripts/probe_versions.py
+
+Cache file: ~/.cache/onekommafive/probe_token.json (chmod 600).
 """
+import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
+import jwt
 import requests
 
 # ---------------------------------------------------------------------------
@@ -23,6 +32,8 @@ HEARTBEAT_BASE = "https://heartbeat.1komma5grad.com"
 IDENTITY_BASE = "https://customer-identity.1komma5grad.com"
 MAX_VERSION = 7  # probe up to this version number
 SOURCE_DIR = Path(__file__).parent.parent / "onekommafive"
+CACHE_FILE = Path.home() / ".cache" / "onekommafive" / "probe_token.json"
+CACHE_EXPIRY_MARGIN = 60  # seconds before JWT exp at which we treat token as stale
 
 # ---------------------------------------------------------------------------
 # Step 1: Parse current versions from source files
@@ -98,32 +109,74 @@ def parse_client_versions() -> dict[str, tuple[str, str, str]]:
 # Step 2: Obtain Bearer token + system ID
 # ---------------------------------------------------------------------------
 
+def _load_cached_token() -> tuple[str, str] | None:
+    """Return (token, system_id) from the cache when present and not expired."""
+    if not CACHE_FILE.exists():
+        return None
+    try:
+        data = json.loads(CACHE_FILE.read_text())
+        if data["expires_at"] - CACHE_EXPIRY_MARGIN < time.time():
+            return None
+        return data["token"], data["system_id"]
+    except (OSError, json.JSONDecodeError, KeyError):
+        return None
+
+
+def _save_cached_token(token: str, system_id: str) -> None:
+    """Persist token + system_id with the JWT expiry timestamp.
+
+    Falls back to ~50 minutes if the JWT cannot be decoded — the script
+    will then re-login earlier than strictly necessary, which is harmless.
+    """
+    try:
+        payload = jwt.decode(token, options={"verify_signature": False})
+        exp = int(payload["exp"])
+    except (jwt.InvalidTokenError, KeyError, ValueError):
+        exp = int(time.time()) + 3000
+    CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    CACHE_FILE.write_text(
+        json.dumps({"token": token, "expires_at": exp, "system_id": system_id})
+    )
+    CACHE_FILE.chmod(0o600)
+
+
 def get_credentials() -> tuple[str, str]:
-    token = os.environ.get("BEARER_TOKEN")
-    system = os.environ.get("ONEKOMMAFIVE_SYSTEM")
-
-    if not token:
-        username = os.environ.get("ONEKOMMAFIVE_USERNAME")
-        password = os.environ.get("ONEKOMMAFIVE_PASSWORD")
-        if not username or not password:
-            print(
-                "Error: set BEARER_TOKEN or (ONEKOMMAFIVE_USERNAME + ONEKOMMAFIVE_PASSWORD)",
-                file=sys.stderr,
-            )
+    # 1) Explicit BEARER_TOKEN override (CI-friendly; bypasses the cache).
+    if env_token := os.environ.get("BEARER_TOKEN"):
+        env_system = os.environ.get("ONEKOMMAFIVE_SYSTEM")
+        if not env_system:
+            print("Error: BEARER_TOKEN requires ONEKOMMAFIVE_SYSTEM", file=sys.stderr)
             sys.exit(1)
-        sys.path.insert(0, str(Path(__file__).parent.parent))
-        from onekommafive import Client  # noqa: PLC0415
-        from onekommafive.systems import Systems  # noqa: PLC0415
-        client = Client(username, password)
-        token = client.get_token()
-        if not system:
-            systems = Systems(client).get_systems()
-            system = systems[0].id() if systems else ""
+        return env_token, env_system
 
-    if not system:
-        print("Error: set ONEKOMMAFIVE_SYSTEM", file=sys.stderr)
+    # 2) Cached token from a previous interactive login.
+    if cached := _load_cached_token():
+        return cached
+
+    # 3) Fresh login via username + password; cache the result.
+    username = os.environ.get("ONEKOMMAFIVE_USERNAME")
+    password = os.environ.get("ONEKOMMAFIVE_PASSWORD")
+    if not username or not password:
+        print(
+            "Error: set BEARER_TOKEN or (ONEKOMMAFIVE_USERNAME + ONEKOMMAFIVE_PASSWORD)",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from onekommafive import Client  # noqa: PLC0415
+    from onekommafive.systems import Systems  # noqa: PLC0415
+    client = Client(username, password)
+    token = client.get_token()
+    system = os.environ.get("ONEKOMMAFIVE_SYSTEM")
+    if not system:
+        systems = Systems(client).get_systems()
+        if not systems:
+            print("Error: no systems available for this account", file=sys.stderr)
+            sys.exit(1)
+        system = systems[0].id()
+
+    _save_cached_token(token, system)
     return token, system
 
 
