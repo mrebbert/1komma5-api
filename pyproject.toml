@@ -41,6 +41,9 @@ dev = [
 [project.scripts]
 1k5 = "onekommafive.cli:main"
 
+[tool.setuptools.packages.find]
+include = ["onekommafive*"]
+
 [project.urls]
 Homepage = "https://github.com/mrebbert/1komma5-api"
 Repository = "https://github.com/mrebbert/1komma5-api"
