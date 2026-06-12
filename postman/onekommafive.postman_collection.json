@@ -1,0 +1,553 @@
+{
+  "info": {
+    "name": "1KOMMA5° Heartbeat API",
+    "description": "Reverse-engineered endpoints used by the `onekommafive` Python client.\n\n**Hosts**\n- `heartbeat.1komma5grad.com` — main API (systems, energy, EMS, EV, weather, AI optimisations)\n- `customer-identity.1komma5grad.com` — user profile and active feature flags\n- `auth.1komma5grad.com` — Auth0 OAuth2 (PKCE) token endpoint\n\n**Auth**\nAll requests except those under `Auth` send `Authorization: Bearer {{accessToken}}` automatically. Obtain the token interactively via the iOS/Android app or via the `1k5` CLI, then paste it into the `accessToken` collection variable.\n\nThe `Auth → Refresh token` request expects a valid `refreshToken` collection variable. The Auth0 Authorization-Code-with-PKCE flow used by the mobile app is not modelled here because it requires an interactive browser step.\n\n**Path variables**\nPopulate the collection variables `systemId`, `siteId` (usually equal to `systemId`), `customerId`, and `evId` once — every request reuses them via `{{...}}`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://heartbeat.1komma5grad.com",
+      "type": "string"
+    },
+    {
+      "key": "identityUrl",
+      "value": "https://customer-identity.1komma5grad.com",
+      "type": "string"
+    },
+    {
+      "key": "authUrl",
+      "value": "https://auth.1komma5grad.com",
+      "type": "string"
+    },
+    {
+      "key": "clientId",
+      "value": "zJTm6GFGM5zHcmpl07xTsi6MP0TwRAw6",
+      "type": "string",
+      "description": "Auth0 client_id of the 1KOMMA5° mobile app (public)."
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string",
+      "description": "Bearer JWT for the Heartbeat / Identity APIs. Paste a fresh one here."
+    },
+    {
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "systemId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "siteId",
+      "value": "{{systemId}}",
+      "type": "string",
+      "description": "Site UUID. Usually identical to systemId."
+    },
+    {
+      "key": "customerId",
+      "value": "",
+      "type": "string",
+      "description": "Customer UUID (from /systems/{id}/details)."
+    },
+    {
+      "key": "evId",
+      "value": "",
+      "type": "string",
+      "description": "EV charger ID (from /systems/{id}/devices/evs)."
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Auth0 OAuth2 endpoints. These do NOT use the collection Bearer auth.",
+      "item": [
+        {
+          "name": "Refresh token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"refresh_token\": \"{{refreshToken}}\",\n  \"grant_type\": \"refresh_token\"\n}"
+            },
+            "url": {
+              "raw": "{{authUrl}}/oauth/token",
+              "host": ["{{authUrl}}"],
+              "path": ["oauth", "token"]
+            },
+            "description": "Exchange a stored refresh token for a fresh access token."
+          },
+          "response": []
+        },
+        {
+          "name": "Token exchange (PKCE authorization_code)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"client_id\": \"{{clientId}}\",\n  \"code\": \"<authorization-code-from-redirect>\",\n  \"code_verifier\": \"<pkce-verifier>\",\n  \"grant_type\": \"authorization_code\",\n  \"redirect_uri\": \"io.onecommafive.my.production.app://auth.1komma5grad.com/ios/io.onecommafive.my.production.app/callback\"\n}"
+            },
+            "url": {
+              "raw": "{{authUrl}}/oauth/token",
+              "host": ["{{authUrl}}"],
+              "path": ["oauth", "token"]
+            },
+            "description": "Final step of the Authorization-Code + PKCE flow. The preceding interactive steps (authorize, login, resume) cannot be reproduced in Postman because they involve browser redirects under the mobile-app URL scheme. Use the `onekommafive` Python client to perform a full login, then paste the resulting `access_token` / `refresh_token` into the collection variables."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get current user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{identityUrl}}/api/v1/users/me",
+              "host": ["{{identityUrl}}"],
+              "path": ["api", "v1", "users", "me"]
+            },
+            "description": "Returns the authenticated user's profile (id, email, name)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Systems",
+      "item": [
+        {
+          "name": "List systems",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/systems",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "systems"]
+            },
+            "description": "List all systems (sites) the authenticated user has access to."
+          },
+          "response": []
+        },
+        {
+          "name": "Get system",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v4/systems/{{systemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v4", "systems", "{{systemId}}"]
+            },
+            "description": "Single system metadata (v4). Does NOT include `energyTraderActive` / `electricityContractActive` — use the `/details` endpoint for those."
+          },
+          "response": []
+        },
+        {
+          "name": "Get system details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/details",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "details"]
+            },
+            "description": "Extended metadata: `empType`, technical contact, embedded customer, smart-meter flags, `earliestMeasurement`, `deviceGateways[]`. Also brings back v2-only `energyTraderActive` / `electricityContractActive`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get site status and assets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/sites/{{siteId}}/status-and-assets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "sites", "{{siteId}}", "status-and-assets"]
+            },
+            "description": "Site connection status plus hardware asset inventory: HYBRID inverter, HEAT_PUMP, METER, EV_CHARGER (manufacturer, model, serial, firmware, network). Note: serial field is `serialnumber` (lowercase n)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get active features",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{identityUrl}}/api/v1/customers/{{customerId}}/sites/{{siteId}}/active-features",
+              "host": ["{{identityUrl}}"],
+              "path": ["api", "v1", "customers", "{{customerId}}", "sites", "{{siteId}}", "active-features"]
+            },
+            "description": "List of active feature flags (e.g. DYNAMIC_TARIFF, TIME_OF_USE_OPTIMIZATION, SMART_CHARGING). `customerId` comes from `/systems/{id}/details`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Live",
+      "item": [
+        {
+          "name": "Get live overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v3/systems/{{systemId}}/live-overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v3", "systems", "{{systemId}}", "live-overview"]
+            },
+            "description": "Real-time energy overview. Response nests `liveHeroView` and `summaryCards`. For battery_power prefer `summaryCards.battery.power` (negated; API: negative=charging). For grid_power prefer `summaryCards.grid.power`."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Energy",
+      "item": [
+        {
+          "name": "Get energy today",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/systems/{{systemId}}/energy-today?resolution=1h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "systems", "{{systemId}}", "energy-today"],
+              "query": [
+                {
+                  "key": "resolution",
+                  "value": "1h",
+                  "description": "1h or 15m"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get energy historical",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v3/systems/{{systemId}}/energy-historical?from=2026-06-01&to=2026-06-02&resolution=1h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v3", "systems", "{{systemId}}", "energy-historical"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-06-01",
+                  "description": "YYYY-MM-DD"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-06-02",
+                  "description": "YYYY-MM-DD (≤ 1 day after `from` for 1h; same day for 15m)"
+                },
+                {
+                  "key": "resolution",
+                  "value": "1h",
+                  "description": "1h or 15m"
+                }
+              ]
+            },
+            "description": "Timeseries are nested under `timestampedProductionAndConsumption.data`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get market prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v4/systems/{{systemId}}/charts/market-prices?from=2026-06-12T00:00:00Z&to=2026-06-13T00:00:00Z&resolution=1h",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v4", "systems", "{{systemId}}", "charts", "market-prices"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-06-12T00:00:00Z",
+                  "description": "RFC3339 UTC"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-06-13T00:00:00Z",
+                  "description": "RFC3339 UTC"
+                },
+                {
+                  "key": "resolution",
+                  "value": "1h",
+                  "description": "1h or 15m"
+                }
+              ]
+            },
+            "description": "Response uses `timeseries[ts].marketPrice` (EUR/kWh) and nested `energyMarket.averagePrice.price.amount` (string)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Weather",
+      "item": [
+        {
+          "name": "Get weather",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/weather",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "weather"]
+            },
+            "description": "Returns `today`, `tomorrow` (temp, precipitation, sunshineMinutes, sunrise/sunset, weatherSymbolId) and `fineGrainedForecasts` (3h slots for 48h). Night symbol IDs = day ID + 100."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "EMS",
+      "item": [
+        {
+          "name": "Get EMS settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/ems/actions/get-settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "ems", "actions", "get-settings"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Set EMS mode (manual override)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"manualSettings\": {},\n  \"overrideAutoSettings\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/ems/actions/set-manual-override",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "ems", "actions", "set-manual-override"]
+            },
+            "description": "`overrideAutoSettings: false` → auto mode. `true` → manual override. Returns 201 on success."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "EV Chargers",
+      "item": [
+        {
+          "name": "List EV chargers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get displayed charging modes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/assets/evs/displayed-ev-charging-modes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sites", "{{siteId}}", "assets", "evs", "displayed-ev-charging-modes"]
+            },
+            "description": "Lists available `ChargingMode` values for this site. Entries with `disabled: true` are excluded by the client."
+          },
+          "response": []
+        },
+        {
+          "name": "Set charging mode",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chargeSettings\": {\n    \"chargingMode\": \"SMART_CHARGE\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs/{{evId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
+            },
+            "description": "Allowed values include `SMART_CHARGE`, `FAST_CHARGE`, `SOLAR_OPTIMIZED`, `MANUAL_CHARGE`, etc. — call `Get displayed charging modes` for the active list."
+          },
+          "response": []
+        },
+        {
+          "name": "Set target SoC",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chargeSettings\": {\n    \"targetSoc\": 0.8\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs/{{evId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
+            },
+            "description": "Target state-of-charge as a decimal in [0, 1] (e.g. 0.8 = 80%)."
+          },
+          "response": []
+        },
+        {
+          "name": "Set current SoC (manualSoc)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"manualSoc\": 0.45\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs/{{evId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
+            },
+            "description": "Decimal in [0, 1]. Only meaningful in `SMART_CHARGE` mode."
+          },
+          "response": []
+        },
+        {
+          "name": "Set primary departure time",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chargeSettings\": {\n    \"primaryScheduleDepartureTime\": \"07:30\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs/{{evId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
+            },
+            "description": "Format `HH:MM` (24h)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "AI Optimisations",
+      "item": [
+        {
+          "name": "Get optimizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/heartbeat-ai/optimizations?siteId={{siteId}}&from=2026-06-12T00:00:00.000Z&to=2026-06-12T23:59:59.999Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "heartbeat-ai", "optimizations"],
+              "query": [
+                {
+                  "key": "siteId",
+                  "value": "{{siteId}}"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-06-12T00:00:00.000Z",
+                  "description": "Format: %Y-%m-%dT%H:%M:%S.000Z"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-06-12T23:59:59.999Z",
+                  "description": "Format: %Y-%m-%dT%H:%M:%S.999Z"
+                }
+              ]
+            },
+            "description": "AI optimisation decisions for the requested window."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
