@@ -20,7 +20,7 @@ My personal setup, on which this library has been tested:
 | Hybrid Inverter | Sungrow SH6.0RT-V112 |
 | Battery | Sungrow SBR256 |
 | Wallbox | go-e homeFix 11 kW |
-| EV | Volkswagen ID.4 |
+| EV | Volkswagen ID.5 |
 | Heat pump | Stiebel Eltron WPL-A 10 HK 400 Premium |
 | Smart meter | DTSU666 |
 
