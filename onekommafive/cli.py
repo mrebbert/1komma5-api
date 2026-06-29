@@ -76,20 +76,24 @@ def _system(client: Client):
 # Subcommands
 # ---------------------------------------------------------------------------
 
+def _format_address(o) -> str:
+    parts = filter(None, [
+        o.address_line1,
+        o.address_line2,
+        f"{o.address_zip_code} {o.address_city}".strip() or None,
+        o.address_country,
+    ])
+    return ", ".join(parts) or "—"
+
+
 def cmd_info(args: argparse.Namespace) -> None:
     client = _client()
     system = _system(client)
     si = system.info()
-    addr_parts = filter(None, [
-        si.address_line1,
-        si.address_line2,
-        f"{si.address_zip_code} {si.address_city}".strip() or None,
-        si.address_country,
-    ])
     print(f"System:       {si.id}")
     print(f"Name:         {si.name or '—'}")
     print(f"Status:       {si.status or '—'}")
-    print(f"Address:      {', '.join(addr_parts) or '—'}")
+    print(f"Address:      {_format_address(si)}")
     if si.address_latitude is not None and si.address_longitude is not None:
         print(f"Coordinates:  {si.address_latitude:.4f}, {si.address_longitude:.4f}")
     print(f"Customer ID:  {si.customer_id or '—'}")
@@ -106,17 +110,11 @@ def cmd_details(args: argparse.Namespace) -> None:
     client = _client()
     system = _system(client)
     d = system.get_details()
-    addr_parts = filter(None, [
-        d.address_line1,
-        d.address_line2,
-        f"{d.address_zip_code} {d.address_city}".strip() or None,
-        d.address_country,
-    ])
     print(f"System:       {d.id}")
     print(f"Name:         {d.name or '—'}")
     print(f"Status:       {d.status or '—'}")
     print(f"EMP type:     {d.emp_type or '—'}")
-    print(f"Address:      {', '.join(addr_parts) or '—'}")
+    print(f"Address:      {_format_address(d)}")
     if d.address_latitude is not None and d.address_longitude is not None:
         print(f"Coordinates:  {d.address_latitude:.4f}, {d.address_longitude:.4f}")
     if d.customer is not None:

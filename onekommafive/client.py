@@ -107,12 +107,7 @@ class Client:
         )
     """
 
-    #: Base URL of the Heartbeat REST API – exposed as a class attribute so
-    #: that dependent modules (System, EVCharger, …) can build URLs without
-    #: importing the module-level constant directly.
     HEARTBEAT_API: str = HEARTBEAT_API
-
-    #: Base URL of the customer-identity API (user profile, per-site feature flags).
     IDENTITY_API: str = _IDENTITY_API
 
     def __init__(
@@ -139,15 +134,8 @@ class Client:
     def get_token(self) -> str:
         """Return a valid Bearer access token, refreshing or logging in as needed.
 
-        The token is refreshed automatically when it is within 60 seconds of
-        expiry. If refresh fails the client falls back to a full re-login.
-
-        Returns:
-            A JWT access token string suitable for use in an
-            ``Authorization: Bearer <token>`` header.
-
-        Raises:
-            AuthenticationError: If neither refresh nor login succeeds.
+        Refreshes automatically within 60 s of expiry; falls back to a full
+        re-login if refresh fails.
         """
         if self._token_set is None:
             return self._login()
@@ -161,14 +149,7 @@ class Client:
         return self._token_set["access_token"]
 
     def get_user(self) -> User:
-        """Fetch the profile of the currently authenticated user.
-
-        Returns:
-            A :class:`~onekommafive.models.User` populated from the identity API.
-
-        Raises:
-            RequestError: If the server returns a non-200 response.
-        """
+        """Fetch the profile of the currently authenticated user."""
         data = self._request(
             "GET",
             f"{_IDENTITY_API}/api/v1/users/me",
@@ -180,9 +161,6 @@ class Client:
         """Invalidate the current session on the Auth0 server.
 
         Clears the local token cache regardless of the server response.
-
-        Raises:
-            RequestError: If the server returns a 4xx or 5xx response.
         """
         response = requests.get(
             url=f"{_AUTH_BASE}/v2/logout",
@@ -238,15 +216,7 @@ class Client:
     # ------------------------------------------------------------------
 
     def _decode_token(self) -> dict[str, Any]:
-        """Validate and decode the current access token.
-
-        Returns:
-            The decoded JWT payload as a dictionary.
-
-        Raises:
-            jwt.exceptions.ExpiredSignatureError: If the token has expired.
-            jwt.exceptions.InvalidTokenError: If signature verification fails.
-        """
+        """Validate and decode the current access token."""
         signing_key = self._jwks_client.get_signing_key_from_jwt(
             self._token_set["access_token"]
         )
@@ -302,18 +272,8 @@ class Client:
     def _login(self) -> str:
         """Perform a full OAuth2 Authorization Code + PKCE login.
 
-        The flow mimics the 1KOMMA5° mobile app:
-
-        1. ``GET /authorize`` to obtain the Auth0 state cookie.
-        2. ``POST`` credentials to the universal login page.
-        3. Follow redirects to extract the authorisation code.
-        4. ``POST /oauth/token`` to exchange the code for tokens.
-
-        Returns:
-            The new access token string.
-
-        Raises:
-            AuthenticationError: If any step fails.
+        Mirrors the 1KOMMA5° mobile app flow: authorize → submit credentials
+        → follow resume redirect → exchange code for tokens.
         """
         session = requests.Session()
         verifier = _generate_code_verifier()
@@ -392,15 +352,7 @@ class Client:
         return self._token_set["access_token"]
 
     def _refresh_token(self) -> str:
-        """Use the stored refresh token to obtain a new access token.
-
-        Returns:
-            The new access token string.
-
-        Raises:
-            AuthenticationError: If no refresh token is available or the
-                server rejects the refresh request.
-        """
+        """Use the stored refresh token to obtain a new access token."""
         if self._token_set is None:
             raise AuthenticationError("No token set available for refresh")
         if "refresh_token" not in self._token_set:
