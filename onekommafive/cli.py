@@ -16,6 +16,7 @@ Usage:
     python cli.py set-ev-target-soc <soc> [--ev <ev_id>]
     python cli.py set-ev-departure <HH:MM> [--ev <ev_id>]
     python cli.py optimizations [--from YYYY-MM-DD[THH:MM]] [--to YYYY-MM-DD[THH:MM]]
+    python cli.py savings [--from YYYY-MM-DD] [--to YYYY-MM-DD]
     python cli.py ems
     python cli.py set-ems auto|manual
 
@@ -255,6 +256,23 @@ def cmd_prices(args: argparse.Namespace) -> None:
         grid = mp.prices_with_grid_costs.get(ts, float("nan"))
         all_in = mp.prices_with_grid_costs_and_vat.get(ts, float("nan"))
         print(f"{ts:<25}  {spot:>9.4f}  {grid:>9.4f}  {all_in:>9.4f}")
+
+
+def cmd_savings(args: argparse.Namespace) -> None:
+    try:
+        from_d = datetime.date.fromisoformat(args.from_date) if args.from_date else None
+        to_d = datetime.date.fromisoformat(args.to_date) if args.to_date else None
+    except ValueError as e:
+        sys.exit(f"Error: invalid date — {e}")
+    system = _get_system()
+    savings = system.get_energy_savings(from_date=from_d, to_date=to_d)
+    range_lbl = f"{from_d} – {to_d}" if from_d or to_d else "(API default window)"
+    print(f"System:   {system.id()}")
+    print(f"Range:    {range_lbl}")
+    if savings.savings_eur is None:
+        print("Savings:  —")
+    else:
+        print(f"Savings:  {savings.savings_eur:.2f} €")
 
 
 def cmd_energy_today(args: argparse.Namespace) -> None:
@@ -593,6 +611,16 @@ def main() -> None:
         "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
     )
 
+    savings_p = sub.add_parser("savings", help="Aggregated Heartbeat savings (€) for a date range")
+    savings_p.add_argument(
+        "--from", dest="from_date", metavar="YYYY-MM-DD", default=None,
+        help="Start date (default: API rolling window)",
+    )
+    savings_p.add_argument(
+        "--to", dest="to_date", metavar="YYYY-MM-DD", default=None,
+        help="End date (default: API rolling window)",
+    )
+
     energy_today_p = sub.add_parser("energy-today", help="Energy production and consumption for today")
     energy_today_p.add_argument(
         "--resolution", metavar="RES", default="1h", choices=["1h", "15m"],
@@ -640,6 +668,7 @@ def main() -> None:
         "set-ev-mode": cmd_set_ev_mode,
         "set-ev-target-soc": cmd_set_ev_target_soc,
         "set-ev-departure": cmd_set_ev_departure,
+        "savings": cmd_savings,
         "energy-today": cmd_energy_today,
         "energy-historical": cmd_energy_historical,
         "optimizations": cmd_optimizations,

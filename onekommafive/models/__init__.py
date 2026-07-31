@@ -6,7 +6,7 @@ domain-based split introduced in this refactor.
 """
 
 from .ems import EmsManualDevice, EmsSettings
-from .energy import EnergyData, EnergySlot
+from .energy import EnergyData, EnergySlot, HeartbeatSavings
 from .ev import ChargingMode
 from .live import LiveOverview
 from .optimizations import OptimizationEvent, OptimizationEvents
@@ -25,6 +25,7 @@ __all__ = [
     "EmsSettings",
     "EnergyData",
     "EnergySlot",
+    "HeartbeatSavings",
     "LiveOverview",
     "MarketPrices",
     "OptimizationEvent",

@@ -411,6 +411,13 @@ def make_displayed_ev_charging_modes_data() -> dict:
     }
 
 
+def make_energy_savings_data(value: float | None = 39.39) -> dict:
+    """Return a /energy-savings v1 response payload."""
+    if value is None:
+        return {"heartbeatSavings": None}
+    return {"heartbeatSavings": {"value": value, "unit": "€"}}
+
+
 def make_weather_data() -> dict:
     """Return a /weather v1 response payload with two daily summaries and two forecast slots."""
     return {

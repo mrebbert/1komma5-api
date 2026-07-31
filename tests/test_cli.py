@@ -7,11 +7,19 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from onekommafive.cli import main
-from onekommafive.models import ChargingMode, EmsSettings, LiveOverview, MarketPrices, SystemInfo
+from onekommafive.models import (
+    ChargingMode,
+    EmsSettings,
+    HeartbeatSavings,
+    LiveOverview,
+    MarketPrices,
+    SystemInfo,
+)
 from tests.fixtures import (
     FAKE_EV_ID,
     FAKE_SYSTEM_ID,
     make_ems_settings_data,
+    make_energy_savings_data,
     make_live_overview_data,
     make_price_data,
     make_system_data,
@@ -405,6 +413,42 @@ class TestCmdSetEms:
     def test_invalid_mode_rejected_by_argparse(self, mock_system) -> None:
         with pytest.raises(SystemExit):
             _run("set-ems", "turbo")
+
+
+# ---------------------------------------------------------------------------
+# savings
+# ---------------------------------------------------------------------------
+
+class TestCmdSavings:
+    def test_prints_savings_value(self, mock_system, capsys) -> None:
+        mock_system.get_energy_savings.return_value = HeartbeatSavings.from_dict(
+            make_energy_savings_data(value=175.42)
+        )
+        _run("savings", "--from", "2026-07-01", "--to", "2026-07-31")
+        out = capsys.readouterr().out
+        assert "175.42" in out
+        assert "2026-07-01" in out
+        assert "2026-07-31" in out
+
+    def test_default_window_labeled(self, mock_system, capsys) -> None:
+        mock_system.get_energy_savings.return_value = HeartbeatSavings.from_dict(
+            make_energy_savings_data()
+        )
+        _run("savings")
+        out = capsys.readouterr().out
+        assert "API default" in out
+        assert "39.39" in out
+
+    def test_missing_value_prints_dash(self, mock_system, capsys) -> None:
+        mock_system.get_energy_savings.return_value = HeartbeatSavings.from_dict(
+            make_energy_savings_data(value=None)
+        )
+        _run("savings")
+        assert "—" in capsys.readouterr().out
+
+    def test_invalid_date_rejected(self, mock_system) -> None:
+        with pytest.raises(SystemExit):
+            _run("savings", "--from", "not-a-date")
 
 
 # ---------------------------------------------------------------------------

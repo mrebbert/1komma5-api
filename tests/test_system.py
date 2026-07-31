@@ -12,6 +12,7 @@ from onekommafive.ev_charger import EVCharger
 from onekommafive.models import (
     EmsSettings,
     EnergyData,
+    HeartbeatSavings,
     LiveOverview,
     MarketPrices,
     OptimizationEvents,
@@ -28,6 +29,7 @@ from tests.fixtures import (
     make_displayed_ev_charging_modes_data,
     make_ems_settings_data,
     make_energy_data,
+    make_energy_savings_data,
     make_ev_data,
     make_live_overview_data,
     make_optimizations_data,
@@ -691,6 +693,56 @@ class TestGetActiveFeatures:
         resp_lib.add(resp_lib.GET, self._url(), json={"error": "error"}, status=500)
         with pytest.raises(RequestError, match="Failed to get active features"):
             _make_system().get_active_features(self._CUSTOMER_ID)
+
+
+# ---------------------------------------------------------------------------
+# Energy savings (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetEnergySavings:
+    _URL = f"{_SYSTEM_BASE}/energy-savings"
+
+    @resp_lib.activate
+    def test_returns_savings_instance(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_energy_savings_data(), status=200)
+        result = _make_system().get_energy_savings()
+        assert isinstance(result, HeartbeatSavings)
+        assert result.savings_eur == pytest.approx(39.39)
+
+    @resp_lib.activate
+    def test_omits_query_params_when_dates_missing(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_energy_savings_data(), status=200)
+        _make_system().get_energy_savings()
+        url = resp_lib.calls[0].request.url
+        assert "from=" not in url
+        assert "to=" not in url
+
+    @resp_lib.activate
+    def test_passes_date_params(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_energy_savings_data(value=175.42), status=200)
+        _make_system().get_energy_savings(
+            from_date=datetime.date(2026, 7, 1),
+            to_date=datetime.date(2026, 7, 31),
+        )
+        url = resp_lib.calls[0].request.url
+        assert "from=2026-07-01" in url
+        assert "to=2026-07-31" in url
+
+    @resp_lib.activate
+    def test_missing_field_yields_none(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=200)
+        assert _make_system().get_energy_savings().savings_eur is None
+
+    @resp_lib.activate
+    def test_null_field_yields_none(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_energy_savings_data(value=None), status=200)
+        assert _make_system().get_energy_savings().savings_eur is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get energy savings"):
+            _make_system().get_energy_savings()
 
 
 # ---------------------------------------------------------------------------

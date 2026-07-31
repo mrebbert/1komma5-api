@@ -9,6 +9,7 @@ from .models import (
     ChargingMode,
     EmsSettings,
     EnergyData,
+    HeartbeatSavings,
     LiveOverview,
     MarketPrices,
     OptimizationEvents,
@@ -144,6 +145,29 @@ class System:
             error_label="Failed to get energy today",
         )
         return EnergyData.from_dict(data)
+
+    def get_energy_savings(
+        self,
+        from_date: datetime.date | None = None,
+        to_date: datetime.date | None = None,
+    ) -> HeartbeatSavings:
+        """Fetch aggregated Heartbeat savings for an inclusive date range.
+
+        When both dates are omitted the API returns its default rolling
+        window (undocumented). Dates must be date-only (``YYYY-MM-DD``);
+        passing ISO datetimes with a time component is rejected by the API.
+        """
+        params: dict[str, str] = {}
+        if from_date is not None:
+            params["from"] = from_date.isoformat()
+        if to_date is not None:
+            params["to"] = to_date.isoformat()
+        data = self._client._request(
+            "GET", self._systems_url("v1", "energy-savings"),
+            params=params or None,
+            error_label="Failed to get energy savings",
+        )
+        return HeartbeatSavings.from_dict(data)
 
     def get_energy_historical(
         self,

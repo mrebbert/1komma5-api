@@ -5,6 +5,32 @@ from typing import Any
 
 
 @dataclass
+class HeartbeatSavings:
+    """Aggregated Heartbeat savings for a date range.
+
+    Returned by :meth:`~onekommafive.System.get_energy_savings`.
+    When both ``from``/``to`` are omitted the API returns its default
+    rolling window (undocumented — appears to be neither today nor the
+    current month).
+    """
+
+    savings_eur: float | None
+    """Total Heartbeat savings for the requested range, in EUR."""
+
+    raw: dict[str, Any] = field(repr=False)
+    """The complete raw API response."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "HeartbeatSavings":
+        node = data.get("heartbeatSavings") or {}
+        value = node.get("value")
+        return cls(
+            savings_eur=float(value) if value is not None else None,
+            raw=data,
+        )
+
+
+@dataclass
 class EnergySlot:
     """One timestamped slot in an energy timeseries.
 
