@@ -42,7 +42,7 @@ import sys
 from pathlib import Path
 
 from onekommafive import Client, Systems
-from onekommafive.models import WEATHER_SYMBOLS, ChargingMode, MarketPrices
+from onekommafive.models import ChargingMode, MarketPrices
 
 # Token cache for the CLI: skips the OAuth2 login round-trip on subsequent
 # invocations while the JWT is still valid (~1h). Delete the file or set
@@ -72,6 +72,10 @@ def _system(client: Client):
     return systems[0]
 
 
+def _get_system():
+    return _system(_client())
+
+
 # ---------------------------------------------------------------------------
 # Subcommands
 # ---------------------------------------------------------------------------
@@ -87,8 +91,7 @@ def _format_address(o) -> str:
 
 
 def cmd_info(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     si = system.info()
     print(f"System:       {si.id}")
     print(f"Name:         {si.name or '—'}")
@@ -107,8 +110,7 @@ def cmd_info(args: argparse.Namespace) -> None:
 
 
 def cmd_details(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     d = system.get_details()
     print(f"System:       {d.id}")
     print(f"Name:         {d.name or '—'}")
@@ -152,8 +154,7 @@ def cmd_details(args: argparse.Namespace) -> None:
 
 
 def cmd_assets(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     s = system.get_status_and_assets()
     print(f"System:       {system.id()}")
     print(f"Site status:  {s.status or '—'}")
@@ -178,8 +179,7 @@ def cmd_assets(args: argparse.Namespace) -> None:
 
 
 def cmd_features(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     customer_id = args.customer_id
     if not customer_id:
         details = system.get_details()
@@ -198,8 +198,7 @@ def cmd_features(args: argparse.Namespace) -> None:
 
 
 def cmd_live(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     ov = system.get_live_overview()
     print(f"System:       {system.id()}")
     print(f"Status:       {ov.status or '—'}")
@@ -219,8 +218,7 @@ def cmd_live(args: argparse.Namespace) -> None:
 
 
 def cmd_prices(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     start = today
     end = today.replace(hour=23, minute=59, second=59)
@@ -260,8 +258,7 @@ def cmd_prices(args: argparse.Namespace) -> None:
 
 
 def cmd_energy_today(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     ed = system.get_energy_today(resolution=args.resolution)
     _print_energy(system.id(), ed, args.resolution)
 
@@ -272,8 +269,7 @@ def cmd_energy_historical(args: argparse.Namespace) -> None:
         to_date = datetime.date.fromisoformat(args.to_date)
     except ValueError as e:
         sys.exit(f"Error: invalid date — {e}")
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     ed = system.get_energy_historical(from_date=from_date, to_date=to_date, resolution=args.resolution)
     _print_energy(system.id(), ed, args.resolution)
 
@@ -321,8 +317,7 @@ def _print_energy(system_id: str, ed, resolution: str) -> None:
 
 
 def cmd_ev(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     chargers = system.get_ev_chargers()
     if not chargers:
         print("No EV chargers registered.")
@@ -349,8 +344,7 @@ def cmd_ev(args: argparse.Namespace) -> None:
 
 
 def cmd_ev_modes(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     modes = system.get_displayed_ev_charging_modes()
     print(f"System: {system.id()}")
     if not modes:
@@ -375,8 +369,7 @@ def cmd_set_ev_mode(args: argparse.Namespace) -> None:
 
 def _resolve_ev(args):
     """Return the targeted EVCharger from args (--ev or first charger)."""
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     chargers = system.get_ev_chargers()
     if not chargers:
         sys.exit("Error: no EV chargers registered on this system")
@@ -407,8 +400,7 @@ def cmd_set_ev_departure(args: argparse.Namespace) -> None:
 
 
 def cmd_ems(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     settings = system.get_ems_settings()
     print(f"System:       {system.id()}")
     print(f"EMS mode:     {'AUTO' if settings.auto_mode else 'MANUAL OVERRIDE'}")
@@ -434,12 +426,11 @@ def cmd_ems(args: argparse.Namespace) -> None:
 
 
 def cmd_weather(args: argparse.Namespace) -> None:
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     w = system.get_weather()
 
     def _day_label(d) -> str:
-        symbol = WEATHER_SYMBOLS.get(d.weather_symbol_id, f"Symbol {d.weather_symbol_id}") if d.weather_symbol_id else "—"
+        symbol = d.weather_description
         sun_h = f"{d.sunshine_minutes / 60:.1f} h" if d.sunshine_minutes is not None else "—"
         rain = f"{d.precipitation_mm:.1f} mm" if d.precipitation_mm is not None else "—"
         prob = f"{d.precipitation_probability:.0f}%" if d.precipitation_probability is not None else "—"
@@ -458,7 +449,7 @@ def cmd_weather(args: argparse.Namespace) -> None:
         print("-" * 92)
         for slot in w.forecasts:
             ts = slot.period_start[:16].replace("T", " ")
-            desc = WEATHER_SYMBOLS.get(slot.weather_symbol_id, f"Symbol {slot.weather_symbol_id}") if slot.weather_symbol_id else "—"
+            desc = slot.weather_description
             temp = f"{slot.temperature_celsius:.1f}°C" if slot.temperature_celsius is not None else "—"
             wind = f"{slot.wind_speed:.1f} m/s" if slot.wind_speed is not None else "—"
             rain = f"{slot.precipitation_mm:.1f} mm" if slot.precipitation_mm is not None else "—"
@@ -472,9 +463,8 @@ def _parse_dt(value: str, end_of_day: bool) -> datetime.datetime:
     for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
         try:
             parsed = datetime.datetime.strptime(value, fmt)
-            if fmt == "%Y-%m-%d":
-                if end_of_day:
-                    parsed = parsed.replace(hour=23, minute=59, second=59)
+            if fmt == "%Y-%m-%d" and end_of_day:
+                parsed = parsed.replace(hour=23, minute=59, second=59)
             return parsed
         except ValueError:
             continue
@@ -489,8 +479,7 @@ def cmd_optimizations(args: argparse.Namespace) -> None:
     except ValueError as e:
         sys.exit(f"Error: invalid date — {e}")
 
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     result = system.get_optimizations(start=start, end=end)
 
     print(f"System:  {system.id()}")
@@ -510,8 +499,7 @@ def cmd_optimizations(args: argparse.Namespace) -> None:
 
 def cmd_set_ems(args: argparse.Namespace) -> None:
     auto = args.mode == "auto"
-    client = _client()
-    system = _system(client)
+    system = _get_system()
     system.set_ems_mode(auto=auto)
     print(f"System: {system.id()}")
     print(f"EMS mode set to: {'AUTO' if auto else 'MANUAL OVERRIDE'}")

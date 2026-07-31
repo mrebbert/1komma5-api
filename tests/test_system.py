@@ -14,9 +14,11 @@ from onekommafive.models import (
     EnergyData,
     LiveOverview,
     MarketPrices,
+    OptimizationEvents,
     SiteStatus,
     SystemDetails,
     SystemInfo,
+    WeatherData,
 )
 from onekommafive.system import System
 from tests.fixtures import (
@@ -28,10 +30,12 @@ from tests.fixtures import (
     make_energy_data,
     make_ev_data,
     make_live_overview_data,
+    make_optimizations_data,
     make_price_data,
     make_status_and_assets_data,
     make_system_data,
     make_system_details_data,
+    make_weather_data,
 )
 
 _BASE = "https://heartbeat.1komma5grad.com"
@@ -41,6 +45,7 @@ _SYSTEM_BASE_V2 = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V3 = f"{_BASE}/api/v3/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V4 = f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"
 _SITE_BASE_V2 = f"{_BASE}/api/v2/sites/{FAKE_SYSTEM_ID}"
+_OPTIMIZATIONS_URL = f"{_BASE}/api/v1/heartbeat-ai/optimizations"
 
 
 def _make_system() -> System:
@@ -686,3 +691,93 @@ class TestGetActiveFeatures:
         resp_lib.add(resp_lib.GET, self._url(), json={"error": "error"}, status=500)
         with pytest.raises(RequestError, match="Failed to get active features"):
             _make_system().get_active_features(self._CUSTOMER_ID)
+
+
+# ---------------------------------------------------------------------------
+# Weather (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetWeather:
+    _URL = f"{_SYSTEM_BASE}/weather"
+
+    @resp_lib.activate
+    def test_returns_weather_data_instance(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_weather_data(), status=200)
+        result = _make_system().get_weather()
+        assert isinstance(result, WeatherData)
+        assert result.today.temperature_celsius == pytest.approx(22.5)
+        assert result.today.weather_symbol_id == 2
+        assert result.today.weather_description == "Heiter"
+        assert len(result.forecasts) == 2
+        assert result.forecasts[0].period_start == "2026-06-01T09:00:00Z"
+        assert result.forecasts[1].wind_speed == pytest.approx(4.1)
+
+    @resp_lib.activate
+    def test_missing_symbol_id_yields_placeholder_description(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_weather_data(), status=200)
+        result = _make_system().get_weather()
+        assert result.tomorrow.weather_symbol_id is None
+        assert result.tomorrow.weather_description == "—"
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get weather"):
+            _make_system().get_weather()
+
+
+# ---------------------------------------------------------------------------
+# Optimizations (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetOptimizations:
+    @resp_lib.activate
+    def test_returns_optimization_events(self) -> None:
+        resp_lib.add(resp_lib.GET, _OPTIMIZATIONS_URL, json=make_optimizations_data(), status=200)
+        result = _make_system().get_optimizations(
+            datetime.datetime(2026, 6, 1, 10),
+            datetime.datetime(2026, 6, 1, 12),
+        )
+        assert isinstance(result, OptimizationEvents)
+        assert len(result.events) == 2
+        first = result.events[0]
+        assert first.decision == "BATTERY_CHARGE_FROM_GRID"
+        assert first.asset == "BATTERY"
+        assert first.market_price == pytest.approx(0.075)
+        assert first.market_price_currency == "EUR"
+        assert first.state_of_charge == 42
+        assert first.log == ["2026-06-01T10:00:00Z", "2026-06-01T10:15:00Z"]
+
+    @resp_lib.activate
+    def test_null_market_price_stays_none(self) -> None:
+        resp_lib.add(resp_lib.GET, _OPTIMIZATIONS_URL, json=make_optimizations_data(), status=200)
+        result = _make_system().get_optimizations(
+            datetime.datetime(2026, 6, 1, 10),
+            datetime.datetime(2026, 6, 1, 12),
+        )
+        second = result.events[1]
+        assert second.market_price is None
+        assert second.total_cost is None
+        assert second.state_of_charge is None
+        assert second.log == []
+
+    @resp_lib.activate
+    def test_url_and_query_params(self) -> None:
+        resp_lib.add(resp_lib.GET, _OPTIMIZATIONS_URL, json=make_optimizations_data(), status=200)
+        _make_system().get_optimizations(
+            datetime.datetime(2026, 6, 1, 10, 15, 30),
+            datetime.datetime(2026, 6, 1, 12, 45, 15),
+        )
+        url = resp_lib.calls[0].request.url
+        assert f"siteId={FAKE_SYSTEM_ID}" in url
+        assert "from=2026-06-01T10%3A15%3A30.000Z" in url
+        assert "to=2026-06-01T12%3A45%3A15.999Z" in url
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, _OPTIMIZATIONS_URL, json={"error": "boom"}, status=500)
+        with pytest.raises(RequestError, match="Failed to get optimizations"):
+            _make_system().get_optimizations(
+                datetime.datetime(2026, 6, 1, 10),
+                datetime.datetime(2026, 6, 1, 12),
+            )

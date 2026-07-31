@@ -411,6 +411,90 @@ def make_displayed_ev_charging_modes_data() -> dict:
     }
 
 
+def make_weather_data() -> dict:
+    """Return a /weather v1 response payload with two daily summaries and two forecast slots."""
+    return {
+        "today": {
+            "temperatureCelsius": 22.5,
+            "precipitationMm": 0.4,
+            "precipitationProbability": 30.0,
+            "sunshineMinutes": 480.0,
+            "sunrise": "2026-06-01T04:52:00Z",
+            "sunset": "2026-06-01T19:47:00Z",
+            "weatherSymbolId": 2,
+        },
+        "tomorrow": {
+            "temperatureCelsius": 19.0,
+            "precipitationMm": 3.2,
+            "precipitationProbability": 85.0,
+            "sunshineMinutes": 120.0,
+            "sunrise": "2026-06-02T04:52:00Z",
+            "sunset": "2026-06-02T19:48:00Z",
+            "weatherSymbolId": None,
+        },
+        "fineGrainedForecasts": [
+            {
+                "periodStart": "2026-06-01T09:00:00Z",
+                "temperatureCelsius": 18.0,
+                "windSpeed": 3.5,
+                "precipitationMm": 0.0,
+                "precipitationProbability": 10.0,
+                "sunshineMinutes": 165.0,
+                "weatherSymbolId": 2,
+            },
+            {
+                "periodStart": "2026-06-01T12:00:00Z",
+                "temperatureCelsius": 22.0,
+                "windSpeed": 4.1,
+                "precipitationMm": 0.2,
+                "precipitationProbability": 25.0,
+                "sunshineMinutes": 140.0,
+                "weatherSymbolId": 3,
+            },
+        ],
+    }
+
+
+def make_optimizations_data() -> dict:
+    """Return a /heartbeat-ai/optimizations v1 response with two decision events."""
+    return {
+        "events": [
+            {
+                "id": "opt-0000-0000-0000-0000-000000000001",
+                "timestamp": "2026-06-01T10:00:00Z",
+                "data": {
+                    "decision": "BATTERY_CHARGE_FROM_GRID",
+                    "asset": "BATTERY",
+                    "from": "2026-06-01T10:00:00Z",
+                    "to": "2026-06-01T11:00:00Z",
+                    "marketPrice": {"value": "0.075", "currency": "EUR"},
+                    "energySold": 0.0,
+                    "energyBought": 2.4,
+                    "totalCost": 0.18,
+                    "stateOfCharge": 42,
+                    "log": ["2026-06-01T10:00:00Z", "2026-06-01T10:15:00Z"],
+                },
+            },
+            {
+                "id": "opt-0000-0000-0000-0000-000000000002",
+                "timestamp": "2026-06-01T11:00:00Z",
+                "data": {
+                    "decision": "BATTERY_NO_DISCHARGE",
+                    "asset": "BATTERY",
+                    "from": "2026-06-01T11:00:00Z",
+                    "to": "2026-06-01T12:00:00Z",
+                    "marketPrice": {"value": None, "currency": "EUR"},
+                    "energySold": None,
+                    "energyBought": None,
+                    "totalCost": None,
+                    "stateOfCharge": None,
+                    "log": [],
+                },
+            },
+        ]
+    }
+
+
 def make_ems_settings_data(override: bool = False) -> dict:
     """Return an EMS settings payload matching the full API shape."""
     return {

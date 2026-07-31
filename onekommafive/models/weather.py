@@ -23,6 +23,12 @@ WEATHER_SYMBOLS: dict[int, str] = {
 """Map from ``weatherSymbolId`` to a human-readable description."""
 
 
+def _describe_weather(symbol_id: int | None) -> str:
+    if symbol_id is None:
+        return "—"
+    return WEATHER_SYMBOLS.get(symbol_id, f"Symbol {symbol_id}")
+
+
 @dataclass
 class WeatherDay:
     """Daily weather summary for today or tomorrow.
@@ -54,9 +60,7 @@ class WeatherDay:
     @property
     def weather_description(self) -> str:
         """Human-readable weather description derived from :attr:`weather_symbol_id`."""
-        if self.weather_symbol_id is None:
-            return "—"
-        return WEATHER_SYMBOLS.get(self.weather_symbol_id, f"Symbol {self.weather_symbol_id}")
+        return _describe_weather(self.weather_symbol_id)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "WeatherDay":
@@ -103,9 +107,7 @@ class WeatherSlot:
     @property
     def weather_description(self) -> str:
         """Human-readable weather description derived from :attr:`weather_symbol_id`."""
-        if self.weather_symbol_id is None:
-            return "—"
-        return WEATHER_SYMBOLS.get(self.weather_symbol_id, f"Symbol {self.weather_symbol_id}")
+        return _describe_weather(self.weather_symbol_id)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "WeatherSlot":

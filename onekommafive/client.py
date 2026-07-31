@@ -11,6 +11,7 @@ import base64
 import datetime
 import hashlib
 import json
+import re
 import secrets
 from pathlib import Path
 from typing import Any
@@ -300,11 +301,12 @@ class Client:
                 f"Authorization request failed ({auth_response.status_code})"
             )
 
-        # Extract the opaque state value embedded in the HTML form
-        try:
-            state = auth_response.text.split('name="state" value="')[1].split('"')[0].strip()
-        except IndexError as exc:
-            raise AuthenticationError("Could not parse state from login page") from exc
+        # Extract the opaque state value embedded in the HTML form.
+        # Regex tolerates whitespace/attribute-order variations in the Auth0 template.
+        state_match = re.search(r'name="state"\s+value="([^"]+)"', auth_response.text)
+        if state_match is None:
+            raise AuthenticationError("Could not parse state from login page")
+        state = state_match.group(1).strip()
 
         # Step 2 – submit credentials
         login_response = session.post(
