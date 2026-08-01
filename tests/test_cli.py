@@ -10,7 +10,10 @@ from onekommafive.cli import main
 from onekommafive.models import (
     ChargingMode,
     EmsSettings,
+    EnergyTrader,
+    HeartbeatAiSummary,
     HeartbeatSavings,
+    ImpactOverview,
     LiveOverview,
     MarketPrices,
     SystemInfo,
@@ -20,6 +23,9 @@ from tests.fixtures import (
     FAKE_SYSTEM_ID,
     make_ems_settings_data,
     make_energy_savings_data,
+    make_energy_trader_data,
+    make_heartbeat_ai_summary_data,
+    make_impact_overview_data,
     make_live_overview_data,
     make_price_data,
     make_system_data,
@@ -449,6 +455,77 @@ class TestCmdSavings:
     def test_invalid_date_rejected(self, mock_system) -> None:
         with pytest.raises(SystemExit):
             _run("savings", "--from", "not-a-date")
+
+
+# ---------------------------------------------------------------------------
+# impact
+# ---------------------------------------------------------------------------
+
+class TestCmdImpact:
+    def test_prints_co2_figures(self, mock_system, capsys) -> None:
+        mock_system.get_impact_overview.return_value = ImpactOverview.from_dict(
+            make_impact_overview_data()
+        )
+        _run("impact")
+        out = capsys.readouterr().out
+        assert "1,234" in out
+        assert "kg" in out
+        assert "50,000" in out or "50000" in out
+
+
+# ---------------------------------------------------------------------------
+# trader
+# ---------------------------------------------------------------------------
+
+class TestCmdTrader:
+    def test_prints_savings_and_status(self, mock_system, capsys) -> None:
+        mock_system.get_energy_trader.return_value = EnergyTrader.from_dict(
+            make_energy_trader_data()
+        )
+        _run("trader")
+        out = capsys.readouterr().out
+        assert "ACTIVE" in out
+        assert "1,500.75" in out
+        assert "125.40" in out
+
+
+# ---------------------------------------------------------------------------
+# ai-summary
+# ---------------------------------------------------------------------------
+
+class TestCmdAiSummary:
+    def test_1m_prints_all_metrics(self, mock_system, capsys) -> None:
+        mock_system.get_heartbeat_ai_summary.return_value = HeartbeatAiSummary.from_dict(
+            "1M", make_heartbeat_ai_summary_data("1M")
+        )
+        _run("ai-summary")
+        out = capsys.readouterr().out
+        assert "1M" in out
+        assert "73.0%" in out
+        assert "30.41" in out
+        assert "210.5" in out
+
+    def test_defaults_to_1m_resolution(self, mock_system) -> None:
+        mock_system.get_heartbeat_ai_summary.return_value = HeartbeatAiSummary.from_dict(
+            "1M", make_heartbeat_ai_summary_data("1M")
+        )
+        _run("ai-summary")
+        mock_system.get_heartbeat_ai_summary.assert_called_once_with(resolution="1M")
+
+    def test_1w_skips_missing_metrics(self, mock_system, capsys) -> None:
+        mock_system.get_heartbeat_ai_summary.return_value = HeartbeatAiSummary.from_dict(
+            "1W", make_heartbeat_ai_summary_data("1W")
+        )
+        _run("ai-summary", "--resolution", "1W")
+        out = capsys.readouterr().out
+        assert "1W" in out
+        assert "Self-suff" not in out
+        assert "Earned" not in out
+        assert "210.5" in out  # co2 still there
+
+    def test_invalid_resolution_rejected(self, mock_system) -> None:
+        with pytest.raises(SystemExit):
+            _run("ai-summary", "--resolution", "1D")
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,9 @@ Usage:
     python cli.py set-ev-departure <HH:MM> [--ev <ev_id>]
     python cli.py optimizations [--from YYYY-MM-DD[THH:MM]] [--to YYYY-MM-DD[THH:MM]]
     python cli.py savings [--from YYYY-MM-DD] [--to YYYY-MM-DD]
+    python cli.py impact
+    python cli.py trader
+    python cli.py ai-summary [--resolution 1W|1M|1Y]
     python cli.py ems
     python cli.py set-ems auto|manual
 
@@ -256,6 +259,49 @@ def cmd_prices(args: argparse.Namespace) -> None:
         grid = mp.prices_with_grid_costs.get(ts, float("nan"))
         all_in = mp.prices_with_grid_costs_and_vat.get(ts, float("nan"))
         print(f"{ts:<25}  {spot:>9.4f}  {grid:>9.4f}  {all_in:>9.4f}")
+
+
+def cmd_impact(args: argparse.Namespace) -> None:
+    system = _get_system()
+    i = system.get_impact_overview()
+    print(f"System:            {system.id()}")
+    print(f"CO2 saved (site):  {i.co2_savings_kg:,.1f} kg" if i.co2_savings_kg is not None else "CO2 saved (site):  —")
+    if i.co2_collective_savings_kg is not None:
+        print(f"CO2 (community):   {i.co2_collective_savings_kg / 1000:,.0f} t")
+    if i.co2_global_savings_estimate_tons is not None:
+        print(f"CO2 (global est.): {i.co2_global_savings_estimate_tons:,.0f} t")
+
+
+def cmd_trader(args: argparse.Namespace) -> None:
+    system = _get_system()
+    t = system.get_energy_trader()
+    print(f"System:                {system.id()}")
+    print(f"Status:                {t.status or '—'}")
+    if t.green_energy_savings_eur is not None:
+        print(f"Green energy savings:  {t.green_energy_savings_eur:,.2f} €")
+    if t.energy_trader_savings_eur is not None:
+        print(f"Energy trader savings: {t.energy_trader_savings_eur:,.2f} €")
+
+
+def cmd_ai_summary(args: argparse.Namespace) -> None:
+    system = _get_system()
+    s = system.get_heartbeat_ai_summary(resolution=args.resolution)
+    print(f"System:      {system.id()}")
+    print(f"Resolution:  {s.resolution}")
+    if s.self_sufficiency_percent is not None:
+        print(f"Self-suff.:  {s.self_sufficiency_percent * 100:.1f}%   "
+              f"(solar {s.self_sufficiency_by_solar_kwh:.1f} kWh, "
+              f"battery {s.self_sufficiency_by_battery_kwh:.1f} kWh)")
+    if s.earned_amount_eur is not None:
+        feed_in = f" @ {s.feed_in_price_eur_per_kwh:.4f} €/kWh" if s.feed_in_price_eur_per_kwh is not None else ""
+        print(f"Earned:      {s.earned_amount_eur:.2f} €   "
+              f"({s.sold_energy_kwh:.1f} kWh sold{feed_in})")
+    if s.co2_saved_kg is not None:
+        car = f", ≈ {s.car_travel_emission_km:.0f} car km" if s.car_travel_emission_km is not None else ""
+        prod = f" (PV {s.production_kwh:.1f} kWh)" if s.production_kwh is not None else ""
+        print(f"CO2 saved:   {s.co2_saved_kg:.1f} kg{car}{prod}")
+    if s.heartbeat_price_eur_per_kwh is not None:
+        print(f"HB price:    {s.heartbeat_price_eur_per_kwh:.4f} €/kWh")
 
 
 def cmd_savings(args: argparse.Namespace) -> None:
@@ -611,6 +657,15 @@ def main() -> None:
         "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
     )
 
+    sub.add_parser("impact", help="Lifetime CO2 savings (site + community)")
+    sub.add_parser("trader", help="Lifetime energy-trading savings (€)")
+
+    ai_sum_p = sub.add_parser("ai-summary", help="Heartbeat-AI performance summary (self-sufficiency, earnings, CO2)")
+    ai_sum_p.add_argument(
+        "--resolution", metavar="RES", default="1M", choices=["1W", "1M", "1Y"],
+        help="Window: '1W', '1M' (default), or '1Y'. Only '1M' returns all metrics.",
+    )
+
     savings_p = sub.add_parser("savings", help="Aggregated Heartbeat savings (€) for a date range")
     savings_p.add_argument(
         "--from", dest="from_date", metavar="YYYY-MM-DD", default=None,
@@ -668,6 +723,9 @@ def main() -> None:
         "set-ev-mode": cmd_set_ev_mode,
         "set-ev-target-soc": cmd_set_ev_target_soc,
         "set-ev-departure": cmd_set_ev_departure,
+        "impact": cmd_impact,
+        "trader": cmd_trader,
+        "ai-summary": cmd_ai_summary,
         "savings": cmd_savings,
         "energy-today": cmd_energy_today,
         "energy-historical": cmd_energy_historical,

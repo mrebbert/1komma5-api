@@ -12,7 +12,10 @@ from onekommafive.ev_charger import EVCharger
 from onekommafive.models import (
     EmsSettings,
     EnergyData,
+    EnergyTrader,
+    HeartbeatAiSummary,
     HeartbeatSavings,
+    ImpactOverview,
     LiveOverview,
     MarketPrices,
     OptimizationEvents,
@@ -30,7 +33,10 @@ from tests.fixtures import (
     make_ems_settings_data,
     make_energy_data,
     make_energy_savings_data,
+    make_energy_trader_data,
     make_ev_data,
+    make_heartbeat_ai_summary_data,
+    make_impact_overview_data,
     make_live_overview_data,
     make_optimizations_data,
     make_price_data,
@@ -776,6 +782,118 @@ class TestGetWeather:
         resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
         with pytest.raises(RequestError, match="Failed to get weather"):
             _make_system().get_weather()
+
+
+# ---------------------------------------------------------------------------
+# Impact overview (v2)
+# ---------------------------------------------------------------------------
+
+class TestGetImpactOverview:
+    _URL = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}/impact-overview"
+
+    @resp_lib.activate
+    def test_returns_instance(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_impact_overview_data(), status=200)
+        result = _make_system().get_impact_overview()
+        assert isinstance(result, ImpactOverview)
+        assert result.co2_savings_kg == pytest.approx(1234.5)
+        assert result.co2_collective_savings_kg == pytest.approx(50_000_000.0)
+        assert result.co2_global_savings_estimate_tons == pytest.approx(2_000_000.0)
+
+    @resp_lib.activate
+    def test_handles_missing_fields(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=200)
+        result = _make_system().get_impact_overview()
+        assert result.co2_savings_kg is None
+        assert result.co2_collective_savings_kg is None
+        assert result.co2_global_savings_estimate_tons is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get impact overview"):
+            _make_system().get_impact_overview()
+
+
+# ---------------------------------------------------------------------------
+# Energy trader (v2)
+# ---------------------------------------------------------------------------
+
+class TestGetEnergyTrader:
+    _URL = f"{_BASE}/api/v2/energy-trader"
+
+    @resp_lib.activate
+    def test_returns_instance_and_query_param(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_energy_trader_data(), status=200)
+        result = _make_system().get_energy_trader()
+        assert isinstance(result, EnergyTrader)
+        assert result.status == "ACTIVE"
+        assert result.green_energy_savings_eur == pytest.approx(1500.75)
+        assert result.energy_trader_savings_eur == pytest.approx(125.40)
+        assert f"siteId={FAKE_SYSTEM_ID}" in resp_lib.calls[0].request.url
+
+    @resp_lib.activate
+    def test_handles_missing_wrapper(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=200)
+        result = _make_system().get_energy_trader()
+        assert result.status is None
+        assert result.green_energy_savings_eur is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get energy trader"):
+            _make_system().get_energy_trader()
+
+
+# ---------------------------------------------------------------------------
+# Heartbeat AI summary (v2)
+# ---------------------------------------------------------------------------
+
+class TestGetHeartbeatAiSummary:
+    _URL = f"{_BASE}/api/v2/heartbeat-ai/summary"
+
+    @resp_lib.activate
+    def test_1m_returns_all_metrics(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_ai_summary_data("1M"), status=200)
+        result = _make_system().get_heartbeat_ai_summary()
+        assert isinstance(result, HeartbeatAiSummary)
+        assert result.resolution == "1M"
+        assert result.self_sufficiency_percent == pytest.approx(0.73)
+        assert result.self_sufficiency_by_solar_kwh == pytest.approx(331.25)
+        assert result.earned_amount_eur == pytest.approx(30.41)
+        assert result.feed_in_price_eur_per_kwh == pytest.approx(0.0803)
+        assert result.co2_saved_kg == pytest.approx(210.5)
+        assert result.heartbeat_price_eur_per_kwh == pytest.approx(0.0745)
+
+    @resp_lib.activate
+    def test_1w_leaves_self_sufficiency_none(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_ai_summary_data("1W"), status=200)
+        result = _make_system().get_heartbeat_ai_summary(resolution="1W")
+        assert result.resolution == "1W"
+        assert result.self_sufficiency_percent is None
+        assert result.earned_amount_eur is None
+        assert result.co2_saved_kg == pytest.approx(210.5)  # co2 still populated
+
+    @resp_lib.activate
+    def test_passes_query_params(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_ai_summary_data("1Y"), status=200)
+        _make_system().get_heartbeat_ai_summary(resolution="1Y")
+        url = resp_lib.calls[0].request.url
+        assert f"siteId={FAKE_SYSTEM_ID}" in url
+        assert "resolution=1Y" in url
+
+    @resp_lib.activate
+    def test_defaults_to_1m(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_ai_summary_data("1M"), status=200)
+        _make_system().get_heartbeat_ai_summary()
+        assert "resolution=1M" in resp_lib.calls[0].request.url
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get Heartbeat AI summary"):
+            _make_system().get_heartbeat_ai_summary()
 
 
 # ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ This package re-exports all model classes so existing
 domain-based split introduced in this refactor.
 """
 
+from .analytics import EnergyTrader, HeartbeatAiSummary, ImpactOverview
 from .ems import EmsManualDevice, EmsSettings
 from .energy import EnergyData, EnergySlot, HeartbeatSavings
 from .ev import ChargingMode
@@ -25,7 +26,10 @@ __all__ = [
     "EmsSettings",
     "EnergyData",
     "EnergySlot",
+    "EnergyTrader",
+    "HeartbeatAiSummary",
     "HeartbeatSavings",
+    "ImpactOverview",
     "LiveOverview",
     "MarketPrices",
     "OptimizationEvent",

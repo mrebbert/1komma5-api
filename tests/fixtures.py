@@ -411,6 +411,62 @@ def make_displayed_ev_charging_modes_data() -> dict:
     }
 
 
+def make_impact_overview_data() -> dict:
+    """Return an /impact-overview v2 response payload."""
+    return {
+        "co2Savings":         {"value": 1234.5, "unit": "kg"},
+        "co2CollectiveSavings": {"value": 50_000_000.0, "unit": "kg"},
+        "co2GlobalSavingsEstimate": {"value": 2_000_000.0, "unit": "tons"},
+    }
+
+
+def make_energy_trader_data() -> dict:
+    """Return an /energy-trader v2 response payload."""
+    return {
+        "energyTrader": {
+            "status": "ACTIVE",
+            "greenEnergySavings":  {"amount": "1500.75", "currency": "EUR"},
+            "energyTraderSavings": {"amount": "125.40", "currency": "EUR"},
+        }
+    }
+
+
+def make_heartbeat_ai_summary_data(resolution: str = "1M") -> dict:
+    """Return a /heartbeat-ai/summary v2 response payload.
+
+    For ``resolution="1W"`` or ``"1Y"`` the API returns null for
+    self-sufficiency and energy-earned blocks; only co2Saved is populated.
+    """
+    body: dict = {
+        "co2Saved": {
+            "co2Saved": 210.5,
+            "production":        {"value": 580.0, "unit": "kWh"},
+            "carTravelEmission": {"value": 825.0, "unit": "km"},
+            "socialStanding": None,
+        },
+        "heartbeatPrice": {"price": {"amount": "0.0745", "currency": "EUR"}, "unit": "kWh"},
+        "heartbeatPriceSocialStanding": None,
+        "peakPriceAvoided": None,
+    }
+    if resolution == "1M":
+        body["selfSufficiency"] = {
+            "percentage": 0.73,
+            "bySolar":   {"value": 331.25, "unit": "kWh"},
+            "byBattery": {"value": 301.30, "unit": "kWh"},
+            "socialStanding": None,
+        }
+        body["energyEarned"] = {
+            "earnedAmount": {"amount": "30.41", "currency": "EUR"},
+            "soldEnergy":   {"value": 378.75, "unit": "kWh"},
+            "feedInPrice":  {"price": {"amount": "0.0803", "currency": "EUR"}, "unit": "kWh"},
+            "socialStanding": None,
+        }
+    else:
+        body["selfSufficiency"] = None
+        body["energyEarned"] = None
+    return body
+
+
 def make_energy_savings_data(value: float | None = 39.39) -> dict:
     """Return a /energy-savings v1 response payload."""
     if value is None:

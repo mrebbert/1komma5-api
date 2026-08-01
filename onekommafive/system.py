@@ -9,7 +9,10 @@ from .models import (
     ChargingMode,
     EmsSettings,
     EnergyData,
+    EnergyTrader,
+    HeartbeatAiSummary,
     HeartbeatSavings,
+    ImpactOverview,
     LiveOverview,
     MarketPrices,
     OptimizationEvents,
@@ -246,6 +249,50 @@ class System:
             error_label="Failed to get weather",
         )
         return WeatherData.from_dict(data)
+
+    # ------------------------------------------------------------------
+    # Analytics — CO2, trading, and AI-summary
+    # ------------------------------------------------------------------
+
+    def get_impact_overview(self) -> ImpactOverview:
+        """Fetch lifetime CO2-savings figures for this site.
+
+        Ignores any query params; the response is always lifetime totals.
+        """
+        data = self._client._request(
+            "GET", self._systems_url("v2", "impact-overview"),
+            error_label="Failed to get impact overview",
+        )
+        return ImpactOverview.from_dict(data)
+
+    def get_energy_trader(self) -> EnergyTrader:
+        """Fetch lifetime energy-trading statistics for this site.
+
+        Uses the account-wide endpoint ``/api/v2/energy-trader`` with the
+        site ID passed as a ``siteId`` query parameter (not a path segment).
+        """
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v2/energy-trader",
+            params={"siteId": self.id()},
+            error_label="Failed to get energy trader",
+        )
+        return EnergyTrader.from_dict(data)
+
+    def get_heartbeat_ai_summary(self, resolution: str = "1M") -> HeartbeatAiSummary:
+        """Fetch aggregated Heartbeat-AI metrics for a resolution window.
+
+        ``resolution`` must be one of ``"1W"``, ``"1M"``, or ``"1Y"``.
+        ``"1W"`` and ``"1Y"`` return only CO2/production figures; the
+        self-sufficiency and earnings fields are ``None`` in those cases.
+        """
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v2/heartbeat-ai/summary",
+            params={"siteId": self.id(), "resolution": resolution},
+            error_label="Failed to get Heartbeat AI summary",
+        )
+        return HeartbeatAiSummary.from_dict(resolution, data)
 
     # ------------------------------------------------------------------
     # AI optimisations
