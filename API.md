@@ -772,6 +772,348 @@ Bekannte `decision`-Werte:
 
 ---
 
+### Heartbeat-Ersparnis für Zeitraum (v1)
+
+Aggregiert die kumulierten Heartbeat-Einsparungen für einen Datumsbereich in einem einzelnen EUR-Wert. Praktisch, wenn nur die Summe interessiert und der Timeseries-Overhead von `energy-today` / `energy-historical` unerwünscht ist.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/energy-savings` |
+
+Parameter (beide optional):
+
+| Parameter | Wert |
+|-----------|------|
+| `from` | Datum **date-only** (`YYYY-MM-DD`). Mit Zeit-Anteil → HTTP 400. |
+| `to` | Datum **date-only** (`YYYY-MM-DD`). |
+
+Ohne Parameter liefert der Endpoint ein serverseitig rollendes Fenster (undokumentiert — weder Tag noch aktueller Monat).
+
+```bash
+# Rollierendes Default-Fenster
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/energy-savings" | jq .
+
+# Beliebiger Zeitraum
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/energy-savings?from=2026-07-01&to=2026-07-31" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{ "heartbeatSavings": { "value": 175.42, "unit": "€" } }
+```
+
+---
+
+### CO₂-Bilanz (v2)
+
+Lifetime-Kennzahlen: eingesparte kg CO₂ für den Standort, aggregierte Community-Werte und eine globale Marketing-Schätzung. Der Endpoint ignoriert `from`/`to`/`resolution` — die Werte sind immer Lifetime-Totals.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/impact-overview` |
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/impact-overview" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{
+  "co2Savings":                { "value": 3099.24,     "unit": "kg" },
+  "co2CollectiveSavings":      { "value": 84779526.33, "unit": "kg" },
+  "co2GlobalSavingsEstimate":  { "value": 2000000,     "unit": "tons" }
+}
+```
+
+Hinweis: `co2GlobalSavingsEstimate` ist eine Marketing-Kennzahl (Tonnen), keine standortspezifische Messung.
+
+---
+
+### Energy Trader – Lifetime-Statistik (v2)
+
+Kumulierte Ersparnisse durch dynamischen Handel für den Standort. Keine Zeitraum-Parameter — Werte akkumulieren über die gesamte Trading-Historie der Anlage.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v2/energy-trader?siteId=$ONEKOMMAFIVE_SYSTEM` |
+
+**Achtung:** `siteId` als Query-Param, **nicht** als Pfad-Segment — anders als die meisten heartbeat-Endpunkte.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/energy-trader?siteId=$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{
+  "energyTrader": {
+    "status": "ACTIVE",
+    "greenEnergySavings":  { "amount": "2678.49", "currency": "EUR" },
+    "energyTraderSavings": { "amount": "231.26",  "currency": "EUR" }
+  }
+}
+```
+
+---
+
+### Energy Trader – Monats-Ø (v1)
+
+Durchschnittliche monatliche Ersparnis aus variabler Preisführung. Ergänzt die Lifetime-Sicht aus `/energy-trader` um eine Monats-Perspektive.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v1/energy-trader-savings/$ONEKOMMAFIVE_SYSTEM/month` |
+
+**Achtung:** der Pfad-Placeholder ist die **Site-ID** (= `$ONEKOMMAFIVE_SYSTEM`), **nicht** die Customer-ID — trotz missverständlicher URL-Struktur. Verifiziert per Live-Test (Customer-ID → HTTP 403, Site-ID → 200).
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/energy-trader-savings/$ONEKOMMAFIVE_SYSTEM/month" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{ "averagePastVariableSavings": { "value": 12.83, "unit": "€" } }
+```
+
+---
+
+### Heartbeat AI – Kurzstatistik (v2)
+
+Aggregierte AI-Kennzahlen für ein Zeitfenster: Autarkiegrad, verdiente Einspeisevergütung, CO₂-Ersparnis, effektiver Heartbeat-Preis.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v2/heartbeat-ai/summary?siteId=$ONEKOMMAFIVE_SYSTEM&resolution=1M` |
+
+Parameter (beide required):
+
+| Parameter | Wert |
+|-----------|------|
+| `siteId` | UUID der Anlage |
+| `resolution` | `1W`, `1M` oder `1Y`. Jeder andere Wert → HTTP 400. |
+
+**Achtung:** Nur `resolution=1M` liefert alle Metriken. Bei `1W` und `1Y` sind `selfSufficiency` und `energyEarned` `null`; nur `co2Saved`, `production` und `carTravelEmission` sind gefüllt.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/heartbeat-ai/summary?siteId=$ONEKOMMAFIVE_SYSTEM&resolution=1M" | jq .
+```
+
+Antwortstruktur (`resolution=1M`):
+
+```json
+{
+  "selfSufficiency": {
+    "percentage": 0.73,
+    "bySolar":   { "value": 331.25, "unit": "kWh" },
+    "byBattery": { "value": 301.30, "unit": "kWh" },
+    "socialStanding": null
+  },
+  "energyEarned": {
+    "earnedAmount": { "amount": "30.41",   "currency": "EUR" },
+    "soldEnergy":   { "value": 378.75,     "unit": "kWh" },
+    "feedInPrice":  { "price": { "amount": "0.0803", "currency": "EUR" }, "unit": "kWh" },
+    "socialStanding": null
+  },
+  "co2Saved": {
+    "co2Saved": 210.5,
+    "production":        { "value": 580.0, "unit": "kWh" },
+    "carTravelEmission": { "value": 825.0, "unit": "km"  },
+    "socialStanding": null
+  },
+  "heartbeatPrice": { "price": { "amount": "0.0745", "currency": "EUR" }, "unit": "kWh" },
+  "heartbeatPriceSocialStanding": null,
+  "peakPriceAvoided": null
+}
+```
+
+Bei `resolution=1W` / `1Y`:
+
+```json
+{
+  "selfSufficiency": null,
+  "energyEarned": null,
+  "co2Saved": { "co2Saved": ..., "production": {...}, "carTravelEmission": {...} },
+  "heartbeatPrice": { ... },
+  "peakPriceAvoided": null
+}
+```
+
+`socialStanding` (überall) enthält vermutlich Community-Percentile — bislang immer `null`; möglicherweise feature-flagged oder anonymisiert.
+
+---
+
+### Preisanpassungen (v2)
+
+Nutzer-konfigurierte Preise: Netzstrompreis, Vergleichspreis, monatlicher Grundpreis. Wird für „Ersparnis vs. Grundversorger"-Rechnungen und Dashboards genutzt.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/price-customizations` |
+
+Keine Query-Parameter.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/price-customizations" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{
+  "gridEnergyPrice":       { "price": { "amount": "0.3039", "currency": "EUR" }, "unit": "kWh" },
+  "comparisonEnergyPrice": { "price": { "amount": "0.274",  "currency": "EUR" }, "unit": "kWh" },
+  "monthlyBasePrice":      { "amount": "13.9", "currency": "EUR" }
+}
+```
+
+Alle Preise als **String** (EUR/kWh); `monthlyBasePrice` in EUR.
+
+---
+
+### Vergleichspreis Grundversorger (v2)
+
+Einzelwert: aktueller Grundversorger-Referenzpreis in EUR/kWh — die Basis für Sparen-Berechnungen. Ergibt genau denselben Wert wie `comparisonEnergyPrice` aus `/price-customizations`, aber ohne den Rest.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v2/comparison-price?siteId=$ONEKOMMAFIVE_SYSTEM` |
+
+**Achtung:** `siteId` als Query-Param, kein Pfad-Segment.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/comparison-price?siteId=$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{ "comparisonPrice": { "price": { "amount": "0.274", "currency": "EUR" }, "unit": "kWh" } }
+```
+
+---
+
+### Preisgarantie (v1, customer-identity)
+
+Vertragliche Preisgarantie des Kunden (z. B. gedeckelte Netzpreise für einen Vertragszeitraum). Liegt wie `active-features` auf dem `customer-identity`-Host.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/price-guarantee?systemId=$ONEKOMMAFIVE_SYSTEM` |
+
+**Achtung:** Der Pfad nimmt die Customer-ID, aber der Query-Parameter heißt `systemId` (**nicht** `customerId`, **nicht** `siteId`) — inkonsistente API-Konvention. Ohne den Query-Param → HTTP 400. `$CUSTOMER_ID` stammt aus dem Feld `customerId` der `/api/v1/systems/{id}/details`-Antwort.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/price-guarantee?systemId=$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{
+  "priceGuaranteeUnit": "ct/kWh",
+  "priceGuaranteeValue": 12,
+  "priceGuaranteeVersion": "DE_PRICE_GUARANTEE_V2"
+}
+```
+
+Beobachtete Versionen: `DE_PRICE_GUARANTEE_V2` (Deutschland, Version 2). Die Version taucht auch als `priceGuaranteeVersion` in einzelnen Subscription-Records auf.
+
+---
+
+### Wallbox-Hardware (v1)
+
+Physische Wallbox-Hardware am Standort. **Anderer Endpoint** als `/devices/evs`: dieser liefert die reine Hardware-Sicht (GridX-ID, Anzeigename, EV-Zuordnung); `/devices/evs` dagegen die Fahrzeug-Seite (Fahrzeug-Profil, `chargingMode`, `targetSoc`, Fahrpläne).
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/ev-chargers` |
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/ev-chargers" | jq .
+```
+
+Antwortstruktur (Array):
+
+```json
+[
+  {
+    "gridxHardwareId": "<uuid>",
+    "name": "Wallbox",
+    "assignedEvId": "<uuid>"
+  }
+]
+```
+
+`assignedEvId` verweist auf die `id` aus `/devices/evs` (Fahrzeug-Profil) — dort finden sich die Ladeeinstellungen.
+
+---
+
+### Smart Meter (v1)
+
+Regulatorische Registrierungsdaten des Smart Meters: ENTSO-E-Regelzonen-EIC, BDEW-Code des Netzbetreibers, Konzessionsabgabe pro kWh. Beides mit Gültigkeitszeiträumen.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/smart-meter` |
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/smart-meter" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{
+  "siteId": "<uuid>",
+  "controlAreaEIC": "10YDE-RWENET---I",
+  "controlAreaEIC__metadata": {
+    "qualityDescription": "Imported from Enet via address lookup",
+    "updatedAt": "ISO8601"
+  },
+  "dsoBdewCode": [
+    {
+      "validFromDate": "2020-01-01",
+      "validUntilDate": "2027-12-31",
+      "reference": "9900000000009",
+      "__metadata": { "qualityDescription": "Imported ...", "updatedAt": "ISO8601" }
+    }
+  ],
+  "concessionFeeEURperkWh": [
+    {
+      "validFromDate": "2020-01-01",
+      "validUntilDate": "2027-12-31",
+      "value": 0.0159,
+      "__metadata": { "qualityDescription": "Imported ...", "updatedAt": "ISO8601" }
+    }
+  ]
+}
+```
+
+Hinweise:
+
+- `controlAreaEIC` = ENTSO-E Regelzone (Deutschland: `10YDE-*` je nach Übertragungsnetzbetreiber wie TenneT/50Hertz/Amprion/RWENET).
+- `dsoBdewCode` = 13-stelliger BDEW-Code des Verteilnetzbetreibers.
+- `concessionFeeEURperkWh.value` = Konzessionsabgabe der Kommune in EUR/kWh.
+- Beide Arrays enthalten historische Einträge mit `validFromDate`/`validUntilDate`; der jeweils aktuelle Eintrag steht typischerweise zuerst.
+- Die `__metadata`-Blöcke dokumentieren Herkunft und letztes Update — meist `Imported from Enet via address lookup`.
+
+---
+
 ## Einheitenübersicht
 
 | Endpunkt | Einheit |
@@ -780,5 +1122,12 @@ Bekannte `decision`-Werte:
 | `energy-today`, `energy-historical` | **kW** (Zeitreihe) / **kWh** (Tagessummen) |
 | `charts/market-prices` | Preise als **String EUR/kWh**, Mengen in **kWh** |
 | `heartbeat-ai/optimizations` | **EUR/MWh** |
+| `heartbeat-ai/summary` | **kWh** / **EUR** / **kg** (CO₂) / **km** (Auto-Äquivalent), Preise als **String EUR/kWh** |
+| `impact-overview` | **kg** CO₂ (site + collective), **tons** (global estimate) |
+| `energy-trader`, `energy-trader-savings/.../month` | **EUR** |
+| `energy-savings` | **EUR** |
+| `price-customizations`, `comparison-price` | **String EUR/kWh** (Grundpreis: **EUR/Monat**) |
+| `price-guarantee` | Wert je `priceGuaranteeUnit` (z. B. `ct/kWh`) |
+| `smart-meter` | Konzessionsabgabe in **EUR/kWh** |
 | `devices/evs` | Kapazität in **Wh**, Ladestrom in **A** |
 | `ems/actions/get-settings` | **kW** (maxSolarSurplusUsage) |
