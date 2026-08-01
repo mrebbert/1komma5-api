@@ -32,7 +32,14 @@ class OptimizationEvent:
     """ISO-8601 end of the optimisation slot."""
 
     market_price: float | None
-    """Market price at decision time, in EUR/MWh (may be ``None``)."""
+    """Reference price the AI compared against for this decision,
+    in EUR/MWh (may be ``None``).
+
+    **Semantic caveat**: empirically much lower than the spot purchase
+    price returned by ``/charts/market-prices`` for the same timestamp
+    (factor ~4-5). Likely the **feed-in / trader-side price** from the
+    Dynamic-Pulse regime rather than the grid-purchase price, but the
+    API does not document which of the two it is."""
 
     market_price_currency: str | None
     """Currency of the market price (typically ``'EUR'``)."""

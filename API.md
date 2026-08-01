@@ -768,7 +768,7 @@ Bekannte `decision`-Werte:
 | `BATTERY_NO_DISCHARGE` | BATTERY | Batterie entlädt nicht (Preis zu niedrig) |
 | `EV_CHARGE_FROM_GRID` | EV | EV lädt aus dem Netz |
 
-`marketPrice.value` in **EUR/MWh**. `stateOfCharge` in %. Das `log`-Feld enthält Zeitstempel von Folge-Slots mit derselben Entscheidung.
+`marketPrice.value` in **EUR/MWh** — empirisch näher am Feed-in-/Trader-Preis als am Spot-Bezug (siehe Self-Sufficiency-Sektion für den beobachteten Faktor ~4-5 gegenüber `charts/market-prices`). `stateOfCharge` in %. Das `log`-Feld enthält Zeitstempel von Folge-Slots mit derselben Entscheidung.
 
 ---
 

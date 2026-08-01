@@ -841,7 +841,7 @@
                 }
               ]
             },
-            "description": "AI optimisation decisions for the requested window."
+            "description": "AI optimisation decisions for the requested window. QUIRK: `data.marketPrice` values are empirically much lower than the spot price returned by `charts/market-prices` for the same timestamp (factor ~4-5) — likely the feed-in / trader-side price rather than the grid-purchase price. Not officially documented. See also `Get self-sufficiency events` for the same shape and semantic caveat."
           },
           "response": []
         },
