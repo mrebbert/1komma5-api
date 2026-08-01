@@ -78,6 +78,31 @@
       "item": [
         {
           "name": "Refresh token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Auto-store fresh tokens into collection variables.",
+                  "// Values land in `currentValue` (device-local) — never in `initialValue`,",
+                  "// so a plain 'Export → Only original data' will not leak them.",
+                  "if (pm.response.code === 200) {",
+                  "    const j = pm.response.json();",
+                  "    if (j.access_token) {",
+                  "        pm.collectionVariables.set('accessToken', j.access_token);",
+                  "    }",
+                  "    if (j.refresh_token) {",
+                  "        pm.collectionVariables.set('refreshToken', j.refresh_token);",
+                  "    }",
+                  "    console.log('Tokens updated. Access-token TTL:', j.expires_in, 's');",
+                  "} else {",
+                  "    console.warn('Refresh failed:', pm.response.code, pm.response.text());",
+                  "}"
+                ]
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "noauth"
@@ -98,7 +123,7 @@
               "host": ["{{authUrl}}"],
               "path": ["oauth", "token"]
             },
-            "description": "Exchange a stored refresh token for a fresh access token."
+            "description": "Exchange a stored refresh token for a fresh access token. The attached post-response script writes the new `access_token` (and, if rotated, the `refresh_token`) back into the collection variables automatically. Values are stored in `currentValue` only, never in `initialValue`."
           },
           "response": []
         },
@@ -221,6 +246,20 @@
             "description": "List of active feature flags (e.g. DYNAMIC_TARIFF, TIME_OF_USE_OPTIMIZATION, SMART_CHARGING). `customerId` comes from `/systems/{id}/details`."
           },
           "response": []
+        },
+        {
+          "name": "Get smart meter",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/smart-meter",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sites", "{{siteId}}", "smart-meter"]
+            },
+            "description": "Smart-meter registration details: ENTSO-E control-area EIC, DSO BDEW code, municipality concession fee in EUR/kWh. The DSO code and concession fee come as arrays of historic entries with `validFromDate`/`validUntilDate` — the current entry is typically the first element."
+          },
+          "response": []
         }
       ]
     },
@@ -327,6 +366,94 @@
             "description": "Response uses `timeseries[ts].marketPrice` (EUR/kWh) and nested `energyMarket.averagePrice.price.amount` (string)."
           },
           "response": []
+        },
+        {
+          "name": "Get energy savings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/energy-savings?from=2026-07-01&to=2026-07-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "energy-savings"],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-07-01",
+                  "description": "OPTIONAL — YYYY-MM-DD only (datetimes with a time component return HTTP 400)"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-07-31",
+                  "description": "OPTIONAL — YYYY-MM-DD only"
+                }
+              ]
+            },
+            "description": "Aggregated Heartbeat savings (EUR) for a date range. Without params: server-side rolling window (undocumented — neither today nor the current month)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Prices",
+      "description": "User-configured prices and contractual guarantees. Basis for savings-vs-grid-supplier calculations.",
+      "item": [
+        {
+          "name": "Get price customizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/systems/{{systemId}}/price-customizations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "systems", "{{systemId}}", "price-customizations"]
+            },
+            "description": "User-configured prices: `gridEnergyPrice`, `comparisonEnergyPrice` (both EUR/kWh as string), `monthlyBasePrice` (EUR/month)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get comparison price",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/comparison-price?siteId={{siteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "comparison-price"],
+              "query": [
+                {
+                  "key": "siteId",
+                  "value": "{{siteId}}",
+                  "description": "REQUIRED — site UUID as a query param (not a path segment)"
+                }
+              ]
+            },
+            "description": "Single-value grid-supplier reference price in EUR/kWh. Equivalent to `comparisonEnergyPrice` from `/price-customizations` but without the surrounding envelope."
+          },
+          "response": []
+        },
+        {
+          "name": "Get price guarantee",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{identityUrl}}/api/v1/customers/{{customerId}}/price-guarantee?systemId={{systemId}}",
+              "host": ["{{identityUrl}}"],
+              "path": ["api", "v1", "customers", "{{customerId}}", "price-guarantee"],
+              "query": [
+                {
+                  "key": "systemId",
+                  "value": "{{systemId}}",
+                  "description": "REQUIRED. Naming quirk: path takes customerId but the query param is 'systemId' (not customerId, not siteId). Without it → HTTP 400."
+                }
+              ]
+            },
+            "description": "Contractual electricity-price guarantee (`priceGuaranteeValue`, `priceGuaranteeUnit` e.g. 'ct/kWh', `priceGuaranteeVersion` e.g. 'DE_PRICE_GUARANTEE_V2'). Sits on the `customer-identity` host."
+          },
+          "response": []
         }
       ]
     },
@@ -402,7 +529,22 @@
               "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs"]
-            }
+            },
+            "description": "Vehicle-side profiles (chargingMode, targetSoc, schedules). For the physical wallbox hardware use `List wallboxes` below."
+          },
+          "response": []
+        },
+        {
+          "name": "List wallboxes (hardware)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/ev-chargers",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "ev-chargers"]
+            },
+            "description": "Physical wallbox hardware (`gridxHardwareId`, `name`, `assignedEvId`). Distinct from `/devices/evs` which returns the vehicle-side profiles. `assignedEvId` links to an entry in `/devices/evs`."
           },
           "response": []
         },
@@ -515,6 +657,61 @@
       ]
     },
     {
+      "name": "Analytics",
+      "description": "Aggregated business metrics — CO2 savings, energy-trader statistics, monthly trading average.",
+      "item": [
+        {
+          "name": "Get impact overview (CO2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/systems/{{systemId}}/impact-overview",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "systems", "{{systemId}}", "impact-overview"]
+            },
+            "description": "Lifetime CO2 figures: `co2Savings` (site, kg), `co2CollectiveSavings` (entire 1KOMMA5° customer base, kg), `co2GlobalSavingsEstimate` (marketing figure, tons). Ignores any query parameters — values are always lifetime totals."
+          },
+          "response": []
+        },
+        {
+          "name": "Get energy trader (lifetime)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/energy-trader?siteId={{siteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "energy-trader"],
+              "query": [
+                {
+                  "key": "siteId",
+                  "value": "{{siteId}}",
+                  "description": "REQUIRED — site UUID as query param (not path segment)"
+                }
+              ]
+            },
+            "description": "Lifetime trading statistics: `status`, `greenEnergySavings` (EUR), `energyTraderSavings` (EUR). Values accumulate over the site's entire trading history; no date range supported."
+          },
+          "response": []
+        },
+        {
+          "name": "Get monthly trading savings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/energy-trader-savings/{{siteId}}/month",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "energy-trader-savings", "{{siteId}}", "month"]
+            },
+            "description": "Average monthly Energy-Trader savings (`averagePastVariableSavings` in EUR). QUIRK: the path segment is the **site ID** (= systemId), NOT the customer ID — despite the misleading URL structure. Verified live: customer_id → HTTP 403, site_id → 200."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "AI Optimisations",
       "item": [
         {
@@ -544,6 +741,32 @@
               ]
             },
             "description": "AI optimisation decisions for the requested window."
+          },
+          "response": []
+        },
+        {
+          "name": "Get AI summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/heartbeat-ai/summary?siteId={{siteId}}&resolution=1M",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "heartbeat-ai", "summary"],
+              "query": [
+                {
+                  "key": "siteId",
+                  "value": "{{siteId}}",
+                  "description": "REQUIRED"
+                },
+                {
+                  "key": "resolution",
+                  "value": "1M",
+                  "description": "REQUIRED. Allowed: '1W', '1M', '1Y'. Any other value → HTTP 400."
+                }
+              ]
+            },
+            "description": "Aggregated Heartbeat-AI metrics (selfSufficiency, energyEarned, co2Saved, heartbeatPrice) for a resolution window. QUIRK: only `resolution=1M` returns all metrics. `1W` and `1Y` return only `co2Saved` + `production` + `carTravelEmission`; `selfSufficiency` and `energyEarned` come back as `null`."
           },
           "response": []
         }
