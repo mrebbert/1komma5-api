@@ -90,6 +90,19 @@ def _get_system():
 # Subcommands
 # ---------------------------------------------------------------------------
 
+def _resolve_customer_id(args: argparse.Namespace, system) -> str:
+    """Return ``args.customer_id`` if set, else look it up via system details.
+
+    Exits with a descriptive error if neither source yields an ID.
+    """
+    if args.customer_id:
+        return args.customer_id
+    customer_id = system.get_details().customer_id
+    if not customer_id:
+        sys.exit("Error: system details do not expose a customer_id; pass --customer-id explicitly")
+    return customer_id
+
+
 def _format_address(o) -> str:
     parts = filter(None, [
         o.address_line1,
@@ -190,12 +203,7 @@ def cmd_assets(args: argparse.Namespace) -> None:
 
 def cmd_features(args: argparse.Namespace) -> None:
     system = _get_system()
-    customer_id = args.customer_id
-    if not customer_id:
-        details = system.get_details()
-        customer_id = details.customer_id
-        if not customer_id:
-            sys.exit("Error: system details do not expose a customer_id; pass --customer-id explicitly")
+    customer_id = _resolve_customer_id(args, system)
     features = system.get_active_features(customer_id)
     print(f"System:       {system.id()}")
     print(f"Customer:     {customer_id}")
@@ -291,12 +299,7 @@ def cmd_comparison_price(args: argparse.Namespace) -> None:
 
 def cmd_price_guarantee(args: argparse.Namespace) -> None:
     system = _get_system()
-    customer_id = args.customer_id
-    if not customer_id:
-        details = system.get_details()
-        customer_id = details.customer_id
-        if not customer_id:
-            sys.exit("Error: system details do not expose a customer_id; pass --customer-id explicitly")
+    customer_id = _resolve_customer_id(args, system)
     pg = system.get_price_guarantee(customer_id)
     print(f"System:    {system.id()}")
     print(f"Customer:  {customer_id}")
@@ -692,7 +695,7 @@ def main() -> None:
 
     sub.add_parser("live", help="Live power overview")
 
-    prices_p = sub.add_parser("prices", help="Market electricity prices (yesterday) [--resolution 1h|15m]")
+    prices_p = sub.add_parser("prices", help="Market electricity prices (today) [--resolution 1h|15m]")
     prices_p.add_argument(
         "--resolution",
         metavar="RES",

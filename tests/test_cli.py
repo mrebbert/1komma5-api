@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +12,7 @@ from onekommafive.models import (
     ChargingMode,
     ComparisonPrice,
     EmsSettings,
+    EnergyData,
     EnergyTrader,
     HeartbeatAiSummary,
     HeartbeatSavings,
@@ -18,29 +20,39 @@ from onekommafive.models import (
     LiveOverview,
     MarketPrices,
     MonthlyTradingSavings,
+    OptimizationEvents,
     PriceCustomizations,
     PriceGuarantee,
+    SiteStatus,
     SmartMeter,
+    SystemDetails,
     SystemInfo,
     Wallbox,
+    WeatherData,
 )
 from tests.fixtures import (
     FAKE_EV_ID,
     FAKE_SYSTEM_ID,
+    make_active_features_data,
     make_comparison_price_data,
     make_ems_settings_data,
+    make_energy_data,
     make_energy_savings_data,
     make_energy_trader_data,
     make_heartbeat_ai_summary_data,
     make_impact_overview_data,
     make_live_overview_data,
     make_monthly_trading_savings_data,
+    make_optimizations_data,
     make_price_customizations_data,
     make_price_data,
     make_price_guarantee_data,
     make_smart_meter_data,
+    make_status_and_assets_data,
     make_system_data,
+    make_system_details_data,
     make_wallboxes_data,
+    make_weather_data,
 )
 
 
@@ -657,6 +669,164 @@ class TestCmdAiSummary:
     def test_invalid_resolution_rejected(self, mock_system) -> None:
         with pytest.raises(SystemExit):
             _run("ai-summary", "--resolution", "1D")
+
+
+# ---------------------------------------------------------------------------
+# details
+# ---------------------------------------------------------------------------
+
+class TestCmdDetails:
+    def test_prints_key_fields(self, mock_system, capsys) -> None:
+        mock_system.get_details.return_value = SystemDetails.from_dict(make_system_details_data())
+        _run("details")
+        out = capsys.readouterr().out
+        assert FAKE_SYSTEM_ID in out
+        assert "My Home System" in out
+        assert "GRIDX" in out
+        assert "John Doe" in out
+        assert "Musterstraße 1" in out
+        assert "Example Installer" in out
+
+
+# ---------------------------------------------------------------------------
+# assets
+# ---------------------------------------------------------------------------
+
+class TestCmdAssets:
+    def test_lists_all_asset_types(self, mock_system, capsys) -> None:
+        mock_system.get_status_and_assets.return_value = SiteStatus.from_dict(make_status_and_assets_data())
+        _run("assets")
+        out = capsys.readouterr().out
+        for asset_type in ("HYBRID", "HEAT_PUMP", "METER", "EV_CHARGER"):
+            assert asset_type in out
+        assert "Sungrow" in out
+        assert "192.0.2." in out  # network address
+
+    def test_prints_no_assets_when_empty(self, mock_system, capsys) -> None:
+        mock_system.get_status_and_assets.return_value = SiteStatus.from_dict({"status": "CONNECTED", "assets": []})
+        _run("assets")
+        assert "No assets" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# features
+# ---------------------------------------------------------------------------
+
+class TestCmdFeatures:
+    def test_uses_explicit_customer_id(self, mock_system, capsys) -> None:
+        mock_system.get_active_features.return_value = ["DYNAMIC_TARIFF", "SMART_CHARGING"]
+        _run("features", "--customer-id", "cust-explicit")
+        mock_system.get_active_features.assert_called_once_with("cust-explicit")
+        out = capsys.readouterr().out
+        assert "DYNAMIC_TARIFF" in out
+        assert "SMART_CHARGING" in out
+
+    def test_falls_back_to_details_customer_id(self, mock_system) -> None:
+        details = MagicMock()
+        details.customer_id = "cust-from-details"
+        mock_system.get_details.return_value = details
+        mock_system.get_active_features.return_value = make_active_features_data()["features"]
+        _run("features")
+        mock_system.get_active_features.assert_called_once_with("cust-from-details")
+
+    def test_exits_when_no_customer_id_available(self, mock_system) -> None:
+        details = MagicMock()
+        details.customer_id = None
+        mock_system.get_details.return_value = details
+        with pytest.raises(SystemExit):
+            _run("features")
+
+    def test_prints_no_features_when_empty(self, mock_system, capsys) -> None:
+        mock_system.get_active_features.return_value = []
+        _run("features", "--customer-id", "cust-1")
+        assert "No active features" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# weather
+# ---------------------------------------------------------------------------
+
+class TestCmdWeather:
+    def test_prints_today_and_tomorrow(self, mock_system, capsys) -> None:
+        mock_system.get_weather.return_value = WeatherData.from_dict(make_weather_data())
+        _run("weather")
+        out = capsys.readouterr().out
+        assert "Heute" in out
+        assert "Morgen" in out
+        assert "Heiter" in out  # symbol 2
+
+    def test_forecasts_flag_prints_slots(self, mock_system, capsys) -> None:
+        mock_system.get_weather.return_value = WeatherData.from_dict(make_weather_data())
+        _run("weather", "--forecasts")
+        out = capsys.readouterr().out
+        assert "Zeit" in out
+        assert "2026-06-01 09:00" in out
+
+
+# ---------------------------------------------------------------------------
+# energy-today
+# ---------------------------------------------------------------------------
+
+class TestCmdEnergyToday:
+    def test_prints_totals_and_timeseries(self, mock_system, capsys) -> None:
+        mock_system.get_energy_today.return_value = EnergyData.from_dict(make_energy_data())
+        _run("energy-today")
+        out = capsys.readouterr().out
+        assert "30.76" in out  # PV produced kWh
+        assert "6.48" in out   # savings EUR
+        assert "2026-03-08T12:00Z" in out
+        mock_system.get_energy_today.assert_called_once_with(resolution="1h")
+
+    def test_passes_resolution_flag(self, mock_system) -> None:
+        mock_system.get_energy_today.return_value = EnergyData.from_dict(make_energy_data())
+        _run("energy-today", "--resolution", "15m")
+        mock_system.get_energy_today.assert_called_once_with(resolution="15m")
+
+
+# ---------------------------------------------------------------------------
+# energy-historical
+# ---------------------------------------------------------------------------
+
+class TestCmdEnergyHistorical:
+    def test_passes_parsed_dates(self, mock_system) -> None:
+        mock_system.get_energy_historical.return_value = EnergyData.from_dict(make_energy_data())
+        _run("energy-historical", "--from", "2026-03-08", "--to", "2026-03-08")
+        mock_system.get_energy_historical.assert_called_once_with(
+            from_date=datetime.date(2026, 3, 8),
+            to_date=datetime.date(2026, 3, 8),
+            resolution="1h",
+        )
+
+    def test_invalid_date_rejected(self, mock_system) -> None:
+        with pytest.raises(SystemExit):
+            _run("energy-historical", "--from", "not-a-date", "--to", "2026-03-08")
+
+
+# ---------------------------------------------------------------------------
+# optimizations
+# ---------------------------------------------------------------------------
+
+class TestCmdOptimizations:
+    def test_default_range_is_today(self, mock_system, capsys) -> None:
+        mock_system.get_optimizations.return_value = OptimizationEvents.from_dict(make_optimizations_data())
+        _run("optimizations")
+        assert mock_system.get_optimizations.call_count == 1
+        start, end = mock_system.get_optimizations.call_args.kwargs.values()
+        assert start.hour == 0 and start.minute == 0
+        assert end.hour == 23 and end.minute == 59
+        assert start.date() == end.date()
+        assert "Events:" in capsys.readouterr().out
+
+    def test_prints_event_rows(self, mock_system, capsys) -> None:
+        mock_system.get_optimizations.return_value = OptimizationEvents.from_dict(make_optimizations_data())
+        _run("optimizations", "--from", "2026-06-01", "--to", "2026-06-01")
+        out = capsys.readouterr().out
+        assert "BATTERY_CHARGE_FROM_GRID" in out
+        assert "BATTERY_NO_DISCHARGE" in out
+
+    def test_invalid_date_rejected(self, mock_system) -> None:
+        with pytest.raises(SystemExit):
+            _run("optimizations", "--from", "not-a-date")
 
 
 # ---------------------------------------------------------------------------
