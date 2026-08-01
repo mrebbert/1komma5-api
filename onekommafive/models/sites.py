@@ -72,6 +72,50 @@ class Asset:
 
 
 @dataclass
+class SmartMeter:
+    """Smart-meter registration details for a site.
+
+    Returned by :meth:`~onekommafive.System.get_smart_meter`
+    (``GET /api/v1/sites/{id}/smart-meter``).
+
+    The API exposes ``dsoBdewCode`` and ``concessionFeeEURperkWh`` as
+    arrays of historic entries with ``validFromDate``/``validUntilDate``.
+    This wrapper flattens each to its **first** entry (typically the most
+    recent). For historic values inspect :attr:`raw`.
+    """
+
+    site_id: str | None
+    """Site UUID as returned by the endpoint (redundant to the caller)."""
+
+    control_area_eic: str | None
+    """ENTSO-E control-area EIC code, e.g. ``"10YDE-RWENET---I"``."""
+
+    dso_bdew_code: str | None
+    """Distribution System Operator's BDEW code (13-digit), latest entry."""
+
+    concession_fee_eur_per_kwh: float | None
+    """Municipality concession fee in EUR/kWh, latest entry."""
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SmartMeter":
+        def _first(nodes: Any, key: str) -> Any:
+            if isinstance(nodes, list) and nodes:
+                return nodes[0].get(key)
+            return None
+
+        fee = _first(data.get("concessionFeeEURperkWh"), "value")
+        return cls(
+            site_id=data.get("siteId"),
+            control_area_eic=data.get("controlAreaEIC"),
+            dso_bdew_code=_first(data.get("dsoBdewCode"), "reference"),
+            concession_fee_eur_per_kwh=float(fee) if fee is not None else None,
+            raw=data,
+        )
+
+
+@dataclass
 class SiteStatus:
     """Overall connection status and asset inventory for a site.
 

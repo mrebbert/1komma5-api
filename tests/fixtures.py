@@ -411,6 +411,77 @@ def make_displayed_ev_charging_modes_data() -> dict:
     }
 
 
+def make_price_customizations_data() -> dict:
+    """Return a /price-customizations v2 response payload."""
+    return {
+        "gridEnergyPrice":       {"price": {"amount": "0.3039", "currency": "EUR"}, "unit": "kWh"},
+        "comparisonEnergyPrice": {"price": {"amount": "0.274",  "currency": "EUR"}, "unit": "kWh"},
+        "monthlyBasePrice":      {"amount": "13.9", "currency": "EUR"},
+    }
+
+
+def make_comparison_price_data(amount: str = "0.274") -> dict:
+    """Return a /comparison-price v2 response payload."""
+    return {"comparisonPrice": {"price": {"amount": amount, "currency": "EUR"}, "unit": "kWh"}}
+
+
+def make_price_guarantee_data(value: int | None = 12) -> dict:
+    """Return a /customers/{cid}/price-guarantee v1 response payload."""
+    if value is None:
+        return {"priceGuaranteeUnit": None, "priceGuaranteeValue": None, "priceGuaranteeVersion": None}
+    return {
+        "priceGuaranteeUnit": "ct/kWh",
+        "priceGuaranteeValue": value,
+        "priceGuaranteeVersion": "DE_PRICE_GUARANTEE_V2",
+    }
+
+
+def make_wallboxes_data() -> list[dict]:
+    """Return a /devices/ev-chargers v1 response payload (list of wallboxes)."""
+    return [
+        {
+            "gridxHardwareId": "wb-0001-0000-0000-0000-000000000001",
+            "name": "Wallbox",
+            "assignedEvId": FAKE_EV_ID,
+        }
+    ]
+
+
+def make_smart_meter_data() -> dict:
+    """Return a /sites/{id}/smart-meter v1 response payload."""
+    return {
+        "siteId": FAKE_SYSTEM_ID,
+        "controlAreaEIC": "10YDE-RWENET---I",
+        "controlAreaEIC__metadata": {
+            "qualityDescription": "Imported from Enet via address lookup",
+            "updatedAt": "2026-01-01T00:00:00.000Z",
+        },
+        "dsoBdewCode": [
+            {
+                "validFromDate": "2020-01-01",
+                "validUntilDate": "2027-12-31",
+                "reference": "9900000000009",
+                "__metadata": {"qualityDescription": "Imported", "updatedAt": "2026-01-01T00:00:00.000Z"},
+            }
+        ],
+        "concessionFeeEURperkWh": [
+            {
+                "validFromDate": "2020-01-01",
+                "validUntilDate": "2027-12-31",
+                "value": 0.0159,
+                "__metadata": {"qualityDescription": "Imported", "updatedAt": "2026-01-01T00:00:00.000Z"},
+            }
+        ],
+    }
+
+
+def make_monthly_trading_savings_data(value: float | None = 12.83) -> dict:
+    """Return a /energy-trader-savings/{site_id}/month v1 response payload."""
+    if value is None:
+        return {}
+    return {"averagePastVariableSavings": {"value": value, "unit": "€"}}
+
+
 def make_impact_overview_data() -> dict:
     """Return an /impact-overview v2 response payload."""
     return {

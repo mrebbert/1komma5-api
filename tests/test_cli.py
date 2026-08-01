@@ -9,6 +9,7 @@ import pytest
 from onekommafive.cli import main
 from onekommafive.models import (
     ChargingMode,
+    ComparisonPrice,
     EmsSettings,
     EnergyTrader,
     HeartbeatAiSummary,
@@ -16,19 +17,30 @@ from onekommafive.models import (
     ImpactOverview,
     LiveOverview,
     MarketPrices,
+    MonthlyTradingSavings,
+    PriceCustomizations,
+    PriceGuarantee,
+    SmartMeter,
     SystemInfo,
+    Wallbox,
 )
 from tests.fixtures import (
     FAKE_EV_ID,
     FAKE_SYSTEM_ID,
+    make_comparison_price_data,
     make_ems_settings_data,
     make_energy_savings_data,
     make_energy_trader_data,
     make_heartbeat_ai_summary_data,
     make_impact_overview_data,
     make_live_overview_data,
+    make_monthly_trading_savings_data,
+    make_price_customizations_data,
     make_price_data,
+    make_price_guarantee_data,
+    make_smart_meter_data,
     make_system_data,
+    make_wallboxes_data,
 )
 
 
@@ -455,6 +467,125 @@ class TestCmdSavings:
     def test_invalid_date_rejected(self, mock_system) -> None:
         with pytest.raises(SystemExit):
             _run("savings", "--from", "not-a-date")
+
+
+# ---------------------------------------------------------------------------
+# price-config
+# ---------------------------------------------------------------------------
+
+class TestCmdPriceConfig:
+    def test_prints_all_prices(self, mock_system, capsys) -> None:
+        mock_system.get_price_customizations.return_value = PriceCustomizations.from_dict(
+            make_price_customizations_data()
+        )
+        _run("price-config")
+        out = capsys.readouterr().out
+        assert "0.3039" in out
+        assert "0.2740" in out
+        assert "13.90" in out
+
+
+# ---------------------------------------------------------------------------
+# comparison-price
+# ---------------------------------------------------------------------------
+
+class TestCmdComparisonPrice:
+    def test_prints_price(self, mock_system, capsys) -> None:
+        mock_system.get_comparison_price.return_value = ComparisonPrice.from_dict(
+            make_comparison_price_data()
+        )
+        _run("comparison-price")
+        assert "0.2740" in capsys.readouterr().out
+
+    def test_prints_dash_when_missing(self, mock_system, capsys) -> None:
+        mock_system.get_comparison_price.return_value = ComparisonPrice.from_dict({})
+        _run("comparison-price")
+        assert "—" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# price-guarantee
+# ---------------------------------------------------------------------------
+
+class TestCmdPriceGuarantee:
+    def test_uses_explicit_customer_id(self, mock_system, capsys) -> None:
+        mock_system.get_price_guarantee.return_value = PriceGuarantee.from_dict(
+            make_price_guarantee_data()
+        )
+        _run("price-guarantee", "--customer-id", "cust-explicit")
+        mock_system.get_price_guarantee.assert_called_once_with("cust-explicit")
+        out = capsys.readouterr().out
+        assert "12" in out
+        assert "ct/kWh" in out
+        assert "DE_PRICE_GUARANTEE_V2" in out
+
+    def test_falls_back_to_details_customer_id(self, mock_system, capsys) -> None:
+        details = MagicMock()
+        details.customer_id = "cust-from-details"
+        mock_system.get_details.return_value = details
+        mock_system.get_price_guarantee.return_value = PriceGuarantee.from_dict(
+            make_price_guarantee_data()
+        )
+        _run("price-guarantee")
+        mock_system.get_price_guarantee.assert_called_once_with("cust-from-details")
+
+    def test_exits_when_no_customer_id_available(self, mock_system) -> None:
+        details = MagicMock()
+        details.customer_id = None
+        mock_system.get_details.return_value = details
+        with pytest.raises(SystemExit):
+            _run("price-guarantee")
+
+
+# ---------------------------------------------------------------------------
+# wallboxes
+# ---------------------------------------------------------------------------
+
+class TestCmdWallboxes:
+    def test_prints_wallbox_info(self, mock_system, capsys) -> None:
+        mock_system.get_wallboxes.return_value = [Wallbox.from_dict(w) for w in make_wallboxes_data()]
+        _run("wallboxes")
+        out = capsys.readouterr().out
+        assert "Wallbox" in out
+        assert "wb-0001" in out
+        assert FAKE_EV_ID in out
+
+    def test_prints_empty_message(self, mock_system, capsys) -> None:
+        mock_system.get_wallboxes.return_value = []
+        _run("wallboxes")
+        assert "No wallboxes" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# smart-meter
+# ---------------------------------------------------------------------------
+
+class TestCmdSmartMeter:
+    def test_prints_flattened_fields(self, mock_system, capsys) -> None:
+        mock_system.get_smart_meter.return_value = SmartMeter.from_dict(make_smart_meter_data())
+        _run("smart-meter")
+        out = capsys.readouterr().out
+        assert "10YDE-RWENET---I" in out
+        assert "9900000000009" in out
+        assert "0.0159" in out
+
+
+# ---------------------------------------------------------------------------
+# monthly-trading
+# ---------------------------------------------------------------------------
+
+class TestCmdMonthlyTrading:
+    def test_prints_value(self, mock_system, capsys) -> None:
+        mock_system.get_monthly_trading_savings.return_value = MonthlyTradingSavings.from_dict(
+            make_monthly_trading_savings_data()
+        )
+        _run("monthly-trading")
+        assert "12.83" in capsys.readouterr().out
+
+    def test_prints_dash_when_missing(self, mock_system, capsys) -> None:
+        mock_system.get_monthly_trading_savings.return_value = MonthlyTradingSavings.from_dict({})
+        _run("monthly-trading")
+        assert "—" in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------

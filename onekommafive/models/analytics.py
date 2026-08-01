@@ -75,6 +75,30 @@ class EnergyTrader:
 
 
 @dataclass
+class MonthlyTradingSavings:
+    """Average monthly savings from Energy Trader activity.
+
+    Returned by :meth:`~onekommafive.System.get_monthly_trading_savings`
+    (``GET /api/v1/energy-trader-savings/{site_id}/month``).
+    Complements :class:`EnergyTrader` (lifetime totals) with a monthly view.
+    """
+
+    average_past_variable_savings_eur: float | None
+    """Average monthly savings from variable-pricing trading, in EUR."""
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "MonthlyTradingSavings":
+        node = data.get("averagePastVariableSavings") or {}
+        val = node.get("value")
+        return cls(
+            average_past_variable_savings_eur=float(val) if val is not None else None,
+            raw=data,
+        )
+
+
+@dataclass
 class HeartbeatAiSummary:
     """Aggregated Heartbeat-AI performance metrics for a resolution window.
 

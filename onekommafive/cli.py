@@ -20,6 +20,12 @@ Usage:
     python cli.py impact
     python cli.py trader
     python cli.py ai-summary [--resolution 1W|1M|1Y]
+    python cli.py price-config
+    python cli.py comparison-price
+    python cli.py price-guarantee [--customer-id UUID]
+    python cli.py wallboxes
+    python cli.py smart-meter
+    python cli.py monthly-trading
     python cli.py ems
     python cli.py set-ems auto|manual
 
@@ -259,6 +265,80 @@ def cmd_prices(args: argparse.Namespace) -> None:
         grid = mp.prices_with_grid_costs.get(ts, float("nan"))
         all_in = mp.prices_with_grid_costs_and_vat.get(ts, float("nan"))
         print(f"{ts:<25}  {spot:>9.4f}  {grid:>9.4f}  {all_in:>9.4f}")
+
+
+def cmd_price_config(args: argparse.Namespace) -> None:
+    system = _get_system()
+    p = system.get_price_customizations()
+    print(f"System:            {system.id()}")
+    if p.grid_energy_price_eur_per_kwh is not None:
+        print(f"Grid price:        {p.grid_energy_price_eur_per_kwh:.4f} €/kWh")
+    if p.comparison_energy_price_eur_per_kwh is not None:
+        print(f"Comparison price:  {p.comparison_energy_price_eur_per_kwh:.4f} €/kWh")
+    if p.monthly_base_price_eur is not None:
+        print(f"Monthly base:      {p.monthly_base_price_eur:.2f} €")
+
+
+def cmd_comparison_price(args: argparse.Namespace) -> None:
+    system = _get_system()
+    c = system.get_comparison_price()
+    print(f"System:            {system.id()}")
+    if c.price_eur_per_kwh is not None:
+        print(f"Comparison price:  {c.price_eur_per_kwh:.4f} €/kWh")
+    else:
+        print("Comparison price:  —")
+
+
+def cmd_price_guarantee(args: argparse.Namespace) -> None:
+    system = _get_system()
+    customer_id = args.customer_id
+    if not customer_id:
+        details = system.get_details()
+        customer_id = details.customer_id
+        if not customer_id:
+            sys.exit("Error: system details do not expose a customer_id; pass --customer-id explicitly")
+    pg = system.get_price_guarantee(customer_id)
+    print(f"System:    {system.id()}")
+    print(f"Customer:  {customer_id}")
+    if pg.value is None:
+        print("Guarantee: —")
+    else:
+        unit = pg.unit or ""
+        version = f"  ({pg.version})" if pg.version else ""
+        print(f"Guarantee: {pg.value:g} {unit}{version}")
+
+
+def cmd_wallboxes(args: argparse.Namespace) -> None:
+    system = _get_system()
+    boxes = system.get_wallboxes()
+    print(f"System: {system.id()}")
+    if not boxes:
+        print("No wallboxes registered.")
+        return
+    for w in boxes:
+        print(f"  {w.name or '—'}")
+        print(f"    Hardware ID:  {w.gridx_hardware_id or '—'}")
+        print(f"    Assigned EV:  {w.assigned_ev_id or '—'}")
+
+
+def cmd_smart_meter(args: argparse.Namespace) -> None:
+    system = _get_system()
+    m = system.get_smart_meter()
+    print(f"Site:              {m.site_id or system.id()}")
+    print(f"Control area EIC: {m.control_area_eic or '—'}")
+    print(f"DSO BDEW code:    {m.dso_bdew_code or '—'}")
+    if m.concession_fee_eur_per_kwh is not None:
+        print(f"Concession fee:   {m.concession_fee_eur_per_kwh:.4f} €/kWh")
+
+
+def cmd_monthly_trading(args: argparse.Namespace) -> None:
+    system = _get_system()
+    s = system.get_monthly_trading_savings()
+    print(f"System:                    {system.id()}")
+    if s.average_past_variable_savings_eur is None:
+        print("Avg. monthly savings:      —")
+    else:
+        print(f"Avg. monthly savings:      {s.average_past_variable_savings_eur:.2f} €")
 
 
 def cmd_impact(args: argparse.Namespace) -> None:
@@ -657,6 +737,19 @@ def main() -> None:
         "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
     )
 
+    sub.add_parser("price-config", help="User-configured energy prices (grid, comparison, monthly base)")
+    sub.add_parser("comparison-price", help="Grid-supplier comparison price (EUR/kWh)")
+
+    pg_p = sub.add_parser("price-guarantee", help="Contractual electricity-price guarantee")
+    pg_p.add_argument(
+        "--customer-id", dest="customer_id", metavar="UUID", default=None,
+        help="Customer UUID (default: looked up via system details)",
+    )
+
+    sub.add_parser("wallboxes", help="Physical wallbox hardware assigned to this system")
+    sub.add_parser("smart-meter", help="Smart-meter registration details (EIC, DSO code, concession fee)")
+    sub.add_parser("monthly-trading", help="Average monthly Energy-Trader savings")
+
     sub.add_parser("impact", help="Lifetime CO2 savings (site + community)")
     sub.add_parser("trader", help="Lifetime energy-trading savings (€)")
 
@@ -723,6 +816,12 @@ def main() -> None:
         "set-ev-mode": cmd_set_ev_mode,
         "set-ev-target-soc": cmd_set_ev_target_soc,
         "set-ev-departure": cmd_set_ev_departure,
+        "price-config": cmd_price_config,
+        "comparison-price": cmd_comparison_price,
+        "price-guarantee": cmd_price_guarantee,
+        "wallboxes": cmd_wallboxes,
+        "smart-meter": cmd_smart_meter,
+        "monthly-trading": cmd_monthly_trading,
         "impact": cmd_impact,
         "trader": cmd_trader,
         "ai-summary": cmd_ai_summary,

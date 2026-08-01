@@ -5,6 +5,98 @@ from typing import Any
 
 
 @dataclass
+class PriceCustomizations:
+    """User-configured energy prices for a system.
+
+    Returned by :meth:`~onekommafive.System.get_price_customizations`
+    (``GET /api/v2/systems/{id}/price-customizations``).
+    """
+
+    grid_energy_price_eur_per_kwh: float | None
+    """User-configured grid electricity price in EUR/kWh (e.g. ``0.3039``)."""
+
+    comparison_energy_price_eur_per_kwh: float | None
+    """User-configured grid-supplier comparison price in EUR/kWh."""
+
+    monthly_base_price_eur: float | None
+    """Monthly base fee in EUR (e.g. ``13.90``)."""
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "PriceCustomizations":
+        def _amount(node: dict | None) -> float | None:
+            if not node:
+                return None
+            price = node.get("price") if "price" in node else node
+            amt = price.get("amount") if price else None
+            return float(amt) if amt is not None else None
+
+        return cls(
+            grid_energy_price_eur_per_kwh=_amount(data.get("gridEnergyPrice")),
+            comparison_energy_price_eur_per_kwh=_amount(data.get("comparisonEnergyPrice")),
+            monthly_base_price_eur=_amount(data.get("monthlyBasePrice")),
+            raw=data,
+        )
+
+
+@dataclass
+class ComparisonPrice:
+    """Site's grid-supplier comparison price (single value).
+
+    Returned by :meth:`~onekommafive.System.get_comparison_price`
+    (``GET /api/v2/comparison-price?siteId={id}``). Basis for
+    "savings vs. grid supplier" calculations.
+    """
+
+    price_eur_per_kwh: float | None
+    """Comparison price in EUR/kWh (e.g. ``0.274``)."""
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ComparisonPrice":
+        cp = data.get("comparisonPrice") or {}
+        price = cp.get("price") or {}
+        amt = price.get("amount")
+        return cls(
+            price_eur_per_kwh=float(amt) if amt is not None else None,
+            raw=data,
+        )
+
+
+@dataclass
+class PriceGuarantee:
+    """Contractual electricity-price guarantee.
+
+    Returned by :meth:`~onekommafive.System.get_price_guarantee`
+    (``GET /api/v1/customers/{cid}/price-guarantee?systemId={id}``,
+    on the ``customer-identity`` host).
+    """
+
+    value: float | None
+    """Guaranteed price value (e.g. ``12`` — see :attr:`unit` for units)."""
+
+    unit: str | None
+    """Unit of the guarantee, e.g. ``"ct/kWh"``."""
+
+    version: str | None
+    """Guarantee scheme identifier, e.g. ``"DE_PRICE_GUARANTEE_V2"``."""
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "PriceGuarantee":
+        val = data.get("priceGuaranteeValue")
+        return cls(
+            value=float(val) if val is not None else None,
+            unit=data.get("priceGuaranteeUnit"),
+            version=data.get("priceGuaranteeVersion"),
+            raw=data,
+        )
+
+
+@dataclass
 class MarketPrices:
     """Electricity market price data for a time range.
 

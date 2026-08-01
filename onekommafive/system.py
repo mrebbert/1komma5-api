@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from .models import (
     ChargingMode,
+    ComparisonPrice,
     EmsSettings,
     EnergyData,
     EnergyTrader,
@@ -15,10 +16,15 @@ from .models import (
     ImpactOverview,
     LiveOverview,
     MarketPrices,
+    MonthlyTradingSavings,
     OptimizationEvents,
+    PriceCustomizations,
+    PriceGuarantee,
     SiteStatus,
+    SmartMeter,
     SystemDetails,
     SystemInfo,
+    Wallbox,
     WeatherData,
 )
 
@@ -251,6 +257,68 @@ class System:
         return WeatherData.from_dict(data)
 
     # ------------------------------------------------------------------
+    # Prices — customizations, comparison, guarantee
+    # ------------------------------------------------------------------
+
+    def get_price_customizations(self) -> PriceCustomizations:
+        """Fetch user-configured energy prices (grid, comparison, monthly base)."""
+        data = self._client._request(
+            "GET", self._systems_url("v2", "price-customizations"),
+            error_label="Failed to get price customizations",
+        )
+        return PriceCustomizations.from_dict(data)
+
+    def get_comparison_price(self) -> ComparisonPrice:
+        """Fetch the site's grid-supplier comparison price (EUR/kWh)."""
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v2/comparison-price",
+            params={"siteId": self.id()},
+            error_label="Failed to get comparison price",
+        )
+        return ComparisonPrice.from_dict(data)
+
+    def get_price_guarantee(self, customer_id: str) -> PriceGuarantee:
+        """Fetch the contractual electricity-price guarantee for this customer.
+
+        ``customer_id`` is available via :meth:`get_details`
+        (``SystemDetails.customer_id``). Sits on the ``customer-identity``
+        host and requires ``systemId`` as a query parameter (server quirk —
+        the customer scope alone is not sufficient).
+        """
+        data = self._client._request(
+            "GET",
+            f"{self._client.IDENTITY_API}/api/v1/customers/{customer_id}/price-guarantee",
+            params={"systemId": self.id()},
+            error_label="Failed to get price guarantee",
+        )
+        return PriceGuarantee.from_dict(data)
+
+    # ------------------------------------------------------------------
+    # Wallboxes (physical charging hardware) and smart meter
+    # ------------------------------------------------------------------
+
+    def get_wallboxes(self) -> list[Wallbox]:
+        """Fetch physical wallbox hardware for this system.
+
+        Complements :meth:`get_ev_chargers` which returns the vehicle-side
+        charging profiles.
+        """
+        data = self._client._request(
+            "GET", self._systems_url("v1", "devices", "ev-chargers"),
+            error_label="Failed to get wallboxes",
+        )
+        return [Wallbox.from_dict(w) for w in data or []]
+
+    def get_smart_meter(self) -> SmartMeter:
+        """Fetch smart-meter registration details for this site (EIC, DSO code, concession fee)."""
+        data = self._client._request(
+            "GET", self._sites_url("v1", "smart-meter"),
+            error_label="Failed to get smart meter",
+        )
+        return SmartMeter.from_dict(data)
+
+    # ------------------------------------------------------------------
     # Analytics — CO2, trading, and AI-summary
     # ------------------------------------------------------------------
 
@@ -278,6 +346,19 @@ class System:
             error_label="Failed to get energy trader",
         )
         return EnergyTrader.from_dict(data)
+
+    def get_monthly_trading_savings(self) -> MonthlyTradingSavings:
+        """Fetch the average monthly savings from Energy Trader activity.
+
+        Uses ``/api/v1/energy-trader-savings/{site_id}/month`` with the
+        site (not customer) ID as the path segment — verified live.
+        """
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v1/energy-trader-savings/{self.id()}/month",
+            error_label="Failed to get monthly trading savings",
+        )
+        return MonthlyTradingSavings.from_dict(data)
 
     def get_heartbeat_ai_summary(self, resolution: str = "1M") -> HeartbeatAiSummary:
         """Fetch aggregated Heartbeat-AI metrics for a resolution window.

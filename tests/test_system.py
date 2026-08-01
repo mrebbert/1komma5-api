@@ -10,6 +10,7 @@ import responses as resp_lib
 from onekommafive.errors import RequestError
 from onekommafive.ev_charger import EVCharger
 from onekommafive.models import (
+    ComparisonPrice,
     EmsSettings,
     EnergyData,
     EnergyTrader,
@@ -18,10 +19,15 @@ from onekommafive.models import (
     ImpactOverview,
     LiveOverview,
     MarketPrices,
+    MonthlyTradingSavings,
     OptimizationEvents,
+    PriceCustomizations,
+    PriceGuarantee,
     SiteStatus,
+    SmartMeter,
     SystemDetails,
     SystemInfo,
+    Wallbox,
     WeatherData,
 )
 from onekommafive.system import System
@@ -29,6 +35,7 @@ from tests.fixtures import (
     FAKE_SYSTEM_ID,
     make_active_features_data,
     make_client,
+    make_comparison_price_data,
     make_displayed_ev_charging_modes_data,
     make_ems_settings_data,
     make_energy_data,
@@ -38,11 +45,16 @@ from tests.fixtures import (
     make_heartbeat_ai_summary_data,
     make_impact_overview_data,
     make_live_overview_data,
+    make_monthly_trading_savings_data,
     make_optimizations_data,
+    make_price_customizations_data,
     make_price_data,
+    make_price_guarantee_data,
+    make_smart_meter_data,
     make_status_and_assets_data,
     make_system_data,
     make_system_details_data,
+    make_wallboxes_data,
     make_weather_data,
 )
 
@@ -782,6 +794,181 @@ class TestGetWeather:
         resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
         with pytest.raises(RequestError, match="Failed to get weather"):
             _make_system().get_weather()
+
+
+# ---------------------------------------------------------------------------
+# Price customizations (v2)
+# ---------------------------------------------------------------------------
+
+class TestGetPriceCustomizations:
+    _URL = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}/price-customizations"
+
+    @resp_lib.activate
+    def test_returns_all_prices(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_price_customizations_data(), status=200)
+        result = _make_system().get_price_customizations()
+        assert isinstance(result, PriceCustomizations)
+        assert result.grid_energy_price_eur_per_kwh == pytest.approx(0.3039)
+        assert result.comparison_energy_price_eur_per_kwh == pytest.approx(0.274)
+        assert result.monthly_base_price_eur == pytest.approx(13.9)
+
+    @resp_lib.activate
+    def test_handles_missing_fields(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=200)
+        result = _make_system().get_price_customizations()
+        assert result.grid_energy_price_eur_per_kwh is None
+        assert result.monthly_base_price_eur is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get price customizations"):
+            _make_system().get_price_customizations()
+
+
+# ---------------------------------------------------------------------------
+# Comparison price (v2)
+# ---------------------------------------------------------------------------
+
+class TestGetComparisonPrice:
+    _URL = f"{_BASE}/api/v2/comparison-price"
+
+    @resp_lib.activate
+    def test_returns_price_and_siteid_query(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_comparison_price_data(), status=200)
+        result = _make_system().get_comparison_price()
+        assert isinstance(result, ComparisonPrice)
+        assert result.price_eur_per_kwh == pytest.approx(0.274)
+        assert f"siteId={FAKE_SYSTEM_ID}" in resp_lib.calls[0].request.url
+
+    @resp_lib.activate
+    def test_handles_missing_wrapper(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=200)
+        assert _make_system().get_comparison_price().price_eur_per_kwh is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get comparison price"):
+            _make_system().get_comparison_price()
+
+
+# ---------------------------------------------------------------------------
+# Price guarantee (customer-identity v1)
+# ---------------------------------------------------------------------------
+
+class TestGetPriceGuarantee:
+    _CUSTOMER_ID = "cust-0001"
+    _URL = f"{_IDENTITY_BASE}/api/v1/customers/{_CUSTOMER_ID}/price-guarantee"
+
+    @resp_lib.activate
+    def test_returns_guarantee_and_systemid_query(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_price_guarantee_data(), status=200)
+        result = _make_system().get_price_guarantee(self._CUSTOMER_ID)
+        assert isinstance(result, PriceGuarantee)
+        assert result.value == pytest.approx(12)
+        assert result.unit == "ct/kWh"
+        assert result.version == "DE_PRICE_GUARANTEE_V2"
+        assert f"systemId={FAKE_SYSTEM_ID}" in resp_lib.calls[0].request.url
+
+    @resp_lib.activate
+    def test_handles_null_value(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_price_guarantee_data(value=None), status=200)
+        result = _make_system().get_price_guarantee(self._CUSTOMER_ID)
+        assert result.value is None
+        assert result.unit is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get price guarantee"):
+            _make_system().get_price_guarantee(self._CUSTOMER_ID)
+
+
+# ---------------------------------------------------------------------------
+# Wallboxes (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetWallboxes:
+    _URL = f"{_SYSTEM_BASE}/devices/ev-chargers"
+
+    @resp_lib.activate
+    def test_returns_list_of_wallboxes(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_wallboxes_data(), status=200)
+        boxes = _make_system().get_wallboxes()
+        assert len(boxes) == 1
+        assert isinstance(boxes[0], Wallbox)
+        assert boxes[0].name == "Wallbox"
+        assert boxes[0].gridx_hardware_id == "wb-0001-0000-0000-0000-000000000001"
+        assert boxes[0].assigned_ev_id == "ev-1111-1111-1111-111111111111"
+
+    @resp_lib.activate
+    def test_returns_empty_list_when_none(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=[], status=200)
+        assert _make_system().get_wallboxes() == []
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get wallboxes"):
+            _make_system().get_wallboxes()
+
+
+# ---------------------------------------------------------------------------
+# Smart meter (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetSmartMeter:
+    _URL = f"{_BASE}/api/v1/sites/{FAKE_SYSTEM_ID}/smart-meter"
+
+    @resp_lib.activate
+    def test_returns_flattened_fields(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_smart_meter_data(), status=200)
+        result = _make_system().get_smart_meter()
+        assert isinstance(result, SmartMeter)
+        assert result.site_id == FAKE_SYSTEM_ID
+        assert result.control_area_eic == "10YDE-RWENET---I"
+        assert result.dso_bdew_code == "9900000000009"
+        assert result.concession_fee_eur_per_kwh == pytest.approx(0.0159)
+
+    @resp_lib.activate
+    def test_handles_missing_arrays(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={"siteId": FAKE_SYSTEM_ID}, status=200)
+        result = _make_system().get_smart_meter()
+        assert result.dso_bdew_code is None
+        assert result.concession_fee_eur_per_kwh is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get smart meter"):
+            _make_system().get_smart_meter()
+
+
+# ---------------------------------------------------------------------------
+# Monthly trading savings (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetMonthlyTradingSavings:
+    _URL = f"{_BASE}/api/v1/energy-trader-savings/{FAKE_SYSTEM_ID}/month"
+
+    @resp_lib.activate
+    def test_returns_value(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_monthly_trading_savings_data(), status=200)
+        result = _make_system().get_monthly_trading_savings()
+        assert isinstance(result, MonthlyTradingSavings)
+        assert result.average_past_variable_savings_eur == pytest.approx(12.83)
+
+    @resp_lib.activate
+    def test_handles_missing_field(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=200)
+        assert _make_system().get_monthly_trading_savings().average_past_variable_savings_eur is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get monthly trading savings"):
+            _make_system().get_monthly_trading_savings()
 
 
 # ---------------------------------------------------------------------------
