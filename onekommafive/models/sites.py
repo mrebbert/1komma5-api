@@ -116,6 +116,108 @@ class SmartMeter:
 
 
 @dataclass
+class SiteDetails:
+    """Extended site metadata — a superset of :class:`~onekommafive.SystemInfo`.
+
+    Returned by :meth:`~onekommafive.System.get_site_details`
+    (``GET /api/v2/sites/{id}/details``). Adds bidding-zone, EMP-connection
+    details, and — most useful — the current EMS runtime state
+    (``ems_mode``, ``ems_state``, ``ems_state_reasons``) that
+    :class:`~onekommafive.SystemInfo`/:class:`~onekommafive.SystemDetails`
+    do not expose.
+
+    ``deviceGateways`` is not in this response — use
+    :meth:`~onekommafive.System.get_details` for those.
+    """
+
+    id: str
+    """Site UUID."""
+
+    name: str | None
+    """Site display name (API field: ``siteName``)."""
+
+    status: str | None
+    """Site status, e.g. ``"ACTIVE"``."""
+
+    emp_type: str | None
+    """Energy-management provider, typically ``"GRIDX"``."""
+
+    bidding_zone: str | None
+    """ENTSO-E bidding zone code, e.g. ``"DE_LU"``."""
+
+    bidding_zone_eic: str | None
+    """ENTSO-E identifier of the bidding zone, e.g. ``"10Y1001A1001A82H"``."""
+
+    ems_mode: str | None
+    """Current EMS operating mode, e.g. ``"TOU"`` (time-of-use)."""
+
+    ems_state: str | None
+    """Current EMS runtime state, e.g. ``"OPERATIONAL"``."""
+
+    ems_state_reasons: list[str]
+    """Machine-readable reason codes explaining the current EMS state (may be empty)."""
+
+    dynamic_pulse_compatible: bool
+    """True when the site is compatible with the Dynamic Pulse tariff."""
+
+    address_line1: str | None
+    address_line2: str | None
+    address_zip_code: str | None
+    address_city: str | None
+    address_country: str | None
+    address_latitude: float | None
+    address_longitude: float | None
+
+    customer_id: str | None
+    """UUID of the owning customer (matches :attr:`SystemDetails.customer_id`)."""
+
+    technical_contact_id: str | None
+    technical_contact_name: str | None
+
+    created_at: str | None
+    updated_at: str | None
+
+    emp_details: dict[str, Any] | None
+    """Raw EMP connection block (contains gateway serial number, GridX start code,
+    installation date — sensitive pairing data, hence kept as a dict)."""
+
+    physical_attributes: dict[str, Any] | None
+    """Site-level physical attributes as delivered by the API."""
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SiteDetails":
+        return cls(
+            id=data["id"],
+            name=data.get("siteName"),
+            status=data.get("status"),
+            emp_type=data.get("empType"),
+            bidding_zone=data.get("biddingZone"),
+            bidding_zone_eic=data.get("biddingZoneEic"),
+            ems_mode=data.get("emsMode"),
+            ems_state=data.get("emsState"),
+            ems_state_reasons=list(data.get("emsStateReasons") or []),
+            dynamic_pulse_compatible=bool(data.get("dynamicPulseCompatible")),
+            address_line1=data.get("addressLine1"),
+            address_line2=data.get("addressLine2"),
+            address_zip_code=data.get("addressZipCode"),
+            address_city=data.get("addressCity"),
+            address_country=data.get("addressCountry"),
+            address_latitude=data.get("addressLatitude"),
+            address_longitude=data.get("addressLongitude"),
+            customer_id=data.get("customerId"),
+            technical_contact_id=data.get("technicalContactId"),
+            technical_contact_name=data.get("technicalContactName"),
+            created_at=data.get("createdAt"),
+            updated_at=data.get("updatedAt"),
+            emp_details=data.get("empDetails"),
+            physical_attributes=data.get("physicalAttributes"),
+            raw=data,
+        )
+
+
+@dataclass
 class SiteStatus:
     """Overall connection status and asset inventory for a site.
 

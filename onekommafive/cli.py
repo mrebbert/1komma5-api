@@ -26,6 +26,12 @@ Usage:
     python cli.py wallboxes
     python cli.py smart-meter
     python cli.py monthly-trading
+    python cli.py ai-decisions [--from YYYY-MM-DD[THH:MM]] [--to YYYY-MM-DD[THH:MM]]
+    python cli.py site-details
+    python cli.py customer [--customer-id UUID]
+    python cli.py notifications
+    python cli.py notification-settings
+    python cli.py versions
     python cli.py ems
     python cli.py set-ems auto|manual
 
@@ -342,6 +348,112 @@ def cmd_monthly_trading(args: argparse.Namespace) -> None:
         print("Avg. monthly savings:      —")
     else:
         print(f"Avg. monthly savings:      {s.average_past_variable_savings_eur:.2f} €")
+
+
+def cmd_ai_decisions(args: argparse.Namespace) -> None:
+    today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    try:
+        start = _parse_dt(args.from_date, end_of_day=False) if args.from_date else today
+        end = _parse_dt(args.to_date, end_of_day=True) if args.to_date else today.replace(hour=23, minute=59, second=59)
+    except ValueError as e:
+        sys.exit(f"Error: invalid date — {e}")
+    system = _get_system()
+    result = system.get_self_sufficiency_events(start=start, end=end)
+    print(f"System:  {system.id()}")
+    print(f"Period:  {start.date()} – {end.date()}")
+    print(f"Events:  {len(result.events)}")
+    if not result.events:
+        return
+    print()
+    print(f"{'Timestamp':<22}  {'Asset':<8}  {'Decision':<26}  {'Price':>9}  {'SoC':>4}")
+    print("-" * 80)
+    for ev in sorted(result.events, key=lambda e: e.timestamp):
+        soc = f"{ev.state_of_charge}%" if ev.state_of_charge is not None else "—"
+        price = f"{ev.market_price:.2f}" if ev.market_price is not None else "—"
+        ts = ev.from_time[:19].replace("T", " ")
+        print(f"{ts:<22}  {ev.asset:<8}  {ev.decision:<26}  {price:>9}  {soc:>4}")
+
+
+def cmd_site_details(args: argparse.Namespace) -> None:
+    system = _get_system()
+    d = system.get_site_details()
+    print(f"Site:              {d.id}")
+    print(f"Name:              {d.name or '—'}")
+    print(f"Status:            {d.status or '—'}")
+    print(f"EMP type:          {d.emp_type or '—'}")
+    print(f"Bidding zone:      {d.bidding_zone or '—'}  ({d.bidding_zone_eic or '—'})")
+    print(f"EMS mode:          {d.ems_mode or '—'}")
+    print(f"EMS state:         {d.ems_state or '—'}")
+    if d.ems_state_reasons:
+        print(f"EMS state reasons: {', '.join(d.ems_state_reasons)}")
+    print(f"Address:           {_format_address(d)}")
+    if d.address_latitude is not None and d.address_longitude is not None:
+        print(f"Coordinates:       {d.address_latitude:.4f}, {d.address_longitude:.4f}")
+    print(f"Customer ID:       {d.customer_id or '—'}")
+    if d.technical_contact_name:
+        print(f"Installer:         {d.technical_contact_name}")
+    print(f"Dynamic Pulse:     {'yes' if d.dynamic_pulse_compatible else 'no'}")
+    print(f"Updated:           {d.updated_at or '—'}")
+
+
+def cmd_customer(args: argparse.Namespace) -> None:
+    system = _get_system()
+    customer_id = _resolve_customer_id(args, system)
+    c = system.get_customer(customer_id)
+    name = " ".join(filter(None, [c.first_name, c.last_name])) or "—"
+    print(f"Customer:   {c.id}")
+    print(f"Name:       {name}")
+    print(f"Email:      {c.contact_email or '—'}")
+    if c.contact_phone:
+        print(f"Phone:      {c.contact_phone}")
+    if c.company_name:
+        print(f"Company:    {c.company_name}")
+    print(f"Address:    {_format_address(c)}")
+    print(f"Type:       {c.customer_type or '—'}")
+    if c.crm_branch_location:
+        print(f"Branch:     {c.crm_branch_location}")
+
+
+def cmd_notifications(args: argparse.Namespace) -> None:
+    system = _get_system()
+    result = system.get_notifications()
+    print(f"System:  {system.id()}")
+    print(f"Count:   {len(result.notifications)}")
+    if not result.notifications:
+        return
+    print()
+    for n in result.notifications:
+        marker = " " if n.read else "*"
+        ts = (n.created_at or "")[:19].replace("T", " ")
+        print(f"  {marker} [{ts}] {n.type}")
+        if n.title:
+            print(f"       {n.title}")
+        if n.body:
+            print(f"       {n.body}")
+
+
+def cmd_notification_settings(args: argparse.Namespace) -> None:
+    system = _get_system()
+    s = system.get_notification_settings()
+    print(f"System:  {system.id()}")
+    print(f"Locale:  {s.lang_code or '—'}")
+    print()
+    for category, entries in s.settings.items():
+        if not entries:
+            print(f"  {category:<40}  (not subscribed)")
+            continue
+        for e in entries:
+            active = [name for name, on in [("app", e.app), ("push", e.push), ("email", e.email)] if on]
+            ch = ", ".join(active) if active else "(no channels)"
+            print(f"  {category:<40}  {ch}")
+
+
+def cmd_versions(args: argparse.Namespace) -> None:
+    v = _client().get_supported_versions()
+    print(f"{'':<10}  {'target':<10}  minimum")
+    print("-" * 34)
+    print(f"{'b2b':<10}  {v.b2b.target_version or '—':<10}  {v.b2b.minimum_supported_version or '—'}")
+    print(f"{'b2c':<10}  {v.b2c.target_version or '—':<10}  {v.b2c.minimum_supported_version or '—'}")
 
 
 def cmd_impact(args: argparse.Namespace) -> None:
@@ -753,6 +865,28 @@ def main() -> None:
     sub.add_parser("smart-meter", help="Smart-meter registration details (EIC, DSO code, concession fee)")
     sub.add_parser("monthly-trading", help="Average monthly Energy-Trader savings")
 
+    ai_dec_p = sub.add_parser("ai-decisions", help="AI self-sufficiency events (companion to 'optimizations')")
+    ai_dec_p.add_argument(
+        "--from", dest="from_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
+        help="Start date/time (default: today 00:00)",
+    )
+    ai_dec_p.add_argument(
+        "--to", dest="to_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
+        help="End date/time (default: today 23:59)",
+    )
+
+    sub.add_parser("site-details", help="Extended site metadata incl. EMS runtime state")
+
+    cust_p = sub.add_parser("customer", help="Full customer record (v3)")
+    cust_p.add_argument(
+        "--customer-id", dest="customer_id", metavar="UUID", default=None,
+        help="Customer UUID (default: looked up via system details)",
+    )
+
+    sub.add_parser("notifications", help="Recent push/in-app notifications")
+    sub.add_parser("notification-settings", help="Notification preferences per category")
+    sub.add_parser("versions", help="API compatibility (b2b/b2c target and minimum versions)")
+
     sub.add_parser("impact", help="Lifetime CO2 savings (site + community)")
     sub.add_parser("trader", help="Lifetime energy-trading savings (€)")
 
@@ -825,6 +959,12 @@ def main() -> None:
         "wallboxes": cmd_wallboxes,
         "smart-meter": cmd_smart_meter,
         "monthly-trading": cmd_monthly_trading,
+        "ai-decisions": cmd_ai_decisions,
+        "site-details": cmd_site_details,
+        "customer": cmd_customer,
+        "notifications": cmd_notifications,
+        "notification-settings": cmd_notification_settings,
+        "versions": cmd_versions,
         "impact": cmd_impact,
         "trader": cmd_trader,
         "ai-summary": cmd_ai_summary,

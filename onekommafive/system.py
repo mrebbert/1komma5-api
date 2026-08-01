@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 from .models import (
     ChargingMode,
     ComparisonPrice,
+    Customer,
     EmsSettings,
     EnergyData,
     EnergyTrader,
@@ -17,9 +18,13 @@ from .models import (
     LiveOverview,
     MarketPrices,
     MonthlyTradingSavings,
+    NotificationSettings,
+    NotificationsList,
     OptimizationEvents,
     PriceCustomizations,
     PriceGuarantee,
+    SelfSufficiencyEvents,
+    SiteDetails,
     SiteStatus,
     SmartMeter,
     SystemDetails,
@@ -396,6 +401,88 @@ class System:
             error_label="Failed to get optimizations",
         )
         return OptimizationEvents.from_dict(data)
+
+    def get_self_sufficiency_events(
+        self,
+        start: datetime.datetime,
+        end: datetime.datetime,
+    ) -> SelfSufficiencyEvents:
+        """Fetch AI self-sufficiency events for ``[start, end]`` (inclusive).
+
+        Same payload shape as :meth:`get_optimizations` but a different
+        endpoint that surfaces a **different subset** of AI activity
+        (typically the granular battery-discharge trace).
+        """
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v1/heartbeat-ai/self-sufficiency",
+            params={
+                "siteId": self.id(),
+                "from": start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "to": end.strftime("%Y-%m-%dT%H:%M:%S.999Z"),
+            },
+            error_label="Failed to get self-sufficiency events",
+        )
+        return SelfSufficiencyEvents.from_dict(data)
+
+    # ------------------------------------------------------------------
+    # Site details, customer, notifications
+    # ------------------------------------------------------------------
+
+    def get_site_details(self) -> SiteDetails:
+        """Fetch extended site metadata (``GET /api/v2/sites/{id}/details``).
+
+        Superset of :meth:`info`/:meth:`get_details`: adds bidding zone,
+        EMP connection block and — most useful — the current EMS runtime
+        state (``ems_mode``, ``ems_state``, ``ems_state_reasons``).
+        """
+        data = self._client._request(
+            "GET", self._sites_url("v2", "details"),
+            error_label="Failed to get site details",
+        )
+        return SiteDetails.from_dict(data)
+
+    def get_customer(self, customer_id: str) -> Customer:
+        """Fetch the full customer record (``GET /api/v3/customers/{id}``, IDENTITY host).
+
+        Superset of the embedded :class:`~onekommafive.SystemCustomer`
+        (which only exposes id/name/email). ``customer_id`` is available
+        via :meth:`get_details`.
+        """
+        data = self._client._request(
+            "GET", f"{self._client.IDENTITY_API}/api/v3/customers/{customer_id}",
+            error_label="Failed to get customer",
+        )
+        return Customer.from_dict(data)
+
+    def get_notifications(self) -> NotificationsList:
+        """Fetch recent push/in-app notifications for the authenticated user.
+
+        ``GET /api/v1/users/{uid}/notifications/latest?systemId={id}``.
+        The user id is looked up lazily via :meth:`~onekommafive.Client.get_user`.
+        """
+        user = self._client.get_user()
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v1/users/{user.id}/notifications/latest",
+            params={"systemId": self.id()},
+            error_label="Failed to get notifications",
+        )
+        return NotificationsList.from_dict(data)
+
+    def get_notification_settings(self) -> NotificationSettings:
+        """Fetch the user's notification preferences for this system.
+
+        ``GET /api/v1/systems/{id}/users/{uid}/notifications/settings``.
+        The user id is looked up lazily via :meth:`~onekommafive.Client.get_user`.
+        """
+        user = self._client.get_user()
+        data = self._client._request(
+            "GET",
+            self._systems_url("v1", "users", user.id, "notifications", "settings"),
+            error_label="Failed to get notification settings",
+        )
+        return NotificationSettings.from_dict(data)
 
     def __repr__(self) -> str:
         return f"System(id={self.id()!r})"

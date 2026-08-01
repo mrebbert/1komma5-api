@@ -21,7 +21,7 @@ import requests
 from jwt import PyJWKClient
 
 from .errors import AuthenticationError, RequestError
-from .models import User
+from .models import SupportedVersions, User
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -157,6 +157,18 @@ class Client:
             error_label="Failed to get user",
         )
         return User.from_dict(data)
+
+    def get_supported_versions(self) -> SupportedVersions:
+        """Fetch the API compatibility matrix (``b2b``/``b2c`` target and minimum versions).
+
+        Not system-scoped — describes the current API deployment as a whole.
+        """
+        data = self._request(
+            "GET",
+            f"{HEARTBEAT_API}/api/v1/supported-versions",
+            error_label="Failed to get supported versions",
+        )
+        return SupportedVersions.from_dict(data)
 
     def logout(self) -> None:
         """Invalidate the current session on the Auth0 server.

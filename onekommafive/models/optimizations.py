@@ -99,3 +99,32 @@ class OptimizationEvents:
             events=[OptimizationEvent.from_dict(e) for e in data.get("events", [])],
             raw=data,
         )
+
+
+@dataclass
+class SelfSufficiencyEvents:
+    """AI events explaining the site's self-sufficiency outcomes.
+
+    Returned by :meth:`~onekommafive.System.get_self_sufficiency_events`
+    (``GET /api/v1/heartbeat-ai/self-sufficiency``).
+
+    Payload structure is identical to :class:`OptimizationEvents` — same
+    :class:`OptimizationEvent` shape — but the two endpoints return
+    **different subsets** of AI activity. In practice ``optimizations``
+    tends to be sparse while ``self-sufficiency`` yields the granular
+    battery discharge/charge decisions. Use both if you need full
+    coverage of the AI's decision trace.
+    """
+
+    events: list[OptimizationEvent]
+    """All self-sufficiency events in the response."""
+
+    raw: dict[str, Any] = field(repr=False)
+    """The complete raw API response."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SelfSufficiencyEvents":
+        return cls(
+            events=[OptimizationEvent.from_dict(e) for e in data.get("events", [])],
+            raw=data,
+        )

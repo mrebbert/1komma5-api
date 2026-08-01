@@ -11,6 +11,7 @@ from onekommafive.errors import RequestError
 from onekommafive.ev_charger import EVCharger
 from onekommafive.models import (
     ComparisonPrice,
+    Customer,
     EmsSettings,
     EnergyData,
     EnergyTrader,
@@ -20,9 +21,13 @@ from onekommafive.models import (
     LiveOverview,
     MarketPrices,
     MonthlyTradingSavings,
+    NotificationSettings,
+    NotificationsList,
     OptimizationEvents,
     PriceCustomizations,
     PriceGuarantee,
+    SelfSufficiencyEvents,
+    SiteDetails,
     SiteStatus,
     SmartMeter,
     SystemDetails,
@@ -33,9 +38,11 @@ from onekommafive.models import (
 from onekommafive.system import System
 from tests.fixtures import (
     FAKE_SYSTEM_ID,
+    FAKE_USER_ID,
     make_active_features_data,
     make_client,
     make_comparison_price_data,
+    make_customer_data,
     make_displayed_ev_charging_modes_data,
     make_ems_settings_data,
     make_energy_data,
@@ -46,14 +53,19 @@ from tests.fixtures import (
     make_impact_overview_data,
     make_live_overview_data,
     make_monthly_trading_savings_data,
+    make_notification_settings_data,
+    make_notifications_data,
     make_optimizations_data,
     make_price_customizations_data,
     make_price_data,
     make_price_guarantee_data,
+    make_self_sufficiency_events_data,
+    make_site_details_data,
     make_smart_meter_data,
     make_status_and_assets_data,
     make_system_data,
     make_system_details_data,
+    make_user_data,
     make_wallboxes_data,
     make_weather_data,
 )
@@ -66,6 +78,8 @@ _SYSTEM_BASE_V3 = f"{_BASE}/api/v3/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V4 = f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"
 _SITE_BASE_V2 = f"{_BASE}/api/v2/sites/{FAKE_SYSTEM_ID}"
 _OPTIMIZATIONS_URL = f"{_BASE}/api/v1/heartbeat-ai/optimizations"
+_SELF_SUFFICIENCY_URL = f"{_BASE}/api/v1/heartbeat-ai/self-sufficiency"
+_USERS_ME_URL = f"{_IDENTITY_BASE}/api/v1/users/me"
 
 
 def _make_system() -> System:
@@ -969,6 +983,173 @@ class TestGetMonthlyTradingSavings:
         resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
         with pytest.raises(RequestError, match="Failed to get monthly trading savings"):
             _make_system().get_monthly_trading_savings()
+
+
+# ---------------------------------------------------------------------------
+# Self-sufficiency events (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetSelfSufficiencyEvents:
+    @resp_lib.activate
+    def test_returns_events(self) -> None:
+        resp_lib.add(resp_lib.GET, _SELF_SUFFICIENCY_URL,
+                     json=make_self_sufficiency_events_data(), status=200)
+        result = _make_system().get_self_sufficiency_events(
+            datetime.datetime(2026, 8, 1, 5),
+            datetime.datetime(2026, 8, 1, 6),
+        )
+        assert isinstance(result, SelfSufficiencyEvents)
+        assert len(result.events) == 1
+        assert result.events[0].decision == "BATTERY_DISCHARGE"
+        assert result.events[0].state_of_charge == 56
+
+    @resp_lib.activate
+    def test_query_params(self) -> None:
+        resp_lib.add(resp_lib.GET, _SELF_SUFFICIENCY_URL,
+                     json=make_self_sufficiency_events_data(), status=200)
+        _make_system().get_self_sufficiency_events(
+            datetime.datetime(2026, 8, 1, 5, 30),
+            datetime.datetime(2026, 8, 1, 6, 45),
+        )
+        url = resp_lib.calls[0].request.url
+        assert f"siteId={FAKE_SYSTEM_ID}" in url
+        assert "from=2026-08-01T05%3A30%3A00.000Z" in url
+        assert "to=2026-08-01T06%3A45%3A00.999Z" in url
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, _SELF_SUFFICIENCY_URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get self-sufficiency events"):
+            _make_system().get_self_sufficiency_events(
+                datetime.datetime(2026, 8, 1, 5),
+                datetime.datetime(2026, 8, 1, 6),
+            )
+
+
+# ---------------------------------------------------------------------------
+# Site details (v2)
+# ---------------------------------------------------------------------------
+
+class TestGetSiteDetails:
+    _URL = f"{_BASE}/api/v2/sites/{FAKE_SYSTEM_ID}/details"
+
+    @resp_lib.activate
+    def test_returns_extended_fields(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_site_details_data(), status=200)
+        result = _make_system().get_site_details()
+        assert isinstance(result, SiteDetails)
+        assert result.id == FAKE_SYSTEM_ID
+        assert result.name == "My Home Site"
+        assert result.bidding_zone == "DE_LU"
+        assert result.ems_mode == "TOU"
+        assert result.ems_state == "OPERATIONAL"
+        assert result.ems_state_reasons == []
+        assert result.emp_details["serialNumber"] == "I000-000-000-000-000-X-X"
+
+    @resp_lib.activate
+    def test_handles_missing_optional_fields(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={"id": FAKE_SYSTEM_ID}, status=200)
+        result = _make_system().get_site_details()
+        assert result.bidding_zone is None
+        assert result.ems_mode is None
+        assert result.ems_state_reasons == []
+        assert result.emp_details is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get site details"):
+            _make_system().get_site_details()
+
+
+# ---------------------------------------------------------------------------
+# Customer (v3, customer-identity)
+# ---------------------------------------------------------------------------
+
+class TestGetCustomer:
+    _CUSTOMER_ID = "cust-0001"
+    _URL = f"{_IDENTITY_BASE}/api/v3/customers/{_CUSTOMER_ID}"
+
+    @resp_lib.activate
+    def test_returns_full_customer(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_customer_data(), status=200)
+        result = _make_system().get_customer(self._CUSTOMER_ID)
+        assert isinstance(result, Customer)
+        assert result.id == self._CUSTOMER_ID
+        assert result.first_name == "John"
+        assert result.contact_email == "user@example.com"
+        assert result.address_city == "Hamburg"
+        assert result.crm_branch_location == "1KOMMA5° Example"
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get customer"):
+            _make_system().get_customer(self._CUSTOMER_ID)
+
+
+# ---------------------------------------------------------------------------
+# Notifications (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetNotifications:
+    _URL = f"{_BASE}/api/v1/users/{FAKE_USER_ID}/notifications/latest"
+
+    @resp_lib.activate
+    def test_returns_notifications_and_query(self) -> None:
+        resp_lib.add(resp_lib.GET, _USERS_ME_URL, json=make_user_data(), status=200)
+        resp_lib.add(resp_lib.GET, self._URL, json=make_notifications_data(), status=200)
+        result = _make_system().get_notifications()
+        assert isinstance(result, NotificationsList)
+        assert len(result.notifications) == 1
+        assert result.notifications[0].type == "ENERGY_MARKET_UPPER_TARGET_REACHED"
+        assert result.notifications[0].title == "Energiepreise steigen"
+        assert result.notifications[0].meta["price"]["value"] == 20.41
+        # Second call (notifications/latest) has systemId query
+        assert f"systemId={FAKE_SYSTEM_ID}" in resp_lib.calls[1].request.url
+
+    @resp_lib.activate
+    def test_empty_list_when_no_notifications(self) -> None:
+        resp_lib.add(resp_lib.GET, _USERS_ME_URL, json=make_user_data(), status=200)
+        resp_lib.add(resp_lib.GET, self._URL, json={"data": []}, status=200)
+        assert _make_system().get_notifications().notifications == []
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, _USERS_ME_URL, json=make_user_data(), status=200)
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get notifications"):
+            _make_system().get_notifications()
+
+
+# ---------------------------------------------------------------------------
+# Notification settings (v1)
+# ---------------------------------------------------------------------------
+
+class TestGetNotificationSettings:
+    _URL = f"{_SYSTEM_BASE}/users/{FAKE_USER_ID}/notifications/settings"
+
+    @resp_lib.activate
+    def test_returns_settings_with_channel_toggles(self) -> None:
+        resp_lib.add(resp_lib.GET, _USERS_ME_URL, json=make_user_data(), status=200)
+        resp_lib.add(resp_lib.GET, self._URL, json=make_notification_settings_data(), status=200)
+        result = _make_system().get_notification_settings()
+        assert isinstance(result, NotificationSettings)
+        assert result.lang_code == "de"
+        assert result.settings["CO2_IMPACT"] == []
+        broadcast = result.settings["BROADCAST_NEW_ELECTRICITY_PRICES"]
+        assert len(broadcast) == 1
+        assert broadcast[0].app is True
+        assert broadcast[0].email is False
+        health = result.settings["SYSTEM_HEALTH"]
+        assert health[0].email is True
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, _USERS_ME_URL, json=make_user_data(), status=200)
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get notification settings"):
+            _make_system().get_notification_settings()
 
 
 # ---------------------------------------------------------------------------

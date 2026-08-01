@@ -23,6 +23,7 @@ from tests.fixtures import (
     FAKE_ACCESS_TOKEN,
     FAKE_TOKEN_SET,
     make_client,
+    make_supported_versions_data,
 )
 
 # ---------------------------------------------------------------------------
@@ -209,6 +210,36 @@ class TestGetUser:
         client = make_client()
         with pytest.raises(RequestError, match="Failed to get user"):
             client.get_user()
+
+
+# ---------------------------------------------------------------------------
+# get_supported_versions
+# ---------------------------------------------------------------------------
+
+class TestGetSupportedVersions:
+    _URL = "https://heartbeat.1komma5grad.com/api/v1/supported-versions"
+
+    @resp_lib.activate
+    def test_returns_versions(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_supported_versions_data(), status=200)
+        v = make_client().get_supported_versions()
+        assert v.b2b.target_version == "1.10.0"
+        assert v.b2b.minimum_supported_version == "1.12.0"
+        assert v.b2c.target_version == "1.73.0"
+        assert v.b2c.minimum_supported_version == "1.73.0"
+
+    @resp_lib.activate
+    def test_handles_missing_channels(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=200)
+        v = make_client().get_supported_versions()
+        assert v.b2b.target_version is None
+        assert v.b2c.minimum_supported_version is None
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get supported versions"):
+            make_client().get_supported_versions()
 
 
 # ---------------------------------------------------------------------------

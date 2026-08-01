@@ -11,6 +11,7 @@ from onekommafive.cli import main
 from onekommafive.models import (
     ChargingMode,
     ComparisonPrice,
+    Customer,
     EmsSettings,
     EnergyData,
     EnergyTrader,
@@ -20,11 +21,16 @@ from onekommafive.models import (
     LiveOverview,
     MarketPrices,
     MonthlyTradingSavings,
+    NotificationSettings,
+    NotificationsList,
     OptimizationEvents,
     PriceCustomizations,
     PriceGuarantee,
+    SelfSufficiencyEvents,
+    SiteDetails,
     SiteStatus,
     SmartMeter,
+    SupportedVersions,
     SystemDetails,
     SystemInfo,
     Wallbox,
@@ -35,6 +41,7 @@ from tests.fixtures import (
     FAKE_SYSTEM_ID,
     make_active_features_data,
     make_comparison_price_data,
+    make_customer_data,
     make_ems_settings_data,
     make_energy_data,
     make_energy_savings_data,
@@ -43,12 +50,17 @@ from tests.fixtures import (
     make_impact_overview_data,
     make_live_overview_data,
     make_monthly_trading_savings_data,
+    make_notification_settings_data,
+    make_notifications_data,
     make_optimizations_data,
     make_price_customizations_data,
     make_price_data,
     make_price_guarantee_data,
+    make_self_sufficiency_events_data,
+    make_site_details_data,
     make_smart_meter_data,
     make_status_and_assets_data,
+    make_supported_versions_data,
     make_system_data,
     make_system_details_data,
     make_wallboxes_data,
@@ -827,6 +839,119 @@ class TestCmdOptimizations:
     def test_invalid_date_rejected(self, mock_system) -> None:
         with pytest.raises(SystemExit):
             _run("optimizations", "--from", "not-a-date")
+
+
+# ---------------------------------------------------------------------------
+# ai-decisions
+# ---------------------------------------------------------------------------
+
+class TestCmdAiDecisions:
+    def test_prints_events(self, mock_system, capsys) -> None:
+        mock_system.get_self_sufficiency_events.return_value = SelfSufficiencyEvents.from_dict(
+            make_self_sufficiency_events_data()
+        )
+        _run("ai-decisions")
+        out = capsys.readouterr().out
+        assert "BATTERY_DISCHARGE" in out
+        assert "56%" in out
+
+    def test_invalid_date_rejected(self, mock_system) -> None:
+        with pytest.raises(SystemExit):
+            _run("ai-decisions", "--from", "not-a-date")
+
+
+# ---------------------------------------------------------------------------
+# site-details
+# ---------------------------------------------------------------------------
+
+class TestCmdSiteDetails:
+    def test_prints_ems_and_bidding_zone(self, mock_system, capsys) -> None:
+        mock_system.get_site_details.return_value = SiteDetails.from_dict(make_site_details_data())
+        _run("site-details")
+        out = capsys.readouterr().out
+        assert "DE_LU" in out
+        assert "TOU" in out
+        assert "OPERATIONAL" in out
+        assert "Hamburg" in out
+
+
+# ---------------------------------------------------------------------------
+# customer
+# ---------------------------------------------------------------------------
+
+class TestCmdCustomer:
+    def test_uses_explicit_customer_id_and_prints_fields(self, mock_system, capsys) -> None:
+        mock_system.get_customer.return_value = Customer.from_dict(make_customer_data())
+        _run("customer", "--customer-id", "cust-0001")
+        mock_system.get_customer.assert_called_once_with("cust-0001")
+        out = capsys.readouterr().out
+        assert "John Doe" in out
+        assert "user@example.com" in out
+        assert "1KOMMA5° Example" in out
+
+    def test_falls_back_via_shared_helper(self, mock_system) -> None:
+        details = MagicMock()
+        details.customer_id = "cust-from-details"
+        mock_system.get_details.return_value = details
+        mock_system.get_customer.return_value = Customer.from_dict(make_customer_data())
+        _run("customer")
+        mock_system.get_customer.assert_called_once_with("cust-from-details")
+
+
+# ---------------------------------------------------------------------------
+# notifications
+# ---------------------------------------------------------------------------
+
+class TestCmdNotifications:
+    def test_prints_title_and_body(self, mock_system, capsys) -> None:
+        mock_system.get_notifications.return_value = NotificationsList.from_dict(
+            make_notifications_data()
+        )
+        _run("notifications")
+        out = capsys.readouterr().out
+        assert "ENERGY_MARKET_UPPER_TARGET_REACHED" in out
+        assert "Energiepreise steigen" in out
+
+    def test_prints_count_when_empty(self, mock_system, capsys) -> None:
+        mock_system.get_notifications.return_value = NotificationsList.from_dict({"data": []})
+        _run("notifications")
+        assert "Count:   0" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# notification-settings
+# ---------------------------------------------------------------------------
+
+class TestCmdNotificationSettings:
+    def test_prints_categories_and_channels(self, mock_system, capsys) -> None:
+        mock_system.get_notification_settings.return_value = NotificationSettings.from_dict(
+            make_notification_settings_data()
+        )
+        _run("notification-settings")
+        out = capsys.readouterr().out
+        assert "CO2_IMPACT" in out
+        assert "not subscribed" in out
+        assert "BROADCAST_NEW_ELECTRICITY_PRICES" in out
+        assert "app" in out
+
+
+# ---------------------------------------------------------------------------
+# versions
+# ---------------------------------------------------------------------------
+
+class TestCmdVersions:
+    def test_prints_both_channels(self, capsys) -> None:
+        client = MagicMock()
+        client.get_supported_versions.return_value = SupportedVersions.from_dict(
+            make_supported_versions_data()
+        )
+        with patch("onekommafive.cli._client", return_value=client):
+            _run("versions")
+        out = capsys.readouterr().out
+        assert "b2b" in out
+        assert "b2c" in out
+        assert "1.10.0" in out
+        assert "1.73.0" in out
 
 
 # ---------------------------------------------------------------------------

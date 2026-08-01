@@ -482,6 +482,162 @@ def make_monthly_trading_savings_data(value: float | None = 12.83) -> dict:
     return {"averagePastVariableSavings": {"value": value, "unit": "€"}}
 
 
+def make_self_sufficiency_events_data() -> dict:
+    """Return a /heartbeat-ai/self-sufficiency v1 response payload."""
+    return {
+        "events": [
+            {
+                "id": "ss-0000-0000-0000-0000-000000000001",
+                "timestamp": "2026-08-01T05:30:00Z",
+                "data": {
+                    "decision": "BATTERY_DISCHARGE",
+                    "from": "2026-08-01T05:30:00Z",
+                    "to": "2026-08-01T05:45:00Z",
+                    "asset": "BATTERY",
+                    "marketPrice": {"value": 33.24, "currency": "EUR"},
+                    "energySold": None,
+                    "energyBought": None,
+                    "totalCost": None,
+                    "stateOfCharge": 56,
+                },
+            }
+        ]
+    }
+
+
+def make_site_details_data() -> dict:
+    """Return a /sites/{id}/details v2 response payload."""
+    return {
+        "id": FAKE_SYSTEM_ID,
+        "createdAt": "2025-01-23T08:09:40.042Z",
+        "updatedAt": "2026-08-01T00:00:00.000Z",
+        "siteName": "My Home Site",
+        "status": "ACTIVE",
+        "empType": "GRIDX",
+        "biddingZone": "DE_LU",
+        "biddingZoneEic": "10Y1001A1001A82H",
+        "emsMode": "TOU",
+        "emsState": "OPERATIONAL",
+        "emsStateReasons": [],
+        "dynamicPulseCompatible": True,
+        "addressLine1": "Musterstraße 1",
+        "addressLine2": None,
+        "addressZipCode": "20095",
+        "addressCity": "Hamburg",
+        "addressCountry": "DE",
+        "addressLatitude": 53.5,
+        "addressLongitude": 10.0,
+        "customerId": "cust-0001",
+        "technicalContactId": "tc-0001",
+        "technicalContactName": "Example Installer",
+        "empDetails": {
+            "empConnectionId": "gw-0001-0000-0000-0000-000000000001",
+            "empConfigurationId": "cfg-0001-0000-0000-0000-000000000001",
+            "serialNumber": "I000-000-000-000-000-X-X",
+            "startCode": "0000000000000000",
+            "installationDate": "2025-01-24",
+        },
+        "physicalAttributes": {},
+    }
+
+
+def make_customer_data() -> dict:
+    """Return a /v3/customers/{id} response payload."""
+    return {
+        "id": "cust-0001",
+        "createdAt": "2025-01-23T08:09:38.762Z",
+        "updatedAt": "2026-03-12T21:15:31.061Z",
+        "firstName": "John",
+        "lastName": "Doe",
+        "contactEmail": "user@example.com",
+        "contactPhone": "+490000000000",
+        "companyName": None,
+        "companyTaxId": None,
+        "addressName": None,
+        "addressLine1": "Musterstraße 1",
+        "addressLine2": None,
+        "addressZipCode": "20095",
+        "addressCity": "Hamburg",
+        "addressCountry": "Deutschland",
+        "crmContactId": "crm-0001",
+        "customerType": "UNKNOWN",
+        "title": None,
+        "crmBranchLocation": "1KOMMA5° Example",
+    }
+
+
+FAKE_USER_ID = "user-0000-0000-0000-0000-000000000001"
+
+
+def make_user_data() -> dict:
+    """Return a /users/me v1 response payload (minimal, for CLI/system tests)."""
+    return {
+        "id": FAKE_USER_ID,
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "user@example.com",
+        "status": "ACTIVE",
+    }
+
+
+def make_notifications_data() -> dict:
+    """Return a /users/{uid}/notifications/latest v1 response payload."""
+    return {
+        "data": [
+            {
+                "id": "n-0000-0000-0000-0000-000000000001",
+                "createdAt": "2026-07-31T18:06:38.141Z",
+                "updatedAt": "2026-07-31T18:06:38.141Z",
+                "systemId": FAKE_SYSTEM_ID,
+                "type": "ENERGY_MARKET_UPPER_TARGET_REACHED",
+                "userId": FAKE_USER_ID,
+                "read": True,
+                "notificationDetails": {
+                    "settings": {},
+                    "meta": {"price": {"value": 20.41, "unit": "ct/kWh"}, "dateTime_utc": "2026-07-31T20:00Z"},
+                },
+                "dismissed": False,
+                "body": "Energiepreise steigen heute um 22:00 auf 20.41 ct/kWh.",
+                "title": "Energiepreise steigen",
+                "locale": "de",
+            }
+        ]
+    }
+
+
+def make_notification_settings_data() -> dict:
+    """Return a /systems/{id}/users/{uid}/notifications/settings v1 response payload."""
+    return {
+        "langCode": "de",
+        "settings": {
+            "CO2_IMPACT": [],
+            "BATTERY_SOC": [],
+            "BROADCAST_NEW_ELECTRICITY_PRICES": [
+                {
+                    "subscriptionId": "sub-0001-0000-0000-0000-000000000001",
+                    "channels": {"app": True, "push": True, "email": False},
+                    "personalizations": {},
+                }
+            ],
+            "SYSTEM_HEALTH": [
+                {
+                    "subscriptionId": "sub-0002-0000-0000-0000-000000000002",
+                    "channels": {"app": True, "push": False, "email": True},
+                    "personalizations": {},
+                }
+            ],
+        },
+    }
+
+
+def make_supported_versions_data() -> dict:
+    """Return a /v1/supported-versions response payload."""
+    return {
+        "b2b": {"targetVersion": "1.10.0", "minimumSupportedVersion": "1.12.0"},
+        "b2c": {"targetVersion": "1.73.0", "minimumSupportedVersion": "1.73.0"},
+    }
+
+
 def make_impact_overview_data() -> dict:
     """Return an /impact-overview v2 response payload."""
     return {
