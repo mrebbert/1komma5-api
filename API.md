@@ -772,6 +772,55 @@ Bekannte `decision`-Werte:
 
 ---
 
+### Heartbeat AI – Self-Sufficiency-Events (v1)
+
+Zeigt AI-Entscheidungen, die die Autarkie-Bilanz erklären — typischerweise das granulare Batterie-Entlade-Trace. **Gleiche Payload-Struktur** wie `/optimizations`, aber ein **anderer Subset** der AI-Aktivität — die beiden Endpunkte ergänzen sich (in einem Fenster in dem `/optimizations` `[]` liefert, kann `/self-sufficiency` mehrere Events zeigen).
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/self-sufficiency` |
+
+Parameter (alle required):
+
+| Parameter | Wert |
+|-----------|------|
+| `siteId` | UUID der Anlage |
+| `from` | ISO-8601 mit Millisekunden, URL-kodiert |
+| `to` | ISO-8601 mit Millisekunden, URL-kodiert |
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  'https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/self-sufficiency?siteId='"$ONEKOMMAFIVE_SYSTEM"'&from=2026-08-01T00%3A00%3A00.000Z&to=2026-08-01T23%3A59%3A59.999Z' | jq .
+```
+
+Antwortstruktur — identisch zu `/optimizations`:
+
+```json
+{
+  "events": [
+    {
+      "id": "<uuid>",
+      "timestamp": "ISO8601",
+      "data": {
+        "decision": "BATTERY_DISCHARGE",
+        "from": "ISO8601",
+        "to": "ISO8601",
+        "asset": "BATTERY",
+        "marketPrice": { "value": 35.30, "currency": "EUR" },
+        "energySold": null,
+        "energyBought": null,
+        "totalCost": null,
+        "stateOfCharge": 67
+      }
+    }
+  ]
+}
+```
+
+Hinweis zu `marketPrice`: **empirisch** deutlich niedriger als der zeitgleich in `charts/market-prices` gemeldete `marketPrice` (Faktor ~4-5). Vermutet Feed-in-/Verkaufspreis aus dem Trader-Regime statt Spot-Bezug, aber API-seitig nicht dokumentiert.
+
+---
+
 ### Heartbeat-Ersparnis für Zeitraum (v1)
 
 Aggregiert die kumulierten Heartbeat-Einsparungen für einen Datumsbereich in einem einzelnen EUR-Wert. Praktisch, wenn nur die Summe interessiert und der Timeseries-Overhead von `energy-today` / `energy-historical` unerwünscht ist.
@@ -1111,6 +1160,247 @@ Hinweise:
 - `concessionFeeEURperkWh.value` = Konzessionsabgabe der Kommune in EUR/kWh.
 - Beide Arrays enthalten historische Einträge mit `validFromDate`/`validUntilDate`; der jeweils aktuelle Eintrag steht typischerweise zuerst.
 - Die `__metadata`-Blöcke dokumentieren Herkunft und letztes Update — meist `Imported from Enet via address lookup`.
+
+---
+
+### Site-Details (v2)
+
+Erweitertes Site-Metadaten — Superset von `/systems/{id}` und `/systems/{id}/details`. Fügt Bidding-Zone, EMP-Verbindungsdaten und — am wertvollsten — den **aktuellen EMS-Runtime-Zustand** hinzu, den weder `SystemInfo` noch `SystemDetails` bieten.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/details` |
+
+Keine Query-Parameter.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/details" | jq .
+```
+
+Antwortstruktur (anonymisiert):
+
+```json
+{
+  "id": "<uuid>",
+  "siteName": "Mustermann",
+  "status": "ACTIVE",
+  "empType": "GRIDX",
+  "biddingZone": "DE_LU",
+  "biddingZoneEic": "10Y1001A1001A82H",
+  "emsMode": "TOU",
+  "emsState": "OPERATIONAL",
+  "emsStateReasons": [],
+  "empDetails": {
+    "empConnectionId": "<uuid>",
+    "empConfigurationId": "<uuid>",
+    "serialNumber": "I000-000-000-000-000-X-X",
+    "startCode": "<hex-token>",
+    "installationDate": "YYYY-MM-DD"
+  },
+  "physicalAttributes": {},
+  "addressLine1": "Musterstraße 1",
+  "addressZipCode": "20095",
+  "addressCity": "Hamburg",
+  "addressCountry": "DE",
+  "addressLatitude": 0.0,
+  "addressLongitude": 0.0,
+  "customerId": "<uuid>",
+  "technicalContactId": "<uuid>",
+  "technicalContactName": "1KOMMA5° <Region>",
+  "dynamicPulseCompatible": true,
+  "createdAt": "ISO8601",
+  "updatedAt": "ISO8601"
+}
+```
+
+Hinweise:
+
+- `biddingZone` = ENTSO-E Bidding-Zone (Deutschland/Luxemburg = `DE_LU`).
+- `emsMode` = Betriebsmodus (`TOU` = Time-of-Use / Dynamic Pulse).
+- `emsState` / `emsStateReasons` = aktueller EMS-Runtime-Zustand (bislang beobachtet: `OPERATIONAL` mit leerer Reason-Liste; bei Störungen vermutlich mit Codes).
+- `empDetails` enthält die **Kopplungswerte** des Gateways (`serialNumber`, `startCode`) — sicherheitsrelevant, nicht protokollieren/teilen.
+- Keine `deviceGateways` — dafür `/systems/{id}/details` verwenden.
+
+---
+
+### Customer-Datensatz (v3, customer-identity)
+
+Vollständiges Customer-Profil — Superset des embedded `customer`-Blocks in `/systems/{id}/details` (der nur `id`, `firstName`, `lastName`, `email` liefert). Liegt wie `active-features` und `price-guarantee` auf dem `customer-identity`-Host.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://customer-identity.1komma5grad.com/api/v3/customers/$CUSTOMER_ID` |
+
+`$CUSTOMER_ID` stammt aus dem Feld `customerId` der `/api/v1/systems/{id}/details`-Antwort.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://customer-identity.1komma5grad.com/api/v3/customers/$CUSTOMER_ID" | jq .
+```
+
+Antwortstruktur (anonymisiert):
+
+```json
+{
+  "id": "<uuid>",
+  "firstName": "Erika",
+  "lastName": "Mustermann",
+  "contactEmail": "user@example.com",
+  "contactPhone": "+490000000000",
+  "companyName": null,
+  "companyTaxId": null,
+  "addressName": null,
+  "addressLine1": "Musterstraße 1",
+  "addressLine2": null,
+  "addressZipCode": "20095",
+  "addressCity": "Hamburg",
+  "addressCountry": "Deutschland",
+  "crmContactId": "<crm-id>",
+  "customerType": "UNKNOWN",
+  "title": null,
+  "crmBranchLocation": "1KOMMA5° <Region>",
+  "createdAt": "ISO8601",
+  "updatedAt": "ISO8601"
+}
+```
+
+Hinweise:
+
+- Feldname ist `contactEmail`, nicht `email` (letzteres nur im eingebetteten `SystemCustomer`).
+- `addressCountry` als **Klarname-String** (z. B. `"Deutschland"`), nicht als ISO-Code — Abweichung von `/systems/{id}` das `"DE"` liefert.
+- `customerType` bisher nur `"UNKNOWN"` beobachtet — vermutlich weitere Werte wie `"PRIVATE"`/`"BUSINESS"` möglich.
+- `crmBranchLocation` = zugewiesene 1KOMMA5°-Filiale (z. B. `"1KOMMA5° Moers"`).
+
+---
+
+### Notifications – letzte Meldungen (v1)
+
+Zeigt die zuletzt ausgelieferten Push- und In-App-Notifications für den authentifizierten Nutzer, gescoped auf eine Anlage.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v1/users/$USER_ID/notifications/latest?systemId=$ONEKOMMAFIVE_SYSTEM` |
+
+`$USER_ID` stammt aus `GET /api/v1/users/me`. **Achtung:** `systemId` als Query-Param ist required — ohne → HTTP 400.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/users/$USER_ID/notifications/latest?systemId=$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{
+  "data": [
+    {
+      "id": "<uuid>",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601",
+      "systemId": "<uuid>",
+      "userId": "<uuid>",
+      "type": "ENERGY_MARKET_UPPER_TARGET_REACHED",
+      "read": true,
+      "dismissed": false,
+      "locale": "de",
+      "title": "Energiepreise steigen",
+      "body": "Achtung! Die Energiepreise werden heute um 22:00 auf 20.41 ct/kWh steigen. …",
+      "notificationDetails": {
+        "settings": {},
+        "meta": {
+          "price": { "value": 20.41, "unit": "ct/kWh" },
+          "dateTime_utc": "ISO8601"
+        }
+      }
+    }
+  ]
+}
+```
+
+`type`-Werte entsprechen den Kategorien aus `/notifications/settings` (siehe unten).
+
+---
+
+### Notifications – Einstellungen (v1)
+
+Nutzer-Präferenzen pro Notification-Kategorie mit Channel-Toggles (App/Push/Email).
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/users/$USER_ID/notifications/settings` |
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/users/$USER_ID/notifications/settings" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{
+  "langCode": "de",
+  "settings": {
+    "CO2_IMPACT": [],
+    "BATTERY_SOC": [],
+    "BROADCAST_NEW_ELECTRICITY_PRICES": [
+      {
+        "subscriptionId": "<uuid>",
+        "channels": { "app": true, "push": true, "email": false },
+        "personalizations": {}
+      }
+    ],
+    "SYSTEM_DATA_COLLECTION_ENDED": [],
+    "EV_DYNAMIC_PULSE": [],
+    "ENERGY_MARKET_UPPER_TARGET_REACHED": [ ... ],
+    "ENERGY_MARKET_LOWER_TARGET_REACHED": [ ... ],
+    "SYSTEM_HEALTH": [ ... ]
+  }
+}
+```
+
+Ein leeres Array pro Kategorie = **nicht abonniert**. Ein Eintrag pro Kategorie enthält die zugehörige Subscription-ID und die aktivierten Channels.
+
+Beobachtete Kategorien (nicht abschließend):
+
+| Kategorie | Bedeutung |
+|-----------|-----------|
+| `CO2_IMPACT` | CO₂-Impact-Meilensteine |
+| `BATTERY_SOC` | Batterie-SoC-Grenzwerte |
+| `BROADCAST_NEW_ELECTRICITY_PRICES` | Tägliche Ansage der Strompreis-Prognose |
+| `SYSTEM_DATA_COLLECTION_ENDED` | Systemdaten-Erfassung beendet |
+| `EV_DYNAMIC_PULSE` | Dynamic-Pulse-EV-Trigger |
+| `ENERGY_MARKET_UPPER_TARGET_REACHED` | Preis-Alert nach oben |
+| `ENERGY_MARKET_LOWER_TARGET_REACHED` | Preis-Alert nach unten |
+| `SYSTEM_HEALTH` | Anlagen-Gesundheitswarnungen |
+
+---
+
+### API-Kompatibilität (v1)
+
+Nicht anlagen-gebundene Meta-Endpunkt: liefert die Ziel- und Mindest-Version für die zwei Client-Kanäle.
+
+| Methode | URL |
+|---------|-----|
+| `GET` | `https://heartbeat.1komma5grad.com/api/v1/supported-versions` |
+
+Keine Query-Parameter, kein Site/Customer-Kontext.
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/supported-versions" | jq .
+```
+
+Antwortstruktur:
+
+```json
+{
+  "b2b": { "targetVersion": "1.10.0", "minimumSupportedVersion": "1.12.0" },
+  "b2c": { "targetVersion": "1.73.0", "minimumSupportedVersion": "1.73.0" }
+}
+```
+
+`b2b` = Installer/Partner-Client, `b2c` = End-Nutzer-App. Kann genutzt werden, um zu warnen wenn eigene Client-Implementierung hinter `minimumSupportedVersion` zurückfällt.
 
 ---
 

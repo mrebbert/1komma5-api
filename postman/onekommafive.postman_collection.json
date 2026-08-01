@@ -69,6 +69,12 @@
       "value": "",
       "type": "string",
       "description": "EV charger ID (from /systems/{id}/devices/evs)."
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string",
+      "description": "User UUID (from GET /api/v1/users/me — used by notification endpoints)."
     }
   ],
   "item": [
@@ -258,6 +264,20 @@
               "path": ["api", "v1", "sites", "{{siteId}}", "smart-meter"]
             },
             "description": "Smart-meter registration details: ENTSO-E control-area EIC, DSO BDEW code, municipality concession fee in EUR/kWh. The DSO code and concession fee come as arrays of historic entries with `validFromDate`/`validUntilDate` — the current entry is typically the first element."
+          },
+          "response": []
+        },
+        {
+          "name": "Get site details (v2, extended)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/sites/{{siteId}}/details",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "sites", "{{siteId}}", "details"]
+            },
+            "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those."
           },
           "response": []
         }
@@ -452,6 +472,87 @@
               ]
             },
             "description": "Contractual electricity-price guarantee (`priceGuaranteeValue`, `priceGuaranteeUnit` e.g. 'ct/kWh', `priceGuaranteeVersion` e.g. 'DE_PRICE_GUARANTEE_V2'). Sits on the `customer-identity` host."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Customer",
+      "description": "Full customer record (v3) — superset of the embedded customer block in `/systems/{id}/details`.",
+      "item": [
+        {
+          "name": "Get customer (v3)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{identityUrl}}/api/v3/customers/{{customerId}}",
+              "host": ["{{identityUrl}}"],
+              "path": ["api", "v3", "customers", "{{customerId}}"]
+            },
+            "description": "Full customer profile — adds phone, address, `customerType`, `crmContactId`, `crmBranchLocation` on top of the embedded `SystemCustomer` (which only has id/name/email). Field naming quirks: `contactEmail` (not `email`), `addressCountry` as plain-name string (`\"Deutschland\"`) not ISO code."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "Recent push/in-app notifications and per-category channel preferences. Both endpoints require the user ID from `User → Get current user` (set the `userId` collection variable).",
+      "item": [
+        {
+          "name": "Get latest notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/notifications/latest?systemId={{systemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}", "notifications", "latest"],
+              "query": [
+                {
+                  "key": "systemId",
+                  "value": "{{systemId}}",
+                  "description": "REQUIRED. Without it → HTTP 400."
+                }
+              ]
+            },
+            "description": "Recent push/in-app notifications with `title`, `body`, `type`, `read`, `dismissed`, plus `notificationDetails.meta` (e.g. `{price, dateTime_utc}` for price alerts)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get notification settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/users/{{userId}}/notifications/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "systems", "{{systemId}}", "users", "{{userId}}", "notifications", "settings"]
+            },
+            "description": "User's notification preferences per category (`CO2_IMPACT`, `BATTERY_SOC`, `BROADCAST_NEW_ELECTRICITY_PRICES`, `SYSTEM_HEALTH`, `ENERGY_MARKET_UPPER_TARGET_REACHED`, `ENERGY_MARKET_LOWER_TARGET_REACHED`, `EV_DYNAMIC_PULSE`, `SYSTEM_DATA_COLLECTION_ENDED`). Empty array per category = not subscribed."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Meta",
+      "description": "Non-system-scoped API meta endpoints.",
+      "item": [
+        {
+          "name": "Get supported versions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/supported-versions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "supported-versions"]
+            },
+            "description": "API compatibility matrix: `b2b` (installer/partner) and `b2c` (end-user) `targetVersion` and `minimumSupportedVersion`. Not system-scoped."
           },
           "response": []
         }
@@ -767,6 +868,25 @@
               ]
             },
             "description": "Aggregated Heartbeat-AI metrics (selfSufficiency, energyEarned, co2Saved, heartbeatPrice) for a resolution window. QUIRK: only `resolution=1M` returns all metrics. `1W` and `1Y` return only `co2Saved` + `production` + `carTravelEmission`; `selfSufficiency` and `energyEarned` come back as `null`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get self-sufficiency events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/heartbeat-ai/self-sufficiency?siteId={{siteId}}&from=2026-08-01T00:00:00.000Z&to=2026-08-01T23:59:59.999Z",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "heartbeat-ai", "self-sufficiency"],
+              "query": [
+                {"key": "siteId", "value": "{{siteId}}", "description": "REQUIRED"},
+                {"key": "from", "value": "2026-08-01T00:00:00.000Z", "description": "Format: %Y-%m-%dT%H:%M:%S.000Z"},
+                {"key": "to", "value": "2026-08-01T23:59:59.999Z", "description": "Format: %Y-%m-%dT%H:%M:%S.999Z"}
+              ]
+            },
+            "description": "AI events explaining self-sufficiency outcomes — typically the granular battery-discharge trace. Same payload shape as `Get optimizations` but a **different subset** of AI activity (complementary, not redundant). QUIRK: `data.marketPrice` values are empirically much lower than the Spot price returned by `charts/market-prices` at the same timestamp — likely the feed-in / trader-side price rather than the grid-purchase price. Not officially documented."
           },
           "response": []
         }
