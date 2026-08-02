@@ -1,22 +1,83 @@
-# 1KOMMA5° API — curl Reference
+# 1KOMMA5° Heartbeat API — curl Reference
 
-Alle Endpunkte unter Verwendung von Umgebungsvariablen und einem Bearer-Token.
+Reverse-engineered reference for every endpoint used by the [`onekommafive`](https://pypi.org/project/onekommafive/) Python client.
+
+Requests unless noted send `Authorization: Bearer $BEARER_TOKEN`. All personal identifiers below are anonymised (Erika Mustermann / Musterstraße 1 / Hamburg / DE). Example UUIDs use the placeholder `<uuid>`.
+
+## Table of contents
+
+- [Setup](#setup)
+  - [Environment variables](#environment-variables)
+  - [Bearer token](#bearer-token)
+  - [Base URLs](#base-urls)
+  - [Endpoint entry template](#endpoint-entry-template)
+- [User and customer](#user-and-customer)
+  - [Authenticated user profile](#authenticated-user-profile)
+  - [Customer record (v3)](#customer-record-v3)
+  - [Price guarantee](#price-guarantee)
+- [System and site](#system-and-site)
+  - [List systems](#list-systems)
+  - [Single system (v4)](#single-system-v4)
+  - [System details (v1, extended)](#system-details-v1-extended)
+  - [Site details (v2, superset)](#site-details-v2-superset)
+  - [Site status and assets](#site-status-and-assets)
+  - [Active feature flags](#active-feature-flags)
+- [Live data](#live-data)
+  - [Live overview](#live-overview)
+- [Energy](#energy)
+  - [Energy today](#energy-today)
+  - [Energy historical](#energy-historical)
+  - [Heartbeat savings](#heartbeat-savings)
+- [Prices](#prices)
+  - [Market prices](#market-prices)
+  - [Price customizations](#price-customizations)
+  - [Comparison price](#comparison-price)
+- [EV chargers and wallbox](#ev-chargers-and-wallbox)
+  - [List EV chargers](#list-ev-chargers)
+  - [Available charging modes](#available-charging-modes)
+  - [Update EV settings](#update-ev-settings)
+  - [List wallboxes (hardware)](#list-wallboxes-hardware)
+- [Energy management (EMS)](#energy-management-ems)
+  - [Get EMS settings](#get-ems-settings)
+  - [Set EMS mode](#set-ems-mode)
+- [Weather](#weather)
+  - [Weather forecast](#weather-forecast)
+- [Heartbeat AI](#heartbeat-ai)
+  - [Optimizations](#optimizations)
+  - [Self-sufficiency events](#self-sufficiency-events)
+  - [AI summary](#ai-summary)
+- [Analytics](#analytics)
+  - [Impact overview (CO2)](#impact-overview-co2)
+  - [Energy trader (lifetime)](#energy-trader-lifetime)
+  - [Monthly trading savings](#monthly-trading-savings)
+- [Smart meter](#smart-meter)
+  - [Smart meter registration](#smart-meter-registration)
+- [Notifications](#notifications)
+  - [Latest notifications](#latest-notifications)
+  - [Notification settings](#notification-settings)
+- [API meta](#api-meta)
+  - [Supported versions](#supported-versions)
+- [Unit reference](#unit-reference)
+- [Known API quirks](#known-api-quirks)
 
 ---
 
-## Umgebungsvariablen setzen
+## Setup
+
+### Environment variables
 
 ```bash
 export ONEKOMMAFIVE_USERNAME="user@example.com"
 export ONEKOMMAFIVE_PASSWORD="s3cr3t"
 
-# Optional: bestimmtes System per UUID auswählen (wird von der CLI verwendet)
+# Optional — pin to a specific system UUID (used by the CLI when
+# multiple systems are visible to the account).
 export ONEKOMMAFIVE_SYSTEM="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
 
----
+### Bearer token
 
-## Bearer-Token holen
+The API accepts a JWT valid for 24 hours. The easiest way to obtain one is via the Python client:
 
 ```bash
 export BEARER_TOKEN=$(python -c '
@@ -27,8 +88,7 @@ print(c.get_token())
 ')
 ```
 
-Der Token ist ein JWT mit einer Gültigkeit von 24 Stunden.
-Für schnelle Tests lässt er sich auch einmalig ausgeben und manuell exportieren:
+The token can also be printed once and exported manually for quick tests:
 
 ```bash
 python -c '
@@ -39,53 +99,63 @@ print(c.get_token())
 '
 ```
 
+### Base URLs
+
+| Subdomain | Purpose |
+|-----------|---------|
+| `heartbeat.1komma5grad.com/api/` | System, energy, EMS, EV, weather, AI, analytics |
+| `customer-identity.1komma5grad.com/api/` | User profile, customer, price guarantee, active features |
+
+`siteId` and `systemId` are the same UUID in this API. The demo system always has ID `00000000-0000-0000-0000-000000000000`.
+
+### Endpoint entry template
+
+Each endpoint below follows the same structure:
+
+- `METHOD /path` header
+- One-line purpose
+- **Query parameters** table (when any)
+- **Request body** (POST / PATCH only)
+- **Example** — a runnable curl invocation
+- **Response** — anonymised JSON payload
+- **Notes** — quirks, gotchas, related endpoints
+
 ---
 
-## Base-URLs
+## User and customer
 
-| Subdomain | Zweck |
-|-----------|-------|
-| `https://customer-identity.1komma5grad.com/api/` | Nutzerverwaltung |
-| `https://heartbeat.1komma5grad.com/api/` | Anlagen- und Energiedaten |
+### Authenticated user profile
 
-`siteId` und `systemId` sind identische UUIDs. Das Demo-System hat immer die ID `00000000-0000-0000-0000-000000000000`.
+`GET /api/v1/users/me` — profile of the currently authenticated user, plus a summary of every site they can access.
 
----
-
-## Bekannte API-Endpunkte
-
-### Authentifizierung & Nutzer
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://customer-identity.1komma5grad.com/api/v1/users/me` |
+**Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   https://customer-identity.1komma5grad.com/api/v1/users/me | jq .
 ```
 
-Antwortstruktur (Auszug):
+**Response**
 
 ```json
 {
   "id": "<uuid>",
-  "firstName": "...",
-  "lastName": "...",
-  "externalId": "auth0|...",
-  "email": "...",
+  "createdAt": "ISO8601",
+  "firstName": "Erika",
+  "lastName": "Mustermann",
+  "externalId": "auth0|abcdef1234567890",
+  "email": "user@example.com",
   "phone": null,
   "status": "ACTIVE",
-  "createdAt": "ISO8601",
   "connectedSystems": [
     {
       "systemId": "<uuid>",
-      "systemName": "...",
+      "systemName": "Mustermann",
       "addressName": null,
-      "addressLine1": "...",
+      "addressLine1": "Musterstraße 1",
       "addressLine2": null,
-      "addressZipCode": "...",
-      "addressCity": "...",
+      "addressZipCode": "20095",
+      "addressCity": "Hamburg",
       "addressCountry": "DE",
       "technicalContactId": "<uuid>"
     }
@@ -93,28 +163,109 @@ Antwortstruktur (Auszug):
 }
 ```
 
-`connectedSystems` listet alle Anlagen, für die der eingeloggte Nutzer eine Zugriffs­berechtigung hat. Bei Multi-System-Nutzern (Familien, Installer-Konten) enthält die Liste mehrere Einträge.
+**Notes**
+
+- Lives on the `customer-identity` host, not `heartbeat`.
+- `connectedSystems` lists every site the caller is authorised for — useful for multi-system accounts (families, installer logins).
 
 ---
 
-### Systeme
+### Customer record (v3)
 
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/systems` |
-| `GET` | `https://heartbeat.1komma5grad.com/api/v4/systems/$ONEKOMMAFIVE_SYSTEM` |
+`GET /api/v3/customers/$CUSTOMER_ID` — full customer profile; superset of the `customer` block embedded in `/systems/{id}/details`.
+
+`$CUSTOMER_ID` comes from the `customerId` field of `/api/v1/systems/{id}/details`.
+
+**Example**
 
 ```bash
-# Alle Systeme auflisten
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  https://heartbeat.1komma5grad.com/api/v2/systems | jq .
-
-# Einzelnes System
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  https://heartbeat.1komma5grad.com/api/v4/systems/$ONEKOMMAFIVE_SYSTEM | jq .
+  "https://customer-identity.1komma5grad.com/api/v3/customers/$CUSTOMER_ID" | jq .
 ```
 
-Antwortstruktur Liste:
+**Response**
+
+```json
+{
+  "id": "<uuid>",
+  "firstName": "Erika",
+  "lastName": "Mustermann",
+  "contactEmail": "user@example.com",
+  "contactPhone": "+490000000000",
+  "companyName": null,
+  "companyTaxId": null,
+  "addressName": null,
+  "addressLine1": "Musterstraße 1",
+  "addressLine2": null,
+  "addressZipCode": "20095",
+  "addressCity": "Hamburg",
+  "addressCountry": "Deutschland",
+  "crmContactId": "<crm-id>",
+  "customerType": "UNKNOWN",
+  "title": null,
+  "crmBranchLocation": "1KOMMA5° <Region>",
+  "createdAt": "ISO8601",
+  "updatedAt": "ISO8601"
+}
+```
+
+**Notes**
+
+- Email field is `contactEmail`, not `email` (which is used by the embedded `SystemCustomer`).
+- `addressCountry` is a plain-name string (e.g. `"Deutschland"`), **not** an ISO code — differs from `/systems/{id}` which returns `"DE"`.
+- `customerType` observed only as `"UNKNOWN"` so far; likely also `"PRIVATE"` / `"BUSINESS"`.
+- `crmBranchLocation` is the assigned 1KOMMA5° branch office (e.g. `"1KOMMA5° Moers"`).
+
+---
+
+### Price guarantee
+
+`GET /api/v1/customers/$CUSTOMER_ID/price-guarantee?systemId=$ONEKOMMAFIVE_SYSTEM` — contractual electricity-price guarantee.
+
+**Query parameters**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `systemId` | yes | System UUID. Path takes `customerId`, but the required query parameter is confusingly named `systemId` (not `customerId`, not `siteId`). Omitting it returns HTTP 400. |
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/price-guarantee?systemId=$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+**Response**
+
+```json
+{
+  "priceGuaranteeUnit": "ct/kWh",
+  "priceGuaranteeValue": 12,
+  "priceGuaranteeVersion": "DE_PRICE_GUARANTEE_V2"
+}
+```
+
+**Notes**
+
+- Lives on the `customer-identity` host.
+- Observed versions: `DE_PRICE_GUARANTEE_V2` (Germany). The same version identifier also appears in the `priceGuaranteeVersion` field of individual subscription records.
+
+---
+
+## System and site
+
+### List systems
+
+`GET /api/v2/systems` — all systems (sites) the authenticated caller has access to, paginated.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  https://heartbeat.1komma5grad.com/api/v2/systems | jq .
+```
+
+**Response**
 
 ```json
 {
@@ -125,10 +276,10 @@ Antwortstruktur Liste:
   "data": [
     {
       "id": "<uuid>",
-      "systemName": "...",
+      "systemName": "Mustermann",
       "status": "ACTIVE",
-      "addressLine1": "...",
-      "addressCity": "...",
+      "addressLine1": "Musterstraße 1",
+      "addressCity": "Hamburg",
       "addressCountry": "DE",
       "addressLongitude": 0.0,
       "addressLatitude": 0.0,
@@ -136,7 +287,7 @@ Antwortstruktur Liste:
       "deviceGateways": [
         {
           "id": "<uuid>",
-          "gridxStartCode": "...",
+          "gridxStartCode": "<hex-token>",
           "serialNumber": "I###-###-###-###-###-P-X",
           "installationDate": "YYYY-MM-DD"
         }
@@ -146,22 +297,41 @@ Antwortstruktur Liste:
 }
 ```
 
-Der Einzelabruf (v4) enthält keine `deviceGateways`. Die Felder `energyTraderActive` und `electricityContractActive` waren in v2 vorhanden, sind in v4 entfallen.
+**Notes**
 
-#### Details (v1, erweitert)
+- The list variant carries `deviceGateways` inline. The single-system variant (`v4`) does **not** — use `/details` for those.
 
-Reicher als der v4-Einzelabruf: enthält zusätzlich `empType`, `technicalContact*`, eingebetteten `customer`-Block, Smart-Meter-Status, `earliestMeasurement` sowie die installierten `deviceGateways`. Bringt außerdem `energyTraderActive` und `electricityContractActive` wieder mit, die in v4 entfallen waren.
+---
 
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/details` |
+### Single system (v4)
+
+`GET /api/v4/systems/$ONEKOMMAFIVE_SYSTEM` — static metadata for one system.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v4/systems/$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+**Notes**
+
+- Does **not** include `deviceGateways`, `energyTraderActive`, or `electricityContractActive`. Those were dropped from v2 to v4 — for the full picture use `/details` (v1).
+
+---
+
+### System details (v1, extended)
+
+`GET /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/details` — richer than the v4 endpoint. Adds `empType`, `technicalContact*`, embedded `customer` block, smart-meter status, `earliestMeasurement`, and installed `deviceGateways`. Also brings back the v2-only `energyTraderActive` / `electricityContractActive`.
+
+**Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/details" | jq .
 ```
 
-Antwortstruktur (anonymisiert):
+**Response**
 
 ```json
 {
@@ -207,991 +377,25 @@ Antwortstruktur (anonymisiert):
 }
 ```
 
-Hinweis: `empType` beschreibt den Energy-Management-Provider; bisher nur der Wert `"GRIDX"` beobachtet. Die `gridxStartCode`/Serial der Gateways sind anlagenspezifische Kopplungswerte und sollten nicht protokolliert werden.
+**Notes**
+
+- `empType` describes the energy-management provider; so far only `"GRIDX"` has been observed.
+- `gridxStartCode` / `serialNumber` on `deviceGateways` are hardware pairing tokens — **sensitive**, do not log or share.
 
 ---
 
-### Status und Assets (v2)
+### Site details (v2, superset)
 
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/status-and-assets` |
+`GET /api/v2/sites/$ONEKOMMAFIVE_SYSTEM/details` — superset of the two `/systems/{id}` endpoints above. Adds bidding zone, EMP connection block, `impactedByEnwg`, grid-connection capacity and — most usefully — the current EMS runtime state (`emsMode`, `emsState`, `emsStateReasons`), which no other endpoint surfaces.
 
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/status-and-assets" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "status": "CONNECTED",
-  "assets": [
-    {
-      "id": "<uuid>",
-      "type": "HYBRID | HEAT_PUMP | METER | EV_CHARGER",
-      "empType": "GRIDX",
-      "name": "Wallbox",
-      "connectionStatus": { "status": "CONNECTED" },
-      "manufacturer": "...",
-      "model": "...",
-      "serialnumber": "...",
-      "firmware": "...",
-      "network": { "address": "<local-ip>" },
-      "heatPumpMeterType": "HOUSEHOLD"
-    }
-  ]
-}
-```
-
-Typ-spezifische Felder:
-
-- `name` ist bisher nur bei `EV_CHARGER`-Assets gesehen.
-- `firmware` fehlt häufig bei `METER` und `HEAT_PUMP`.
-- `heatPumpMeterType` tritt nur bei `HEAT_PUMP` auf (Werte z.B. `"HOUSEHOLD"`).
-- `serialnumber` ist im API kleingeschrieben (nicht `serialNumber`); bei `HEAT_PUMP`-Geräten kann der Wert das Format `mac_<lowercase-mac>` haben.
-
-Asset-Typen einer typischen Anlage:
-
-| Typ | Hersteller | Modell |
-|-----|-----------|--------|
-| `HYBRID` | Sungrow | SH6.0RT-V112 |
-| `HEAT_PUMP` | Stiebel Eltron | WPMsystem |
-| `METER` | Chint | DTSU666 |
-| `EV_CHARGER` | go-e | HOMEfix 11kW |
-
----
-
-### Aktive Feature-Flags (v1, customer-identity)
-
-Listet die für ein Customer/Site-Paar aktiven Feature-Codes. Anderer Host als die übrigen Endpunkte (`customer-identity` statt `heartbeat`).
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features` |
-
-`$CUSTOMER_ID` lässt sich aus dem Feld `customerId` der `/api/v1/systems/{id}/details`-Antwort gewinnen.
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "features": [
-    "DYNAMIC_TARIFF",
-    "TIME_OF_USE_OPTIMIZATION",
-    "SMART_CHARGING"
-  ]
-}
-```
-
-Bekannte Feature-Codes (nicht abschließend — die Liste kann sich erweitern):
-
-| Code | Bedeutung |
-|------|-----------|
-| `DYNAMIC_TARIFF` | Dynamischer Strompreis-Tarif aktiv |
-| `TIME_OF_USE_OPTIMIZATION` | Zeitvariable Tarif-Optimierung durch das EMS |
-| `SMART_CHARGING` | EV-Smart-Charging verfügbar |
-
----
-
-### Live-Übersicht (v3)
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v3/systems/$ONEKOMMAFIVE_SYSTEM/live-overview` |
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v3/systems/$ONEKOMMAFIVE_SYSTEM/live-overview" | jq .
-```
-
-Antwortstruktur (Auszug):
-
-```json
-{
-  "timestamp": "ISO8601",
-  "status": "ONLINE",
-  "liveHeroView": {
-    "selfSufficiency": 1,
-    "production":      { "value": 0,      "unit": "W" },
-    "consumption":     { "value": 666.53, "unit": "W" },
-    "gridFeedIn":      { "value": 4.66,   "unit": "W" },
-    "gridConsumption": { "value": 0,      "unit": "W" },
-    "grid":            { "value": -4.66,  "unit": "W" },
-    "totalStateOfCharge": 0.45,
-    "evChargersAggregated":  { "power": { "value": 0, "unit": "W" } },
-    "heatPumpsAggregated":   { "power": { "value": 0, "unit": "W" } }
-  },
-  "summaryCards": {
-    "grid":         { "power": { "value": -4.66, "unit": "W" } },
-    "battery":      { "power": { "value": 671.19, "unit": "W" }, "stateOfCharge": 0.45 },
-    "photovoltaic": { "production": { "value": 0, "unit": "W" } },
-    "evChargers": [
-      {
-        "applianceId": "<uuid>",
-        "currentSoc": null,
-        "power": { "value": 0, "unit": "W" },
-        "powerSource": null
-      }
-    ],
-    "heatPumps": [ { "applianceId": "<uuid>", "power": { "value": 0, "unit": "W" } } ],
-    "household":    { "power": { "value": 666.53, "unit": "W" } }
-  }
-}
-```
-
-Hinweis: Alle Leistungswerte in **W** (nicht kW). `grid.value` negativ = Einspeisung, positiv = Netzbezug.
-
----
-
-### Energie heute (v2)
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/energy-today` |
-
-Parameter:
-
-| Parameter | Wert |
-|-----------|------|
-| `resolution` | `1h` (Standard) oder `15m` |
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  'https://heartbeat.1komma5grad.com/api/v2/systems/'"$ONEKOMMAFIVE_SYSTEM"'/energy-today?resolution=1h' | jq .
-```
-
-Antwortstruktur (Auszug):
-
-```json
-{
-  "energyProduced": { "value": 30.76, "unit": "kWh" },
-  "selfSufficiencyPercent": 0.61,
-  "heartbeatSavings": { "value": 6.48, "unit": "€" },
-  "grid": {
-    "feedIn":  { "value": 6.76, "unit": "kWh" },
-    "supply":  { "value": 10.33, "unit": "kWh" }
-  },
-  "battery": {
-    "charge":    { "value": 22.42, "unit": "kWh" },
-    "discharge": { "value": 14.58, "unit": "kWh" }
-  },
-  "consumption": {
-    "direct": { "value": 4.60, "unit": "kWh" },
-    "total":  { "value": 26.50, "unit": "kWh" },
-    "consumers": {
-      "ev":        { "value": 5.0,  "unit": "kWh" },
-      "heatPump":  { "value": 12.0, "unit": "kWh" },
-      "household": { "value": 13.5, "unit": "kWh" },
-      "battery":   { "value": ...,  "unit": "kWh" }
-    }
-  },
-  "timestampedProductionAndConsumption": {
-    "data": {
-      "2026-03-08T12:00Z": {
-        "production": 5.008,
-        "consumption": {
-          "household":      0.267,
-          "householdTotal": 0.602,
-          "ev":             0,
-          "evCharge":       0,
-          "heatPump":       0,
-          "heatPumpTotal":  0,
-          "battery":        4.688,
-          "direct":         0.267
-        },
-        "gridSupply":           0.334,
-        "gridFeedIn":           0.053,
-        "batteryStateOfCharge": 0.536,
-        "batteryCharge":        4.688,
-        "batteryDischarge":     0
-      }
-    },
-    "metadata": { "units": { "production": "kW", "gridSupply": "kW", "gridFeedIn": "kW" } }
-  }
-}
-```
-
-Unterschied `household` vs. `householdTotal`: `household` = PV-Direktanteil, `householdTotal` = Gesamtverbrauch (PV + Batterie + Netz). Entsprechend für `heatPump`/`heatPumpTotal` und `ev`/`evCharge`.
-
----
-
-### Energie historisch (v3)
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v3/systems/$ONEKOMMAFIVE_SYSTEM/energy-historical` |
-
-Parameter:
-
-| Parameter | Wert |
-|-----------|------|
-| `from` | Datum ISO-8601, z. B. `2026-03-07` |
-| `to` | Datum ISO-8601, z. B. `2026-03-07` |
-| `resolution` | `1h` (Standard) oder `15m` (nur für einen einzelnen Tag) |
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  'https://heartbeat.1komma5grad.com/api/v3/systems/'"$ONEKOMMAFIVE_SYSTEM"'/energy-historical?from=2026-03-07&to=2026-03-07&resolution=1h' | jq .
-```
-
-Gleiche Antwortstruktur wie `energy-today`.
-
----
-
-### Marktpreise (v4)
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v4/systems/$ONEKOMMAFIVE_SYSTEM/charts/market-prices` |
-
-Parameter:
-
-| Parameter | Wert |
-|-----------|------|
-| `from` | ISO-8601-Zeitstempel, z. B. `2026-03-01T00:00:00.000Z` |
-| `to` | ISO-8601-Zeitstempel, z. B. `2026-03-01T23:59:59.999Z` |
-| `resolution` | `1h` oder `15m` |
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  'https://heartbeat.1komma5grad.com/api/v4/systems/'"$ONEKOMMAFIVE_SYSTEM"'/charts/market-prices?from=2026-03-01T00%3A00%3A00.000Z&to=2026-03-01T23%3A59%3A59.999Z&resolution=1h' | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "energyMarket":                    { "averagePrice": { "price": { "amount": "0.137", "currency": "EUR" }, "unit": "kWh" }, "highestPrice": {...}, "lowestPrice": {...} },
-  "energyMarketWithGridCosts":       { ... },
-  "energyMarketWithGridCostsAndVat": { ... },
-  "vat": 0.19,
-  "gridCostsTotal": { "price": { "amount": "0.1636964", "currency": "EUR" }, "unit": "kWh" },
-  "usesFallbackGridCosts": false,
-  "timeseries": {
-    "2026-03-10T18:00Z": {
-      "marketPrice":                   "0.23715",
-      "marketPriceWithVat":            "0.2822085",
-      "marketPriceWithGridCost":       "0.37471",
-      "marketPriceWithGridCostAndVat": "0.4459049",
-      "gridCosts":                     "0.13756",
-      "gridConsumption": 0.00956125,
-      "gridFeedIn":      0.01150825
-    }
-  }
-}
-```
-
-Alle Preise als **String** (EUR/kWh). Zeitstempel in UTC. `gridConsumption`/`gridFeedIn` in kWh.
-
----
-
-### Wetter (v1)
-
-Liefert eine Wettervorhersage für den Standort der Anlage – Tagesübersicht für heute/morgen sowie eine feingranulare 3-Stunden-Prognose für 48 Stunden. Dient primär der PV-Ertragsprognose und Ladeplanung.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/weather` |
-
-Keine Query-Parameter erforderlich.
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/weather" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "today": {
-    "temperatureCelsius": 16.1,       // Tageshöchsttemperatur
-    "precipitationMm": 5.2,           // Gesamtniederschlag in mm
-    "precipitationProbability": 86.5, // float, 0–100 %
-    "sunshineMinutes": 383.7,         // Sonnenscheindauer in Minuten (Vorhersage, kann >600 sein)
-    "sunrise": "2026-03-11T05:57Z",   // ISO8601, UTC
-    "sunset":  "2026-03-11T17:32Z",
-    "weatherSymbolId": 5              // Wettersymbol-Code (s. u.)
-  },
-  "tomorrow": { ... },                // identische Struktur
-  "fineGrainedForecasts": [
-    {
-      "periodStart": "2026-03-11T15:00Z", // Beginn des 3h-Slots, UTC
-      "windSpeed": 3.8,                   // m/s
-      "temperatureCelsius": 10.2,
-      "weatherSymbolId": 5,
-      "sunshineMinutes": 0,               // Sonnenschein im Slot (max. ~60 min bei 3h)
-      "precipitationMm": 1.07,
-      "precipitationProbability": 51.4    // float, 0–100 %
-    }
-  ]
-}
-```
-
-`fineGrainedForecasts` enthält 3-Stunden-Slots für 48 h. Alle Zeitstempel in UTC.
-
-#### Wettersymbol-IDs
-
-Nacht-IDs folgen dem Muster **Tag-ID + 100** (z. B. `5` → `105`). Nacht-Symbole erscheinen in `fineGrainedForecasts`-Slots nach Sonnenuntergang.
-
-| Tag-ID | Nacht-ID | Bedeutung |
-|--------|----------|-----------|
-| `1` | `101` | Sonnig / klar |
-| `2` | `102` | Heiter (leicht bewölkt) |
-| `3` | `103` | Wechselnd bewölkt |
-| `4` | `104` | Bedeckt / stark bewölkt |
-| `5` | `105` | Regen |
-| `8` | `108` | Leicht bewölkt mit Schauern |
-| `15` | `115` | Starker Regen / Schauer |
-
-Alle Werte durch Beobachtung abgeleitet, nicht offiziell dokumentiert.
-
-Hinweis: Symbol `2` (heiter) kann auch bei niedrigem `sunshineMinutes`-Wert (z. B. 43 min) vergeben werden – es beschreibt aufgelockerte Bewölkung, nicht zwingend viel Sonnenschein.
-
----
-
-### EV-Lader
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs` |
-| `PATCH` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID` |
-
-```bash
-# Alle EV-Lader abrufen
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs" | jq .
-```
-
-Antwortstruktur (Array):
-
-```json
-[
-  {
-    "id": "<uuid>",
-    "profile": {
-      "name": "...",
-      "manufacturer": "...",
-      "model": "...",
-      "capacity": { "value": 77000, "unit": "Wh" },
-      "minChargingCurrent": { "value": 2, "unit": "A" }
-    },
-    "manualSoc": 0.5,
-    "manualSocTimestamp": "ISO8601",
-    "assignedChargerId": "<uuid>",
-    "chargeSettings": {
-      "defaultSoc": 0.35,
-      "targetSoc": 0.8,
-      "chargingMode": "SMART_CHARGE",
-      "primaryScheduleDays": [],
-      "primaryScheduleDepartureTime": "06:30",
-      "primaryScheduleDepartureSoc": 1,
-      "secondaryScheduleDepartureTime": null,
-      "secondaryScheduleDepartureSoc": null
-    }
-  }
-]
-```
-
-Hinweis: `capacity.unit` ist **Wh** (nicht kWh) – 77.000 Wh = 77 kWh. `manualSoc` wird manuell gesetzt, da die Wallbox keinen SoC-Rückkanal hat.
-
-```bash
-# Lademodus setzen (SMART_CHARGE | QUICK_CHARGE | SOLAR_CHARGE)
-curl -s -X PATCH \
-  -H "Authorization: Bearer $BEARER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"chargeSettings": {"chargingMode": "SOLAR_CHARGE"}}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
-
-# Aktuellen SoC setzen (Dezimalwert 0.0–1.0)
-curl -s -X PATCH \
-  -H "Authorization: Bearer $BEARER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"manualSoc": 0.8}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
-
-# Zielladezustand setzen (Dezimalwert 0.0–1.0)
-curl -s -X PATCH \
-  -H "Authorization: Bearer $BEARER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"chargeSettings": {"targetSoc": 0.9}}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
-
-# Tägliche Abfahrtzeit setzen (Format HH:MM)
-curl -s -X PATCH \
-  -H "Authorization: Bearer $BEARER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"chargeSettings": {"primaryScheduleDepartureTime": "07:30"}}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
-```
-
----
-
-### Verfügbare EV-Lademodi
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/displayed-ev-charging-modes` |
-
-Verwendet `/sites/` statt `/systems/` als Pfadpräfix (IDs sind identisch).
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/displayed-ev-charging-modes" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "displayedEvChargingModes": [
-    { "type": "SMART_CHARGE", "disabled": false },
-    { "type": "SOLAR_CHARGE", "disabled": false },
-    { "type": "QUICK_CHARGE", "disabled": false }
-  ],
-  "emsMode": "TOU"
-}
-```
-
-`emsMode: "TOU"` = Time of Use (Dynamic-Pulse-Tarif aktiv, Börsenpreise steuern Ladeentscheidungen).
-
----
-
-### EMS-Einstellungen
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/ems/actions/get-settings` |
-| `POST` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/ems/actions/set-manual-override` |
-
-```bash
-# EMS-Einstellungen abrufen
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/ems/actions/get-settings" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "systemId": "<uuid>",
-  "consentGiven": true,
-  "overrideAutoSettings": false,
-  "timeOfUseEnabled": true,
-  "manualSettings": {
-    "0": {
-      "type": "EV_CHARGER",
-      "id": "<uuid>",
-      "assignedEvId": "<uuid>",
-      "activeChargingMode": "SMART_CHARGE"
-    },
-    "1": {
-      "type": "BATTERY",
-      "enableForecastCharging": false
-    },
-    "2": {
-      "type": "HEAT_PUMP",
-      "id": "<uuid>",
-      "useSolarSurplus": true,
-      "maxSolarSurplusUsage": { "value": 2, "unit": "kW" }
-    }
-  }
-}
-```
-
-`overrideAutoSettings: false` = KI-Automatik aktiv. `manualSettings` verwendet numerische String-Keys (`"0"`, `"1"`, `"2"`); das `type`-Feld zur Identifikation verwenden.
-
-```bash
-# Automatischen Modus aktivieren
-curl -s -X POST \
-  -H "Authorization: Bearer $BEARER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"overrideAutoSettings": false}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/ems/actions/set-manual-override" | jq .
-
-# Manuellen Override aktivieren
-curl -s -X POST \
-  -H "Authorization: Bearer $BEARER_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"overrideAutoSettings": true}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/ems/actions/set-manual-override" | jq .
-```
-
----
-
-### Heartbeat AI – KI-Optimierungsentscheidungen (v1)
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/optimizations` |
-
-Parameter:
-
-| Parameter | Wert |
-|-----------|------|
-| `siteId` | UUID der Anlage |
-| `from` | ISO-8601-Zeitstempel mit Millisekunden, URL-kodiert |
-| `to` | ISO-8601-Zeitstempel mit Millisekunden, URL-kodiert |
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  'https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/optimizations?siteId='"$ONEKOMMAFIVE_SYSTEM"'&from=2026-03-08T00%3A00%3A00.000Z&to=2026-03-08T23%3A59%3A59.999Z' | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "events": [
-    {
-      "id": "<uuid>",
-      "timestamp": "ISO8601",
-      "data": {
-        "decision": "BATTERY_CHARGE_FROM_GRID",
-        "from": "ISO8601",
-        "to": "ISO8601",
-        "asset": "BATTERY",
-        "marketPrice": { "value": 24.76, "currency": "EUR" },
-        "stateOfCharge": 3,
-        "log": ["ISO8601", ...]
-      }
-    }
-  ]
-}
-```
-
-Bekannte `decision`-Werte:
-
-| Wert | Asset | Bedeutung |
-|------|-------|-----------|
-| `BATTERY_CHARGE_FROM_GRID` | BATTERY | Batterie lädt aus dem Netz (günstiger Preis) |
-| `BATTERY_NO_DISCHARGE` | BATTERY | Batterie entlädt nicht (Preis zu niedrig) |
-| `EV_CHARGE_FROM_GRID` | EV | EV lädt aus dem Netz |
-
-`marketPrice.value` in **EUR/MWh** — empirisch näher am Feed-in-/Trader-Preis als am Spot-Bezug (siehe Self-Sufficiency-Sektion für den beobachteten Faktor ~4-5 gegenüber `charts/market-prices`). `stateOfCharge` in %. Das `log`-Feld enthält Zeitstempel von Folge-Slots mit derselben Entscheidung.
-
----
-
-### Heartbeat AI – Self-Sufficiency-Events (v1)
-
-Zeigt AI-Entscheidungen, die die Autarkie-Bilanz erklären — typischerweise das granulare Batterie-Entlade-Trace. **Gleiche Payload-Struktur** wie `/optimizations`, aber ein **anderer Subset** der AI-Aktivität — die beiden Endpunkte ergänzen sich (in einem Fenster in dem `/optimizations` `[]` liefert, kann `/self-sufficiency` mehrere Events zeigen).
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/self-sufficiency` |
-
-Parameter (alle required):
-
-| Parameter | Wert |
-|-----------|------|
-| `siteId` | UUID der Anlage |
-| `from` | ISO-8601 mit Millisekunden, URL-kodiert |
-| `to` | ISO-8601 mit Millisekunden, URL-kodiert |
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  'https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/self-sufficiency?siteId='"$ONEKOMMAFIVE_SYSTEM"'&from=2026-08-01T00%3A00%3A00.000Z&to=2026-08-01T23%3A59%3A59.999Z' | jq .
-```
-
-Antwortstruktur — identisch zu `/optimizations`:
-
-```json
-{
-  "events": [
-    {
-      "id": "<uuid>",
-      "timestamp": "ISO8601",
-      "data": {
-        "decision": "BATTERY_DISCHARGE",
-        "from": "ISO8601",
-        "to": "ISO8601",
-        "asset": "BATTERY",
-        "marketPrice": { "value": 35.30, "currency": "EUR" },
-        "energySold": null,
-        "energyBought": null,
-        "totalCost": null,
-        "stateOfCharge": 67
-      }
-    }
-  ]
-}
-```
-
-Hinweis zu `marketPrice`: **empirisch** deutlich niedriger als der zeitgleich in `charts/market-prices` gemeldete `marketPrice` (Faktor ~4-5). Vermutet Feed-in-/Verkaufspreis aus dem Trader-Regime statt Spot-Bezug, aber API-seitig nicht dokumentiert.
-
----
-
-### Heartbeat-Ersparnis für Zeitraum (v1)
-
-Aggregiert die kumulierten Heartbeat-Einsparungen für einen Datumsbereich in einem einzelnen EUR-Wert. Praktisch, wenn nur die Summe interessiert und der Timeseries-Overhead von `energy-today` / `energy-historical` unerwünscht ist.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/energy-savings` |
-
-Parameter (beide optional):
-
-| Parameter | Wert |
-|-----------|------|
-| `from` | Datum **date-only** (`YYYY-MM-DD`). Mit Zeit-Anteil → HTTP 400. |
-| `to` | Datum **date-only** (`YYYY-MM-DD`). |
-
-Ohne Parameter liefert der Endpoint ein serverseitig rollendes Fenster (undokumentiert — weder Tag noch aktueller Monat).
-
-```bash
-# Rollierendes Default-Fenster
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/energy-savings" | jq .
-
-# Beliebiger Zeitraum
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/energy-savings?from=2026-07-01&to=2026-07-31" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{ "heartbeatSavings": { "value": 175.42, "unit": "€" } }
-```
-
----
-
-### CO₂-Bilanz (v2)
-
-Lifetime-Kennzahlen: eingesparte kg CO₂ für den Standort, aggregierte Community-Werte und eine globale Marketing-Schätzung. Der Endpoint ignoriert `from`/`to`/`resolution` — die Werte sind immer Lifetime-Totals.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/impact-overview` |
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/impact-overview" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "co2Savings":                { "value": 3099.24,     "unit": "kg" },
-  "co2CollectiveSavings":      { "value": 84779526.33, "unit": "kg" },
-  "co2GlobalSavingsEstimate":  { "value": 2000000,     "unit": "tons" }
-}
-```
-
-Hinweis: `co2GlobalSavingsEstimate` ist eine Marketing-Kennzahl (Tonnen), keine standortspezifische Messung.
-
----
-
-### Energy Trader – Lifetime-Statistik (v2)
-
-Kumulierte Ersparnisse durch dynamischen Handel für den Standort. Keine Zeitraum-Parameter — Werte akkumulieren über die gesamte Trading-Historie der Anlage.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/energy-trader?siteId=$ONEKOMMAFIVE_SYSTEM` |
-
-**Achtung:** `siteId` als Query-Param, **nicht** als Pfad-Segment — anders als die meisten heartbeat-Endpunkte.
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v2/energy-trader?siteId=$ONEKOMMAFIVE_SYSTEM" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "energyTrader": {
-    "status": "ACTIVE",
-    "greenEnergySavings":  { "amount": "2678.49", "currency": "EUR" },
-    "energyTraderSavings": { "amount": "231.26",  "currency": "EUR" }
-  }
-}
-```
-
----
-
-### Energy Trader – Monats-Ø (v1)
-
-Durchschnittliche monatliche Ersparnis aus variabler Preisführung. Ergänzt die Lifetime-Sicht aus `/energy-trader` um eine Monats-Perspektive.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/energy-trader-savings/$ONEKOMMAFIVE_SYSTEM/month` |
-
-**Achtung:** der Pfad-Placeholder ist die **Site-ID** (= `$ONEKOMMAFIVE_SYSTEM`), **nicht** die Customer-ID — trotz missverständlicher URL-Struktur. Verifiziert per Live-Test (Customer-ID → HTTP 403, Site-ID → 200).
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/energy-trader-savings/$ONEKOMMAFIVE_SYSTEM/month" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{ "averagePastVariableSavings": { "value": 12.83, "unit": "€" } }
-```
-
----
-
-### Heartbeat AI – Kurzstatistik (v2)
-
-Aggregierte AI-Kennzahlen für ein Zeitfenster: Autarkiegrad, verdiente Einspeisevergütung, CO₂-Ersparnis, effektiver Heartbeat-Preis.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/heartbeat-ai/summary?siteId=$ONEKOMMAFIVE_SYSTEM&resolution=1M` |
-
-Parameter (beide required):
-
-| Parameter | Wert |
-|-----------|------|
-| `siteId` | UUID der Anlage |
-| `resolution` | `1W`, `1M` oder `1Y`. Jeder andere Wert → HTTP 400. |
-
-**Achtung:** Nur `resolution=1M` liefert alle Metriken. Bei `1W` und `1Y` sind `selfSufficiency` und `energyEarned` `null`; nur `co2Saved`, `production` und `carTravelEmission` sind gefüllt.
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v2/heartbeat-ai/summary?siteId=$ONEKOMMAFIVE_SYSTEM&resolution=1M" | jq .
-```
-
-Antwortstruktur (`resolution=1M`):
-
-```json
-{
-  "selfSufficiency": {
-    "percentage": 0.73,
-    "bySolar":   { "value": 331.25, "unit": "kWh" },
-    "byBattery": { "value": 301.30, "unit": "kWh" },
-    "socialStanding": null
-  },
-  "energyEarned": {
-    "earnedAmount": { "amount": "30.41",   "currency": "EUR" },
-    "soldEnergy":   { "value": 378.75,     "unit": "kWh" },
-    "feedInPrice":  { "price": { "amount": "0.0803", "currency": "EUR" }, "unit": "kWh" },
-    "socialStanding": null
-  },
-  "co2Saved": {
-    "co2Saved": 210.5,
-    "production":        { "value": 580.0, "unit": "kWh" },
-    "carTravelEmission": { "value": 825.0, "unit": "km"  },
-    "socialStanding": null
-  },
-  "heartbeatPrice": { "price": { "amount": "0.0745", "currency": "EUR" }, "unit": "kWh" },
-  "heartbeatPriceSocialStanding": null,
-  "peakPriceAvoided": {
-    "priceAvoided":        { "amount": "22.50", "currency": "EUR" },
-    "batteryChargingCost": { "amount": "37.68", "currency": "EUR" },
-    "gridChargingCost":    { "amount": "60.18", "currency": "EUR" }
-  }
-}
-```
-
-`peakPriceAvoided` = Ersparnis durch strategisches Batterie-Entladen zur Vermeidung teurer Netzstunden: `priceAvoided` = Nettoersparnis, `gridChargingCost` = was Netzbezug ohne Strategie gekostet hätte, `batteryChargingCost` = was das strategische Batterieladen gekostet hat (Nettoersparnis = grid − battery). Top-level Felder gleichen Namens (`priceAvoided`, `batteryChargingCost`, `gridChargingCost`) sind empirisch immer `null` — der Wert steht ausschließlich im nested Block.
-
-Bei `resolution=1W` / `1Y`:
-
-```json
-{
-  "selfSufficiency": null,
-  "energyEarned": null,
-  "co2Saved": { "co2Saved": ..., "production": {...}, "carTravelEmission": {...} },
-  "heartbeatPrice": { ... },
-  "peakPriceAvoided": null
-}
-```
-
-`socialStanding` (überall) enthält vermutlich Community-Percentile — bislang immer `null`; möglicherweise feature-flagged oder anonymisiert.
-
----
-
-### Preisanpassungen (v2)
-
-Nutzer-konfigurierte Preise: Netzstrompreis, Vergleichspreis, monatlicher Grundpreis. Wird für „Ersparnis vs. Grundversorger"-Rechnungen und Dashboards genutzt.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/price-customizations` |
-
-Keine Query-Parameter.
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/price-customizations" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "gridEnergyPrice":       { "price": { "amount": "0.3039", "currency": "EUR" }, "unit": "kWh" },
-  "comparisonEnergyPrice": { "price": { "amount": "0.274",  "currency": "EUR" }, "unit": "kWh" },
-  "monthlyBasePrice":      { "amount": "13.9", "currency": "EUR" }
-}
-```
-
-Alle Preise als **String** (EUR/kWh); `monthlyBasePrice` in EUR.
-
----
-
-### Vergleichspreis Grundversorger (v2)
-
-Einzelwert: aktueller Grundversorger-Referenzpreis in EUR/kWh — die Basis für Sparen-Berechnungen. Ergibt genau denselben Wert wie `comparisonEnergyPrice` aus `/price-customizations`, aber ohne den Rest.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/comparison-price?siteId=$ONEKOMMAFIVE_SYSTEM` |
-
-**Achtung:** `siteId` als Query-Param, kein Pfad-Segment.
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v2/comparison-price?siteId=$ONEKOMMAFIVE_SYSTEM" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{ "comparisonPrice": { "price": { "amount": "0.274", "currency": "EUR" }, "unit": "kWh" } }
-```
-
----
-
-### Preisgarantie (v1, customer-identity)
-
-Vertragliche Preisgarantie des Kunden (z. B. gedeckelte Netzpreise für einen Vertragszeitraum). Liegt wie `active-features` auf dem `customer-identity`-Host.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/price-guarantee?systemId=$ONEKOMMAFIVE_SYSTEM` |
-
-**Achtung:** Der Pfad nimmt die Customer-ID, aber der Query-Parameter heißt `systemId` (**nicht** `customerId`, **nicht** `siteId`) — inkonsistente API-Konvention. Ohne den Query-Param → HTTP 400. `$CUSTOMER_ID` stammt aus dem Feld `customerId` der `/api/v1/systems/{id}/details`-Antwort.
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/price-guarantee?systemId=$ONEKOMMAFIVE_SYSTEM" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "priceGuaranteeUnit": "ct/kWh",
-  "priceGuaranteeValue": 12,
-  "priceGuaranteeVersion": "DE_PRICE_GUARANTEE_V2"
-}
-```
-
-Beobachtete Versionen: `DE_PRICE_GUARANTEE_V2` (Deutschland, Version 2). Die Version taucht auch als `priceGuaranteeVersion` in einzelnen Subscription-Records auf.
-
----
-
-### Wallbox-Hardware (v1)
-
-Physische Wallbox-Hardware am Standort. **Anderer Endpoint** als `/devices/evs`: dieser liefert die reine Hardware-Sicht (GridX-ID, Anzeigename, EV-Zuordnung); `/devices/evs` dagegen die Fahrzeug-Seite (Fahrzeug-Profil, `chargingMode`, `targetSoc`, Fahrpläne).
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/ev-chargers` |
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/ev-chargers" | jq .
-```
-
-Antwortstruktur (Array):
-
-```json
-[
-  {
-    "gridxHardwareId": "<uuid>",
-    "name": "Wallbox",
-    "assignedEvId": "<uuid>"
-  }
-]
-```
-
-`assignedEvId` verweist auf die `id` aus `/devices/evs` (Fahrzeug-Profil) — dort finden sich die Ladeeinstellungen.
-
----
-
-### Smart Meter (v1)
-
-Regulatorische Registrierungsdaten des Smart Meters: ENTSO-E-Regelzonen-EIC, BDEW-Code des Netzbetreibers, Konzessionsabgabe pro kWh. Beides mit Gültigkeitszeiträumen.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/smart-meter` |
-
-```bash
-curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/smart-meter" | jq .
-```
-
-Antwortstruktur:
-
-```json
-{
-  "siteId": "<uuid>",
-  "controlAreaEIC": "10YDE-RWENET---I",
-  "controlAreaEIC__metadata": {
-    "qualityDescription": "Imported from Enet via address lookup",
-    "updatedAt": "ISO8601"
-  },
-  "dsoBdewCode": [
-    {
-      "validFromDate": "2020-01-01",
-      "validUntilDate": "2027-12-31",
-      "reference": "9900000000009",
-      "__metadata": { "qualityDescription": "Imported ...", "updatedAt": "ISO8601" }
-    }
-  ],
-  "concessionFeeEURperkWh": [
-    {
-      "validFromDate": "2020-01-01",
-      "validUntilDate": "2027-12-31",
-      "value": 0.0159,
-      "__metadata": { "qualityDescription": "Imported ...", "updatedAt": "ISO8601" }
-    }
-  ]
-}
-```
-
-Hinweise:
-
-- `controlAreaEIC` = ENTSO-E Regelzone (Deutschland: `10YDE-*` je nach Übertragungsnetzbetreiber wie TenneT/50Hertz/Amprion/RWENET).
-- `dsoBdewCode` = 13-stelliger BDEW-Code des Verteilnetzbetreibers.
-- `concessionFeeEURperkWh.value` = Konzessionsabgabe der Kommune in EUR/kWh.
-- Beide Arrays enthalten historische Einträge mit `validFromDate`/`validUntilDate`; der jeweils aktuelle Eintrag steht typischerweise zuerst.
-- Die `__metadata`-Blöcke dokumentieren Herkunft und letztes Update — meist `Imported from Enet via address lookup`.
-
----
-
-### Site-Details (v2)
-
-Erweitertes Site-Metadaten — Superset von `/systems/{id}` und `/systems/{id}/details`. Fügt Bidding-Zone, EMP-Verbindungsdaten und — am wertvollsten — den **aktuellen EMS-Runtime-Zustand** hinzu, den weder `SystemInfo` noch `SystemDetails` bieten.
-
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/details` |
-
-Keine Query-Parameter.
+**Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/details" | jq .
 ```
 
-Antwortstruktur (anonymisiert):
+**Response**
 
 ```json
 {
@@ -1240,87 +444,1033 @@ Antwortstruktur (anonymisiert):
 }
 ```
 
-Hinweise:
+**Notes**
 
-- `biddingZone` = ENTSO-E Bidding-Zone (Deutschland/Luxemburg = `DE_LU`).
-- `emsMode` = Betriebsmodus (`TOU` = Time-of-Use / Dynamic Pulse).
-- `emsState` / `emsStateReasons` = aktueller EMS-Runtime-Zustand (bislang beobachtet: `OPERATIONAL` mit leerer Reason-Liste; bei Störungen vermutlich mit Codes).
-- `empDetails` enthält die **Kopplungswerte** des Gateways (`serialNumber`, `startCode`) — sicherheitsrelevant, nicht protokollieren/teilen.
-- `impactedByEnwg` = regulatorisches Flag für §14a EnWG (Steuerung / reduzierte Netzentgelte für steuerbare Verbrauchseinrichtungen).
-- `gridConnectionPointPhases` / `maxCurrentPerPhaseAmpere` = Netzanschluss-Kapazität (Anzahl Phasen; max. Ampere pro Phase). Bei manchen Anlagen `null`.
-- `customer` ist der eingebettete Kurz-Block; für den vollen Datensatz (Adresse, Phone, `crmBranchLocation`) siehe **Customer-Datensatz (v3)**.
-- `earliestMeasurement`, `energyTraderActive`, `electricityContractActive` sind auch via `/systems/{id}/details` verfügbar — hier redundant, aber praktisch weil in einem Response.
-- Keine `deviceGateways` — dafür `/systems/{id}/details` verwenden.
-- **v2 und v3 liefern byte-identische Payloads** (verifiziert 2026-08-02) — kein Grund für einen Versions-Wechsel.
+- `biddingZone` — ENTSO-E bidding zone (Germany + Luxembourg = `DE_LU`).
+- `emsMode` — operating mode (`TOU` = time-of-use / Dynamic Pulse).
+- `emsState` / `emsStateReasons` — current EMS runtime state (`OPERATIONAL` with an empty reason list has been observed; likely populated with codes during faults).
+- `empDetails` carries gateway **pairing values** (`serialNumber`, `startCode`) — sensitive, do not log or share.
+- `impactedByEnwg` — German regulatory flag for §14a EnWG (control-box / reduced grid-charge rules for controllable consumption devices).
+- `gridConnectionPointPhases` / `maxCurrentPerPhaseAmpere` — grid-connection capacity (phase count; max amperes per phase). Both can be `null`.
+- `customer` is the short embedded block; for the full record see [Customer record (v3)](#customer-record-v3).
+- `earliestMeasurement`, `energyTraderActive`, `electricityContractActive` are also on `/systems/{id}/details` — redundant here but included in one response.
+- Does **not** carry `deviceGateways` — use `/systems/{id}/details` for those.
+- **v2 and v3 return byte-identical payloads** (verified 2026-08-02) — no reason to switch.
 
 ---
 
-### Customer-Datensatz (v3, customer-identity)
+### Site status and assets
 
-Vollständiges Customer-Profil — Superset des embedded `customer`-Blocks in `/systems/{id}/details` (der nur `id`, `firstName`, `lastName`, `email` liefert). Liegt wie `active-features` und `price-guarantee` auf dem `customer-identity`-Host.
+`GET /api/v2/sites/$ONEKOMMAFIVE_SYSTEM/status-and-assets` — site connection status plus the installed hardware inventory (inverter, heat pump, meter, EV charger).
 
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://customer-identity.1komma5grad.com/api/v3/customers/$CUSTOMER_ID` |
-
-`$CUSTOMER_ID` stammt aus dem Feld `customerId` der `/api/v1/systems/{id}/details`-Antwort.
+**Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://customer-identity.1komma5grad.com/api/v3/customers/$CUSTOMER_ID" | jq .
+  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/status-and-assets" | jq .
 ```
 
-Antwortstruktur (anonymisiert):
+**Response**
 
 ```json
 {
-  "id": "<uuid>",
-  "firstName": "Erika",
-  "lastName": "Mustermann",
-  "contactEmail": "user@example.com",
-  "contactPhone": "+490000000000",
-  "companyName": null,
-  "companyTaxId": null,
-  "addressName": null,
-  "addressLine1": "Musterstraße 1",
-  "addressLine2": null,
-  "addressZipCode": "20095",
-  "addressCity": "Hamburg",
-  "addressCountry": "Deutschland",
-  "crmContactId": "<crm-id>",
-  "customerType": "UNKNOWN",
-  "title": null,
-  "crmBranchLocation": "1KOMMA5° <Region>",
-  "createdAt": "ISO8601",
-  "updatedAt": "ISO8601"
+  "status": "CONNECTED",
+  "assets": [
+    {
+      "id": "<uuid>",
+      "type": "HYBRID | HEAT_PUMP | METER | EV_CHARGER",
+      "empType": "GRIDX",
+      "name": "Wallbox",
+      "connectionStatus": { "status": "CONNECTED" },
+      "manufacturer": "...",
+      "model": "...",
+      "serialnumber": "...",
+      "firmware": "...",
+      "network": { "address": "<local-ip>" },
+      "heatPumpMeterType": "HOUSEHOLD"
+    }
+  ]
 }
 ```
 
-Hinweise:
+**Notes**
 
-- Feldname ist `contactEmail`, nicht `email` (letzteres nur im eingebetteten `SystemCustomer`).
-- `addressCountry` als **Klarname-String** (z. B. `"Deutschland"`), nicht als ISO-Code — Abweichung von `/systems/{id}` das `"DE"` liefert.
-- `customerType` bisher nur `"UNKNOWN"` beobachtet — vermutlich weitere Werte wie `"PRIVATE"`/`"BUSINESS"` möglich.
-- `crmBranchLocation` = zugewiesene 1KOMMA5°-Filiale (z. B. `"1KOMMA5° Moers"`).
+- Type-specific fields:
+  - `name` has only been observed on `EV_CHARGER` assets.
+  - `firmware` is often missing on `METER` and `HEAT_PUMP`.
+  - `heatPumpMeterType` appears only on `HEAT_PUMP` (values e.g. `"HOUSEHOLD"`).
+  - **`serialnumber` is lowercase-n in the API** (not `serialNumber`). On heat pumps the value can take the form `mac_<lowercase-mac>`.
+- Typical asset composition for a full installation:
+
+  | Type | Manufacturer | Model |
+  |------|--------------|-------|
+  | `HYBRID` | Sungrow | SH6.0RT-V112 |
+  | `HEAT_PUMP` | Stiebel Eltron | WPMsystem |
+  | `METER` | Chint | DTSU666 |
+  | `EV_CHARGER` | go-e | HOMEfix 11kW |
 
 ---
 
-### Notifications – letzte Meldungen (v1)
+### Active feature flags
 
-Zeigt die zuletzt ausgelieferten Push- und In-App-Notifications für den authentifizierten Nutzer, gescoped auf eine Anlage.
+`GET /api/v1/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features` — active feature codes for the given customer + site pair.
 
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/users/$USER_ID/notifications/latest?systemId=$ONEKOMMAFIVE_SYSTEM` |
+`$CUSTOMER_ID` comes from the `customerId` field of `/api/v1/systems/{id}/details`.
 
-`$USER_ID` stammt aus `GET /api/v1/users/me`. **Achtung:** `systemId` als Query-Param ist required — ohne → HTTP 400.
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features" | jq .
+```
+
+**Response**
+
+```json
+{
+  "features": [
+    "DYNAMIC_TARIFF",
+    "TIME_OF_USE_OPTIMIZATION",
+    "SMART_CHARGING"
+  ]
+}
+```
+
+**Notes**
+
+- Lives on the `customer-identity` host, not `heartbeat`.
+- Known feature codes (not exhaustive — the list can grow):
+
+  | Code | Meaning |
+  |------|---------|
+  | `DYNAMIC_TARIFF` | Dynamic electricity tariff is active |
+  | `TIME_OF_USE_OPTIMIZATION` | Time-variable tariff optimisation by the EMS |
+  | `SMART_CHARGING` | EV smart-charging available |
+
+---
+
+## Live data
+
+### Live overview
+
+`GET /api/v3/systems/$ONEKOMMAFIVE_SYSTEM/live-overview` — real-time energy overview.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v3/systems/$ONEKOMMAFIVE_SYSTEM/live-overview" | jq .
+```
+
+**Response** (excerpt)
+
+```json
+{
+  "timestamp": "ISO8601",
+  "status": "ONLINE",
+  "liveHeroView": {
+    "selfSufficiency": 1,
+    "production":      { "value": 0,      "unit": "W" },
+    "consumption":     { "value": 666.53, "unit": "W" },
+    "gridFeedIn":      { "value": 4.66,   "unit": "W" },
+    "gridConsumption": { "value": 0,      "unit": "W" },
+    "grid":            { "value": -4.66,  "unit": "W" },
+    "totalStateOfCharge": 0.45,
+    "evChargersAggregated":  { "power": { "value": 0, "unit": "W" } },
+    "heatPumpsAggregated":   { "power": { "value": 0, "unit": "W" } }
+  },
+  "summaryCards": {
+    "grid":         { "power": { "value": -4.66, "unit": "W" } },
+    "battery":      { "power": { "value": 671.19, "unit": "W" }, "stateOfCharge": 0.45 },
+    "photovoltaic": { "production": { "value": 0, "unit": "W" } },
+    "evChargers": [
+      {
+        "applianceId": "<uuid>",
+        "currentSoc": null,
+        "power": { "value": 0, "unit": "W" },
+        "powerSource": null
+      }
+    ],
+    "heatPumps":  [ { "applianceId": "<uuid>", "power": { "value": 0, "unit": "W" } } ],
+    "household":  { "power": { "value": 666.53, "unit": "W" } }
+  }
+}
+```
+
+**Notes**
+
+- All power values are in **Watts** (not kW).
+- `grid.value` sign convention: negative = feeding in, positive = drawing from the grid.
+- Prefer `summaryCards.battery.power` over `liveHeroView.production`-derived battery estimates (API convention: negative = charging; the client flips the sign to positive-for-charging).
+
+---
+
+## Energy
+
+### Energy today
+
+`GET /api/v2/systems/$ONEKOMMAFIVE_SYSTEM/energy-today` — today's production and consumption plus a timestamped timeseries.
+
+**Query parameters**
+
+| Name | Values | Description |
+|------|--------|-------------|
+| `resolution` | `1h` (default), `15m` | Time-series bucket size. |
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  'https://heartbeat.1komma5grad.com/api/v2/systems/'"$ONEKOMMAFIVE_SYSTEM"'/energy-today?resolution=1h' | jq .
+```
+
+**Response** (excerpt)
+
+```json
+{
+  "energyProduced":  { "value": 30.76, "unit": "kWh" },
+  "selfSufficiencyPercent": 0.61,
+  "heartbeatSavings": { "value": 6.48, "unit": "€" },
+  "grid": {
+    "feedIn":  { "value": 6.76,  "unit": "kWh" },
+    "supply":  { "value": 10.33, "unit": "kWh" }
+  },
+  "battery": {
+    "charge":    { "value": 22.42, "unit": "kWh" },
+    "discharge": { "value": 14.58, "unit": "kWh" }
+  },
+  "consumption": {
+    "direct": { "value": 4.60,  "unit": "kWh" },
+    "total":  { "value": 26.50, "unit": "kWh" },
+    "consumers": {
+      "ev":        { "value": 5.0,  "unit": "kWh" },
+      "heatPump":  { "value": 12.0, "unit": "kWh" },
+      "household": { "value": 13.5, "unit": "kWh" },
+      "battery":   { "value": ...,  "unit": "kWh" }
+    }
+  },
+  "timestampedProductionAndConsumption": {
+    "data": {
+      "2026-03-08T12:00Z": {
+        "production": 5.008,
+        "consumption": {
+          "household":      0.267,
+          "householdTotal": 0.602,
+          "ev":             0,
+          "evCharge":       0,
+          "heatPump":       0,
+          "heatPumpTotal":  0,
+          "battery":        4.688,
+          "direct":         0.267
+        },
+        "gridSupply":           0.334,
+        "gridFeedIn":           0.053,
+        "batteryStateOfCharge": 0.536,
+        "batteryCharge":        4.688,
+        "batteryDischarge":     0
+      }
+    },
+    "metadata": { "units": { "production": "kW", "gridSupply": "kW", "gridFeedIn": "kW" } }
+  }
+}
+```
+
+**Notes**
+
+- Scalar totals are in **kWh**; timeseries values in **kW**.
+- `household` vs `householdTotal`: `household` = share sourced directly from PV; `householdTotal` = total consumption from all sources (PV + battery + grid). Same convention for `heatPump`/`heatPumpTotal` and `ev`/`evCharge`.
+
+---
+
+### Energy historical
+
+`GET /api/v3/systems/$ONEKOMMAFIVE_SYSTEM/energy-historical` — historical energy for an inclusive date range. Same payload shape as [Energy today](#energy-today).
+
+**Query parameters**
+
+| Name | Values | Description |
+|------|--------|-------------|
+| `from` | `YYYY-MM-DD` | Start date. |
+| `to`   | `YYYY-MM-DD` | End date. |
+| `resolution` | `1h` (default), `15m` | For `15m`, the date range must be a single day. |
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  'https://heartbeat.1komma5grad.com/api/v3/systems/'"$ONEKOMMAFIVE_SYSTEM"'/energy-historical?from=2026-03-07&to=2026-03-07&resolution=1h' | jq .
+```
+
+**Notes**
+
+- Payload structure is identical to [Energy today](#energy-today).
+
+---
+
+### Heartbeat savings
+
+`GET /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/energy-savings` — aggregated Heartbeat savings (EUR) for a date range as a single value. Useful when the timeseries overhead of `energy-today`/`energy-historical` is not needed.
+
+**Query parameters** (both optional)
+
+| Name | Values | Description |
+|------|--------|-------------|
+| `from` | `YYYY-MM-DD` | Start date. **Date-only** — passing a time component returns HTTP 400. |
+| `to`   | `YYYY-MM-DD` | End date. Same date-only rule. |
+
+Without parameters the endpoint returns a server-side rolling window (undocumented — neither today nor the current month).
+
+**Example**
+
+```bash
+# Default rolling window
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/energy-savings" | jq .
+
+# Custom date range
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/energy-savings?from=2026-07-01&to=2026-07-31" | jq .
+```
+
+**Response**
+
+```json
+{ "heartbeatSavings": { "value": 175.42, "unit": "€" } }
+```
+
+---
+
+## Prices
+
+### Market prices
+
+`GET /api/v4/systems/$ONEKOMMAFIVE_SYSTEM/charts/market-prices` — spot electricity prices with grid-cost and VAT breakdowns.
+
+**Query parameters**
+
+| Name | Values | Description |
+|------|--------|-------------|
+| `from` | ISO-8601 with millis, e.g. `2026-03-01T00:00:00.000Z` | Start (UTC). |
+| `to`   | ISO-8601 with millis, e.g. `2026-03-01T23:59:59.999Z` | End (UTC). |
+| `resolution` | `1h`, `15m` | Bucket size. |
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  'https://heartbeat.1komma5grad.com/api/v4/systems/'"$ONEKOMMAFIVE_SYSTEM"'/charts/market-prices?from=2026-03-01T00%3A00%3A00.000Z&to=2026-03-01T23%3A59%3A59.999Z&resolution=1h' | jq .
+```
+
+**Response**
+
+```json
+{
+  "energyMarket":                    { "averagePrice": { "price": { "amount": "0.137", "currency": "EUR" }, "unit": "kWh" }, "highestPrice": {}, "lowestPrice": {} },
+  "energyMarketWithGridCosts":       {  },
+  "energyMarketWithGridCostsAndVat": {  },
+  "vat": 0.19,
+  "gridCostsTotal": { "price": { "amount": "0.1636964", "currency": "EUR" }, "unit": "kWh" },
+  "usesFallbackGridCosts": false,
+  "timeseries": {
+    "2026-03-10T18:00Z": {
+      "marketPrice":                   "0.23715",
+      "marketPriceWithVat":            "0.2822085",
+      "marketPriceWithGridCost":       "0.37471",
+      "marketPriceWithGridCostAndVat": "0.4459049",
+      "gridCosts":                     "0.13756",
+      "gridConsumption": 0.00956125,
+      "gridFeedIn":      0.01150825
+    }
+  }
+}
+```
+
+**Notes**
+
+- All prices are delivered as **strings** in **EUR/kWh**.
+- Timestamps are UTC. `gridConsumption` / `gridFeedIn` are in kWh.
+
+---
+
+### Price customizations
+
+`GET /api/v2/systems/$ONEKOMMAFIVE_SYSTEM/price-customizations` — user-configured prices (grid price, comparison price, monthly base fee).
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/price-customizations" | jq .
+```
+
+**Response**
+
+```json
+{
+  "gridEnergyPrice":       { "price": { "amount": "0.3039", "currency": "EUR" }, "unit": "kWh" },
+  "comparisonEnergyPrice": { "price": { "amount": "0.274",  "currency": "EUR" }, "unit": "kWh" },
+  "monthlyBasePrice":      { "amount": "13.9", "currency": "EUR" }
+}
+```
+
+**Notes**
+
+- Prices are **strings** (EUR/kWh); `monthlyBasePrice` is in EUR / month.
+
+---
+
+### Comparison price
+
+`GET /api/v2/comparison-price?siteId=$ONEKOMMAFIVE_SYSTEM` — single-value grid-supplier reference price. Equivalent to `comparisonEnergyPrice` from [Price customizations](#price-customizations), without the surrounding envelope.
+
+**Query parameters**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `siteId` | yes | Site UUID as a query parameter — **not a path segment**. |
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/comparison-price?siteId=$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+**Response**
+
+```json
+{ "comparisonPrice": { "price": { "amount": "0.274", "currency": "EUR" }, "unit": "kWh" } }
+```
+
+---
+
+## EV chargers and wallbox
+
+### List EV chargers
+
+`GET /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs` — the **vehicle-side** charging profiles registered to a system (charging mode, target SoC, departure schedule).
+
+For the physical wallbox hardware, see [List wallboxes (hardware)](#list-wallboxes-hardware).
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs" | jq .
+```
+
+**Response** (array)
+
+```json
+[
+  {
+    "id": "<uuid>",
+    "profile": {
+      "name": "...",
+      "manufacturer": "...",
+      "model": "...",
+      "capacity": { "value": 77000, "unit": "Wh" },
+      "minChargingCurrent": { "value": 2, "unit": "A" }
+    },
+    "manualSoc": 0.5,
+    "manualSocTimestamp": "ISO8601",
+    "assignedChargerId": "<uuid>",
+    "chargeSettings": {
+      "defaultSoc": 0.35,
+      "targetSoc": 0.8,
+      "chargingMode": "SMART_CHARGE",
+      "primaryScheduleDays": [],
+      "primaryScheduleDepartureTime": "06:30",
+      "primaryScheduleDepartureSoc": 1,
+      "secondaryScheduleDepartureTime": null,
+      "secondaryScheduleDepartureSoc": null
+    }
+  }
+]
+```
+
+**Notes**
+
+- **`capacity.unit` is Wh, not kWh** (77 000 Wh = 77 kWh).
+- `manualSoc` is a decimal in `[0, 1]` (not a percentage), and is set manually because the wallbox has no SoC feedback channel.
+
+---
+
+### Available charging modes
+
+`GET /api/v1/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/displayed-ev-charging-modes` — charging modes available at this site and whether each is currently enabled.
+
+Note the `/sites/` prefix (path IDs are the same as for `/systems/`).
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/displayed-ev-charging-modes" | jq .
+```
+
+**Response**
+
+```json
+{
+  "displayedEvChargingModes": [
+    { "type": "SMART_CHARGE", "disabled": false },
+    { "type": "SOLAR_CHARGE", "disabled": false },
+    { "type": "QUICK_CHARGE", "disabled": false }
+  ],
+  "emsMode": "TOU"
+}
+```
+
+**Notes**
+
+- `emsMode: "TOU"` = time-of-use (Dynamic Pulse tariff active, exchange prices drive charging decisions).
+
+---
+
+### Update EV settings
+
+`PATCH /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID` — update charging mode, target SoC, current SoC, or departure time.
+
+Each call sends a partial body matching the target field.
+
+**Set charging mode**
+
+```bash
+# Allowed values: SMART_CHARGE | QUICK_CHARGE | SOLAR_CHARGE
+curl -s -X PATCH \
+  -H "Authorization: Bearer $BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"chargeSettings": {"chargingMode": "SOLAR_CHARGE"}}' \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+```
+
+**Set current SoC** (decimal `0.0`–`1.0`)
+
+```bash
+curl -s -X PATCH \
+  -H "Authorization: Bearer $BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"manualSoc": 0.8}' \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+```
+
+**Set target SoC** (decimal `0.0`–`1.0`)
+
+```bash
+curl -s -X PATCH \
+  -H "Authorization: Bearer $BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"chargeSettings": {"targetSoc": 0.9}}' \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+```
+
+**Set primary departure time** (format `HH:MM`)
+
+```bash
+curl -s -X PATCH \
+  -H "Authorization: Bearer $BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"chargeSettings": {"primaryScheduleDepartureTime": "07:30"}}' \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+```
+
+---
+
+### List wallboxes (hardware)
+
+`GET /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/ev-chargers` — the **physical wallbox hardware** assigned to a system (GridX hardware ID, name, currently-paired EV).
+
+Distinct from [List EV chargers](#list-ev-chargers) which returns the vehicle-side profile. `assignedEvId` links to an entry in `/devices/evs`.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/ev-chargers" | jq .
+```
+
+**Response** (array)
+
+```json
+[
+  {
+    "gridxHardwareId": "<uuid>",
+    "name": "Wallbox",
+    "assignedEvId": "<uuid>"
+  }
+]
+```
+
+---
+
+## Energy management (EMS)
+
+### Get EMS settings
+
+`GET /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/ems/actions/get-settings` — current EMS configuration and per-device manual settings.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/ems/actions/get-settings" | jq .
+```
+
+**Response**
+
+```json
+{
+  "systemId": "<uuid>",
+  "consentGiven": true,
+  "overrideAutoSettings": false,
+  "timeOfUseEnabled": true,
+  "manualSettings": {
+    "0": {
+      "type": "EV_CHARGER",
+      "id": "<uuid>",
+      "assignedEvId": "<uuid>",
+      "activeChargingMode": "SMART_CHARGE"
+    },
+    "1": {
+      "type": "BATTERY",
+      "enableForecastCharging": false
+    },
+    "2": {
+      "type": "HEAT_PUMP",
+      "id": "<uuid>",
+      "useSolarSurplus": true,
+      "maxSolarSurplusUsage": { "value": 2, "unit": "kW" }
+    }
+  }
+}
+```
+
+**Notes**
+
+- `overrideAutoSettings: false` = AI automatic mode active.
+- `manualSettings` uses numeric string keys (`"0"`, `"1"`, `"2"`); use the `type` field for identification.
+
+---
+
+### Set EMS mode
+
+`POST /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/ems/actions/set-manual-override` — switch between automatic and manual override.
+
+**Request body**
+
+```json
+{
+  "manualSettings": {},
+  "overrideAutoSettings": false
+}
+```
+
+- `overrideAutoSettings: false` → automatic mode.
+- `overrideAutoSettings: true`  → manual override.
+
+**Example**
+
+```bash
+# Enable automatic mode
+curl -s -X POST \
+  -H "Authorization: Bearer $BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"overrideAutoSettings": false}' \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/ems/actions/set-manual-override" | jq .
+```
+
+**Notes**
+
+- Successful response is HTTP **201**, not 200.
+
+---
+
+## Weather
+
+### Weather forecast
+
+`GET /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/weather` — weather forecast for the site location: daily summaries for today + tomorrow, plus 3-hour slots for the next 48 hours.
+
+Primarily used by the AI for PV-yield estimation and charging planning.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/weather" | jq .
+```
+
+**Response**
+
+```json
+{
+  "today": {
+    "temperatureCelsius": 16.1,
+    "precipitationMm": 5.2,
+    "precipitationProbability": 86.5,
+    "sunshineMinutes": 383.7,
+    "sunrise": "2026-03-11T05:57Z",
+    "sunset":  "2026-03-11T17:32Z",
+    "weatherSymbolId": 5
+  },
+  "tomorrow": {  },
+  "fineGrainedForecasts": [
+    {
+      "periodStart": "2026-03-11T15:00Z",
+      "windSpeed": 3.8,
+      "temperatureCelsius": 10.2,
+      "weatherSymbolId": 5,
+      "sunshineMinutes": 0,
+      "precipitationMm": 1.07,
+      "precipitationProbability": 51.4
+    }
+  ]
+}
+```
+
+**Notes**
+
+- All timestamps in **UTC**. `fineGrainedForecasts` contains 3-hour slots for the next 48 hours.
+- `precipitationProbability` is a float in `0–100`.
+- `sunshineMinutes` on `today`/`tomorrow` is a full-day forecast (can exceed 600); on slots it's max ~60 minutes (out of 180).
+- Symbol `2` (fair) can appear even with low `sunshineMinutes` — it describes broken cloud cover, not necessarily much sunshine.
+
+**Weather symbol IDs**
+
+Night IDs follow the pattern **day-ID + 100** (e.g. `5` → `105`). Night symbols appear in `fineGrainedForecasts` slots after sunset.
+
+| Day ID | Night ID | Meaning |
+|--------|----------|---------|
+| `1` | `101` | Sunny / clear |
+| `2` | `102` | Fair (partly cloudy) |
+| `3` | `103` | Changing cloudiness |
+| `4` | `104` | Overcast / heavy cloud |
+| `5` | `105` | Rain |
+| `8` | `108` | Slight cloud with showers |
+| `15` | `115` | Heavy rain / showers |
+
+Values derived from observation, not officially documented.
+
+---
+
+## Heartbeat AI
+
+### Optimizations
+
+`GET /api/v1/heartbeat-ai/optimizations` — AI optimisation decisions (battery charge / discharge / EV charge) for a time window.
+
+**Query parameters**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `siteId` | yes | Site UUID. |
+| `from`   | yes | ISO-8601 with milliseconds, URL-encoded. Format `%Y-%m-%dT%H:%M:%S.000Z`. |
+| `to`     | yes | ISO-8601 with milliseconds, URL-encoded. Format `%Y-%m-%dT%H:%M:%S.999Z`. |
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  'https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/optimizations?siteId='"$ONEKOMMAFIVE_SYSTEM"'&from=2026-03-08T00%3A00%3A00.000Z&to=2026-03-08T23%3A59%3A59.999Z' | jq .
+```
+
+**Response**
+
+```json
+{
+  "events": [
+    {
+      "id": "<uuid>",
+      "timestamp": "ISO8601",
+      "data": {
+        "decision": "BATTERY_CHARGE_FROM_GRID",
+        "from": "ISO8601",
+        "to": "ISO8601",
+        "asset": "BATTERY",
+        "marketPrice": { "value": 24.76, "currency": "EUR" },
+        "stateOfCharge": 3,
+        "log": ["ISO8601", "..."]
+      }
+    }
+  ]
+}
+```
+
+**Notes**
+
+- Known `decision` values (not exhaustive):
+
+  | Value | Asset | Meaning |
+  |-------|-------|---------|
+  | `BATTERY_CHARGE_FROM_GRID` | BATTERY | Charge battery from the grid (cheap price) |
+  | `BATTERY_NO_DISCHARGE` | BATTERY | Do not discharge battery (price too low) |
+  | `EV_CHARGE_FROM_GRID` | EV | Charge EV from the grid |
+
+- `marketPrice.value` is in **EUR/MWh** — but empirically closer to the feed-in / trader-side price than to the spot purchase price. See [Self-sufficiency events](#self-sufficiency-events) for the observed factor ~4-5 delta vs `charts/market-prices`.
+- `stateOfCharge` is a **percentage** (0–100).
+- `log` contains ISO timestamps of follow-up slots with the same decision.
+
+---
+
+### Self-sufficiency events
+
+`GET /api/v1/heartbeat-ai/self-sufficiency` — AI events that explain self-sufficiency outcomes (typically the granular battery discharge/charge trace).
+
+**Same payload shape** as [Optimizations](#optimizations), but a **different subset** of AI activity — the two are complementary. In a window where `/optimizations` returns `[]`, `/self-sufficiency` can return multiple events.
+
+**Query parameters** — same as [Optimizations](#optimizations).
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  'https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/self-sufficiency?siteId='"$ONEKOMMAFIVE_SYSTEM"'&from=2026-08-01T00%3A00%3A00.000Z&to=2026-08-01T23%3A59%3A59.999Z' | jq .
+```
+
+**Response** — identical to [Optimizations](#optimizations).
+
+**Notes on `marketPrice`**
+
+Empirically the values are much lower than the spot price returned by `charts/market-prices` at the same timestamp — a factor of roughly 4–5 lower. Presumably the feed-in / trader-side price used by the Dynamic-Pulse regime, but the API does not document which of the two it is.
+
+Example (author's account):
+
+| Time | AI `marketPrice` (EUR/MWh → ct/kWh) | `charts/market-prices` (ct/kWh) |
+|---|---|---|
+| 00:15 | 35.30 → 3.53 | 16.27 |
+| 03:00 | 34.55 → 3.46 | 15.45 |
+| 06:45 | 31.11 → 3.11 | 14.64 |
+
+---
+
+### AI summary
+
+`GET /api/v2/heartbeat-ai/summary` — aggregated Heartbeat-AI metrics for a resolution window: self-sufficiency, feed-in earnings, CO₂ saved, effective Heartbeat price, and peak-price avoidance.
+
+**Query parameters**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `siteId` | yes | Site UUID. |
+| `resolution` | yes | One of `1W`, `1M`, `1Y`. Any other value returns HTTP 400. |
+
+**Only `resolution=1M` returns all metrics.** `1W` and `1Y` return only `co2Saved`, `production`, `carTravelEmission`; `selfSufficiency` and `energyEarned` come back as `null`.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/heartbeat-ai/summary?siteId=$ONEKOMMAFIVE_SYSTEM&resolution=1M" | jq .
+```
+
+**Response** (`resolution=1M`)
+
+```json
+{
+  "selfSufficiency": {
+    "percentage": 0.73,
+    "bySolar":   { "value": 331.25, "unit": "kWh" },
+    "byBattery": { "value": 301.30, "unit": "kWh" },
+    "socialStanding": null
+  },
+  "energyEarned": {
+    "earnedAmount": { "amount": "30.41",   "currency": "EUR" },
+    "soldEnergy":   { "value": 378.75,     "unit": "kWh" },
+    "feedInPrice":  { "price": { "amount": "0.0803", "currency": "EUR" }, "unit": "kWh" },
+    "socialStanding": null
+  },
+  "co2Saved": {
+    "co2Saved": 210.5,
+    "production":        { "value": 580.0, "unit": "kWh" },
+    "carTravelEmission": { "value": 825.0, "unit": "km"  },
+    "socialStanding": null
+  },
+  "heartbeatPrice": { "price": { "amount": "0.0745", "currency": "EUR" }, "unit": "kWh" },
+  "heartbeatPriceSocialStanding": null,
+  "peakPriceAvoided": {
+    "priceAvoided":        { "amount": "22.50", "currency": "EUR" },
+    "batteryChargingCost": { "amount": "37.68", "currency": "EUR" },
+    "gridChargingCost":    { "amount": "60.18", "currency": "EUR" }
+  }
+}
+```
+
+`peakPriceAvoided` = savings from strategically discharging the battery to avoid expensive grid hours: `priceAvoided` = net saving, `gridChargingCost` = what grid consumption would have cost without the strategy, `batteryChargingCost` = what the strategic battery charging did cost (net saving = grid − battery). Top-level fields of the same name (`priceAvoided`, `batteryChargingCost`, `gridChargingCost`) are empirically always `null` — the actual value sits exclusively in this nested block.
+
+**Response** (`resolution=1W` / `1Y`)
+
+```json
+{
+  "selfSufficiency": null,
+  "energyEarned": null,
+  "co2Saved": { "co2Saved": null, "production": {}, "carTravelEmission": {} },
+  "heartbeatPrice": {  },
+  "peakPriceAvoided": null
+}
+```
+
+`socialStanding` fields (throughout) presumably contain community percentiles — always observed as `null` so far, possibly feature-flagged or anonymised.
+
+---
+
+## Analytics
+
+### Impact overview (CO2)
+
+`GET /api/v2/systems/$ONEKOMMAFIVE_SYSTEM/impact-overview` — lifetime figures: kg of CO₂ saved for the site, aggregate for the entire customer base, and a global marketing estimate.
+
+The endpoint ignores `from`, `to`, and `resolution` — values are always lifetime totals.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/systems/$ONEKOMMAFIVE_SYSTEM/impact-overview" | jq .
+```
+
+**Response**
+
+```json
+{
+  "co2Savings":                { "value": 3099.24,     "unit": "kg" },
+  "co2CollectiveSavings":      { "value": 84779526.33, "unit": "kg" },
+  "co2GlobalSavingsEstimate":  { "value": 2000000,     "unit": "tons" }
+}
+```
+
+**Notes**
+
+- `co2GlobalSavingsEstimate` is a marketing figure (tons), not a site-specific measurement.
+
+---
+
+### Energy trader (lifetime)
+
+`GET /api/v2/energy-trader?siteId=$ONEKOMMAFIVE_SYSTEM` — cumulative trading savings for the site. Values accumulate over the site's entire trading history; no date range is supported.
+
+**Query parameters**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `siteId` | yes | Site UUID — as a **query parameter**, not a path segment (unlike most heartbeat endpoints). |
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/energy-trader?siteId=$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+**Response**
+
+```json
+{
+  "energyTrader": {
+    "status": "ACTIVE",
+    "greenEnergySavings":  { "amount": "2678.49", "currency": "EUR" },
+    "energyTraderSavings": { "amount": "231.26",  "currency": "EUR" }
+  }
+}
+```
+
+---
+
+### Monthly trading savings
+
+`GET /api/v1/energy-trader-savings/$ONEKOMMAFIVE_SYSTEM/month` — average monthly savings from variable-price trading. Complements the lifetime view of [Energy trader](#energy-trader-lifetime).
+
+**Path parameter caveat:** the segment is the **site ID** (= `$ONEKOMMAFIVE_SYSTEM`), **not** the customer ID, despite the misleading URL structure. Verified live (customer_id → HTTP 403, site_id → 200).
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/energy-trader-savings/$ONEKOMMAFIVE_SYSTEM/month" | jq .
+```
+
+**Response**
+
+```json
+{ "averagePastVariableSavings": { "value": 12.83, "unit": "€" } }
+```
+
+---
+
+## Smart meter
+
+### Smart meter registration
+
+`GET /api/v1/sites/$ONEKOMMAFIVE_SYSTEM/smart-meter` — regulatory smart-meter registration data: ENTSO-E control-area EIC, DSO BDEW code, municipality concession fee per kWh — each with validity periods.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/smart-meter" | jq .
+```
+
+**Response**
+
+```json
+{
+  "siteId": "<uuid>",
+  "controlAreaEIC": "10YDE-RWENET---I",
+  "controlAreaEIC__metadata": {
+    "qualityDescription": "Imported from Enet via address lookup",
+    "updatedAt": "ISO8601"
+  },
+  "dsoBdewCode": [
+    {
+      "validFromDate": "2020-01-01",
+      "validUntilDate": "2027-12-31",
+      "reference": "9900000000009",
+      "__metadata": { "qualityDescription": "Imported ...", "updatedAt": "ISO8601" }
+    }
+  ],
+  "concessionFeeEURperkWh": [
+    {
+      "validFromDate": "2020-01-01",
+      "validUntilDate": "2027-12-31",
+      "value": 0.0159,
+      "__metadata": { "qualityDescription": "Imported ...", "updatedAt": "ISO8601" }
+    }
+  ]
+}
+```
+
+**Notes**
+
+- `controlAreaEIC` = ENTSO-E control zone (Germany: `10YDE-*` per transmission-system operator — TenneT / 50Hertz / Amprion / RWENET).
+- `dsoBdewCode` = 13-digit BDEW code of the distribution-system operator.
+- `concessionFeeEURperkWh.value` = municipality concession fee in EUR/kWh.
+- Both arrays contain historic entries with `validFromDate` / `validUntilDate`; the current entry is typically the first element.
+- `__metadata` blocks document origin and last update — usually `Imported from Enet via address lookup`.
+
+---
+
+## Notifications
+
+### Latest notifications
+
+`GET /api/v1/users/$USER_ID/notifications/latest?systemId=$ONEKOMMAFIVE_SYSTEM` — recent push / in-app notifications for the authenticated user, scoped to one system.
+
+`$USER_ID` comes from `GET /api/v1/users/me`.
+
+**Query parameters**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `systemId` | yes | System UUID — omitting it returns HTTP 400. |
+
+**Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   "https://heartbeat.1komma5grad.com/api/v1/users/$USER_ID/notifications/latest?systemId=$ONEKOMMAFIVE_SYSTEM" | jq .
 ```
 
-Antwortstruktur:
+**Response**
 
 ```json
 {
@@ -1349,24 +1499,24 @@ Antwortstruktur:
 }
 ```
 
-`type`-Werte entsprechen den Kategorien aus `/notifications/settings` (siehe unten).
+**Notes**
+
+- `type` values match the categories from [Notification settings](#notification-settings) below.
 
 ---
 
-### Notifications – Einstellungen (v1)
+### Notification settings
 
-Nutzer-Präferenzen pro Notification-Kategorie mit Channel-Toggles (App/Push/Email).
+`GET /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/users/$USER_ID/notifications/settings` — user preferences per notification category with channel toggles (app / push / email).
 
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/users/$USER_ID/notifications/settings` |
+**Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/users/$USER_ID/notifications/settings" | jq .
 ```
 
-Antwortstruktur:
+**Response**
 
 ```json
 {
@@ -1383,46 +1533,44 @@ Antwortstruktur:
     ],
     "SYSTEM_DATA_COLLECTION_ENDED": [],
     "EV_DYNAMIC_PULSE": [],
-    "ENERGY_MARKET_UPPER_TARGET_REACHED": [ ... ],
-    "ENERGY_MARKET_LOWER_TARGET_REACHED": [ ... ],
-    "SYSTEM_HEALTH": [ ... ]
+    "ENERGY_MARKET_UPPER_TARGET_REACHED": [],
+    "ENERGY_MARKET_LOWER_TARGET_REACHED": [],
+    "SYSTEM_HEALTH": []
   }
 }
 ```
 
-Ein leeres Array pro Kategorie = **nicht abonniert**. Ein Eintrag pro Kategorie enthält die zugehörige Subscription-ID und die aktivierten Channels.
+An empty array per category = **not subscribed**. An entry per category carries the associated subscription ID and the active channels.
 
-Beobachtete Kategorien (nicht abschließend):
+**Observed categories** (not exhaustive)
 
-| Kategorie | Bedeutung |
-|-----------|-----------|
-| `CO2_IMPACT` | CO₂-Impact-Meilensteine |
-| `BATTERY_SOC` | Batterie-SoC-Grenzwerte |
-| `BROADCAST_NEW_ELECTRICITY_PRICES` | Tägliche Ansage der Strompreis-Prognose |
-| `SYSTEM_DATA_COLLECTION_ENDED` | Systemdaten-Erfassung beendet |
-| `EV_DYNAMIC_PULSE` | Dynamic-Pulse-EV-Trigger |
-| `ENERGY_MARKET_UPPER_TARGET_REACHED` | Preis-Alert nach oben |
-| `ENERGY_MARKET_LOWER_TARGET_REACHED` | Preis-Alert nach unten |
-| `SYSTEM_HEALTH` | Anlagen-Gesundheitswarnungen |
+| Category | Meaning |
+|----------|---------|
+| `CO2_IMPACT` | CO₂ impact milestones |
+| `BATTERY_SOC` | Battery SoC thresholds |
+| `BROADCAST_NEW_ELECTRICITY_PRICES` | Daily electricity-price forecast broadcast |
+| `SYSTEM_DATA_COLLECTION_ENDED` | System-data collection stopped |
+| `EV_DYNAMIC_PULSE` | Dynamic-Pulse EV trigger |
+| `ENERGY_MARKET_UPPER_TARGET_REACHED` | Price alert — upper threshold |
+| `ENERGY_MARKET_LOWER_TARGET_REACHED` | Price alert — lower threshold |
+| `SYSTEM_HEALTH` | System health warnings |
 
 ---
 
-### API-Kompatibilität (v1)
+## API meta
 
-Nicht anlagen-gebundene Meta-Endpunkt: liefert die Ziel- und Mindest-Version für die zwei Client-Kanäle.
+### Supported versions
 
-| Methode | URL |
-|---------|-----|
-| `GET` | `https://heartbeat.1komma5grad.com/api/v1/supported-versions` |
+`GET /api/v1/supported-versions` — not site-scoped meta endpoint returning target and minimum-supported versions for each client channel.
 
-Keine Query-Parameter, kein Site/Customer-Kontext.
+**Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   "https://heartbeat.1komma5grad.com/api/v1/supported-versions" | jq .
 ```
 
-Antwortstruktur:
+**Response**
 
 ```json
 {
@@ -1431,24 +1579,81 @@ Antwortstruktur:
 }
 ```
 
-`b2b` = Installer/Partner-Client, `b2c` = End-Nutzer-App. Kann genutzt werden, um zu warnen wenn eigene Client-Implementierung hinter `minimumSupportedVersion` zurückfällt.
+**Notes**
+
+- `b2b` = installer / partner client channel.
+- `b2c` = end-user app channel.
+- Useful for warning when your own client implementation drops below `minimumSupportedVersion`.
 
 ---
 
-## Einheitenübersicht
+## Unit reference
 
-| Endpunkt | Einheit |
-|----------|---------|
-| `live-overview` | **W** (Momentanleistung) |
-| `energy-today`, `energy-historical` | **kW** (Zeitreihe) / **kWh** (Tagessummen) |
-| `charts/market-prices` | Preise als **String EUR/kWh**, Mengen in **kWh** |
-| `heartbeat-ai/optimizations` | **EUR/MWh** |
-| `heartbeat-ai/summary` | **kWh** / **EUR** / **kg** (CO₂) / **km** (Auto-Äquivalent), Preise als **String EUR/kWh** |
+| Endpoint | Unit convention |
+|----------|-----------------|
+| `live-overview` | **W** (instantaneous power) |
+| `energy-today`, `energy-historical` | **kW** (timeseries) / **kWh** (daily totals) |
+| `charts/market-prices` | Prices as **string EUR/kWh**, quantities in **kWh** |
+| `heartbeat-ai/optimizations`, `heartbeat-ai/self-sufficiency` | **EUR/MWh** (see quirks) |
+| `heartbeat-ai/summary` | **kWh** / **EUR** / **kg** CO₂ / **km** car equivalent, prices as **string EUR/kWh** |
 | `impact-overview` | **kg** CO₂ (site + collective), **tons** (global estimate) |
 | `energy-trader`, `energy-trader-savings/.../month` | **EUR** |
 | `energy-savings` | **EUR** |
-| `price-customizations`, `comparison-price` | **String EUR/kWh** (Grundpreis: **EUR/Monat**) |
-| `price-guarantee` | Wert je `priceGuaranteeUnit` (z. B. `ct/kWh`) |
-| `smart-meter` | Konzessionsabgabe in **EUR/kWh** |
-| `devices/evs` | Kapazität in **Wh**, Ladestrom in **A** |
-| `ems/actions/get-settings` | **kW** (maxSolarSurplusUsage) |
+| `price-customizations`, `comparison-price` | **String EUR/kWh** (base fee: **EUR/month**) |
+| `price-guarantee` | Value per `priceGuaranteeUnit` (e.g. `ct/kWh`) |
+| `smart-meter` | Concession fee in **EUR/kWh** |
+| `devices/evs` | Capacity in **Wh**, charging current in **A** |
+| `ems/actions/get-settings` | **kW** (`maxSolarSurplusUsage`) |
+
+---
+
+## Known API quirks
+
+Consolidated reference of every non-obvious behaviour documented above:
+
+**Query parameters vs path segments**
+
+- `siteId` is a **query parameter** (not a path segment) in: `/energy-trader`, `/comparison-price`, `/heartbeat-ai/summary`, `/heartbeat-ai/optimizations`, `/heartbeat-ai/self-sufficiency`, `/users/{uid}/notifications/latest`.
+- In `/customers/{cid}/price-guarantee` the required query parameter is named `systemId` (not `customerId`, not `siteId`), despite the customer scope in the path.
+- `/energy-trader-savings/{site_id}/month` takes the **site ID** in the path, not the customer ID.
+
+**Date and time formats**
+
+- `energy-savings` requires **date-only** (`YYYY-MM-DD`) — datetimes with a time component return HTTP 400.
+- `heartbeat-ai/optimizations` and `heartbeat-ai/self-sufficiency` require **ISO-8601 with milliseconds** (`%Y-%m-%dT%H:%M:%S.000Z` / `%Y-%m-%dT%H:%M:%S.999Z`), URL-encoded.
+- `charts/market-prices` requires ISO-8601 with millisecond precision, URL-encoded.
+- `energy-historical` accepts date-only. For `resolution=15m` the range must be a single day.
+
+**Resolution / range constraints**
+
+- `heartbeat-ai/summary`: only `resolution=1M` returns all metrics. `1W` and `1Y` return only `co2Saved` + `production` + `carTravelEmission`; `selfSufficiency` and `energyEarned` are `null`. Any other resolution returns HTTP 400.
+- `impact-overview` ignores query parameters (always lifetime).
+- `energy-trader` accepts no date range (always lifetime).
+
+**Hosts**
+
+- The `customer-identity` host is used by: `/users/me`, `/customers/{cid}` (v3), `/customers/{cid}/sites/{sid}/active-features`, `/customers/{cid}/price-guarantee`.
+- Everything else lives on `heartbeat`.
+
+**Field naming inconsistencies**
+
+- `status-and-assets`: the API returns `serialnumber` in **lowercase-n**, not `serialNumber`. On heat-pump assets the value can take the form `mac_<lowercase-mac>`.
+- Customer v3: the email field is `contactEmail`, not `email` (the embedded `SystemCustomer` uses `email`).
+- Customer v3: `addressCountry` is a plain-name string (e.g. `"Deutschland"`), not an ISO code — differs from `/systems/{id}` which returns `"DE"`.
+
+**Semantic pitfalls**
+
+- `heartbeat-ai/optimizations` + `heartbeat-ai/self-sufficiency`: `data.marketPrice` is empirically much lower than the spot price from `charts/market-prices` (factor ~4–5). Likely the feed-in / trader-side price rather than the grid-purchase price — not documented by the API.
+- `heartbeat-ai/summary` top-level fields `priceAvoided` / `batteryChargingCost` / `gridChargingCost` are empirically always `null`; the populated values sit inside the `peakPriceAvoided` block.
+- `/devices/evs` returns the **vehicle-side** profile (charging mode, target SoC, schedules). `/devices/ev-chargers` returns the **physical wallbox hardware**. They are complementary — link them via `assignedEvId`.
+- `/sites/{id}/details` **v2 and v3 return byte-identical payloads** (verified 2026-08-02). Do NOT include `deviceGateways` — use `/systems/{id}/details` for those.
+
+**Unit surprises**
+
+- EV `capacity.unit` is **Wh** (not kWh). 77000 Wh = 77 kWh.
+- EV `manualSoc` / `targetSoc` / `defaultSoc` are decimals in `[0, 1]` — **not** percentages.
+- Weather night-symbol IDs = day-symbol ID + **100**.
+
+**Response-code surprises**
+
+- `POST /ems/actions/set-manual-override` returns HTTP **201** on success, not 200.
