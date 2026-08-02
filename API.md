@@ -1198,6 +1198,7 @@ Antwortstruktur (anonymisiert):
     "startCode": "<hex-token>",
     "installationDate": "YYYY-MM-DD"
   },
+  "empReferenceId": "<uuid>",
   "physicalAttributes": {},
   "addressLine1": "Musterstraße 1",
   "addressZipCode": "20095",
@@ -1206,9 +1207,19 @@ Antwortstruktur (anonymisiert):
   "addressLatitude": 0.0,
   "addressLongitude": 0.0,
   "customerId": "<uuid>",
+  "customer": {
+    "id": "<uuid>",
+    "firstName": "Erika",
+    "lastName": "Mustermann",
+    "email": "user@example.com"
+  },
   "technicalContactId": "<uuid>",
   "technicalContactName": "1KOMMA5° <Region>",
   "dynamicPulseCompatible": true,
+  "earliestMeasurement": "YYYY-MM-DD",
+  "energyTraderActive": true,
+  "electricityContractActive": true,
+  "impactedByEnwg": false,
   "createdAt": "ISO8601",
   "updatedAt": "ISO8601"
 }
@@ -1220,7 +1231,11 @@ Hinweise:
 - `emsMode` = Betriebsmodus (`TOU` = Time-of-Use / Dynamic Pulse).
 - `emsState` / `emsStateReasons` = aktueller EMS-Runtime-Zustand (bislang beobachtet: `OPERATIONAL` mit leerer Reason-Liste; bei Störungen vermutlich mit Codes).
 - `empDetails` enthält die **Kopplungswerte** des Gateways (`serialNumber`, `startCode`) — sicherheitsrelevant, nicht protokollieren/teilen.
+- `impactedByEnwg` = regulatorisches Flag für §14a EnWG (Steuerung / reduzierte Netzentgelte für steuerbare Verbrauchseinrichtungen).
+- `customer` ist der eingebettete Kurz-Block; für den vollen Datensatz (Adresse, Phone, `crmBranchLocation`) siehe **Customer-Datensatz (v3)**.
+- `earliestMeasurement`, `energyTraderActive`, `electricityContractActive` sind auch via `/systems/{id}/details` verfügbar — hier redundant, aber praktisch weil in einem Response.
 - Keine `deviceGateways` — dafür `/systems/{id}/details` verwenden.
+- **v2 und v3 liefern byte-identische Payloads** (verifiziert 2026-08-02) — kein Grund für einen Versions-Wechsel.
 
 ---
 

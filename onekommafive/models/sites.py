@@ -3,6 +3,8 @@
 from dataclasses import dataclass, field
 from typing import Any
 
+from .system import SystemCustomer
+
 
 @dataclass
 class Asset:
@@ -171,8 +173,32 @@ class SiteDetails:
     customer_id: str | None
     """UUID of the owning customer (matches :attr:`SystemDetails.customer_id`)."""
 
+    customer: SystemCustomer | None
+    """Embedded customer contact block (id/firstName/lastName/email). ``None`` when the
+    API omits the block. For the full customer profile, use
+    :meth:`~onekommafive.System.get_customer`."""
+
     technical_contact_id: str | None
     technical_contact_name: str | None
+
+    earliest_measurement: str | None
+    """ISO-8601 date (``YYYY-MM-DD``) of the earliest available measurement.
+    Matches :attr:`SystemDetails.earliest_measurement`."""
+
+    energy_trader_active: bool | None
+    """Whether Energy Trader is active for this site. ``None`` when the API omits
+    the flag entirely (matches :attr:`SystemDetails.energy_trader_active`)."""
+
+    electricity_contract_active: bool | None
+    """Whether the electricity contract is active. ``None`` when the API omits
+    the flag entirely (matches :attr:`SystemDetails.electricity_contract_active`)."""
+
+    impacted_by_enwg: bool | None
+    """German regulatory flag: whether the site is impacted by the Energiewirtschaftsgesetz
+    (§14a EnWG grid-charge reduction / control-box rules). ``None`` when the field is absent."""
+
+    emp_reference_id: str | None
+    """Additional Energy-Management-Provider reference identifier (opaque)."""
 
     created_at: str | None
     updated_at: str | None
@@ -188,6 +214,7 @@ class SiteDetails:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SiteDetails":
+        customer_data = data.get("customer")
         return cls(
             id=data["id"],
             name=data.get("siteName"),
@@ -207,8 +234,22 @@ class SiteDetails:
             address_latitude=data.get("addressLatitude"),
             address_longitude=data.get("addressLongitude"),
             customer_id=data.get("customerId"),
+            customer=SystemCustomer.from_dict(customer_data) if customer_data else None,
             technical_contact_id=data.get("technicalContactId"),
             technical_contact_name=data.get("technicalContactName"),
+            earliest_measurement=data.get("earliestMeasurement"),
+            energy_trader_active=(
+                bool(data["energyTraderActive"]) if "energyTraderActive" in data else None
+            ),
+            electricity_contract_active=(
+                bool(data["electricityContractActive"])
+                if "electricityContractActive" in data
+                else None
+            ),
+            impacted_by_enwg=(
+                bool(data["impactedByEnwg"]) if "impactedByEnwg" in data else None
+            ),
+            emp_reference_id=data.get("empReferenceId"),
             created_at=data.get("createdAt"),
             updated_at=data.get("updatedAt"),
             emp_details=data.get("empDetails"),

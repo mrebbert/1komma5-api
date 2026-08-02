@@ -1047,6 +1047,19 @@ class TestGetSiteDetails:
         assert result.emp_details["serialNumber"] == "I000-000-000-000-000-X-X"
 
     @resp_lib.activate
+    def test_returns_newly_mapped_fields(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_site_details_data(), status=200)
+        result = _make_system().get_site_details()
+        assert result.earliest_measurement == "2025-01-24"
+        assert result.energy_trader_active is True
+        assert result.electricity_contract_active is True
+        assert result.impacted_by_enwg is False
+        assert result.emp_reference_id == "emp-ref-0001"
+        assert result.customer is not None
+        assert result.customer.first_name == "John"
+        assert result.customer.email == "user@example.com"
+
+    @resp_lib.activate
     def test_handles_missing_optional_fields(self) -> None:
         resp_lib.add(resp_lib.GET, self._URL, json={"id": FAKE_SYSTEM_ID}, status=200)
         result = _make_system().get_site_details()
@@ -1054,6 +1067,12 @@ class TestGetSiteDetails:
         assert result.ems_mode is None
         assert result.ems_state_reasons == []
         assert result.emp_details is None
+        assert result.customer is None
+        assert result.energy_trader_active is None
+        assert result.electricity_contract_active is None
+        assert result.impacted_by_enwg is None
+        assert result.earliest_measurement is None
+        assert result.emp_reference_id is None
 
     @resp_lib.activate
     def test_raises_on_server_error(self) -> None:

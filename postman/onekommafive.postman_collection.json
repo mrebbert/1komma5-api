@@ -277,7 +277,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v2", "sites", "{{siteId}}", "details"]
             },
-            "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those."
+            "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), `empReferenceId`, `impactedByEnwg` (§14a EnWG flag), embedded `customer` block, and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those. Note: v2 and v3 return byte-identical payloads (verified live) — no reason to switch."
           },
           "response": []
         }
