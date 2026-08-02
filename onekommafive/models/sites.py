@@ -194,8 +194,18 @@ class SiteDetails:
     the flag entirely (matches :attr:`SystemDetails.electricity_contract_active`)."""
 
     impacted_by_enwg: bool | None
-    """German regulatory flag: whether the site is impacted by the Energiewirtschaftsgesetz
-    (§14a EnWG grid-charge reduction / control-box rules). ``None`` when the field is absent."""
+    """German regulatory flag related to the Energiewirtschaftsgesetz (EnWG).
+    ``None`` when the field is absent.
+
+    **Semantic caveat**: the exact meaning is not documented by the API.
+    Most plausible interpretation is ``§14a EnWG``, which since 2024-01-01
+    lets DSOs remotely reduce controllable consumption devices (heat pump /
+    wallbox / battery storage / AC ≥ 4.2 kW) during grid stress, in exchange
+    for reduced grid fees. A ``true`` value would presumably mean the site
+    has at least one such device registered under §14a. Other EnWG paragraphs
+    (§17c smart meters, §41d dynamic tariffs) are less likely because the
+    client already exposes dedicated flags for those (``hasThirdPartySmartMeter``,
+    ``dynamicPulseCompatible``)."""
 
     emp_reference_id: str | None
     """Additional Energy-Management-Provider reference identifier (opaque)."""

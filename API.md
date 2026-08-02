@@ -450,7 +450,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 - `emsMode` — operating mode (`TOU` = time-of-use / Dynamic Pulse).
 - `emsState` / `emsStateReasons` — current EMS runtime state (`OPERATIONAL` with an empty reason list has been observed; likely populated with codes during faults).
 - `empDetails` carries gateway **pairing values** (`serialNumber`, `startCode`) — sensitive, do not log or share.
-- `impactedByEnwg` — German regulatory flag for §14a EnWG (control-box / reduced grid-charge rules for controllable consumption devices).
+- `impactedByEnwg` — German regulatory flag related to the Energiewirtschaftsgesetz (EnWG). **Exact meaning not documented** by the API. Most plausible interpretation: **§14a EnWG** (since 2024-01-01, DSOs may reduce controllable consumption devices — heat pump / wallbox / battery storage / AC ≥ 4.2 kW — during grid stress, in exchange for reduced grid fees). A `true` value would presumably mean the site has at least one such device registered under §14a.
 - `gridConnectionPointPhases` / `maxCurrentPerPhaseAmpere` — grid-connection capacity (phase count; max amperes per phase). Both can be `null`.
 - `customer` is the short embedded block; for the full record see [Customer record (v3)](#customer-record-v3).
 - `earliestMeasurement`, `energyTraderActive`, `electricityContractActive` are also on `/systems/{id}/details` — redundant here but included in one response.
