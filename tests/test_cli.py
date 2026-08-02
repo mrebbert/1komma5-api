@@ -33,12 +33,14 @@ from onekommafive.models import (
     SupportedVersions,
     SystemDetails,
     SystemInfo,
+    User,
     Wallbox,
     WeatherData,
 )
 from tests.fixtures import (
     FAKE_EV_ID,
     FAKE_SYSTEM_ID,
+    FAKE_USER_ID,
     make_active_features_data,
     make_comparison_price_data,
     make_customer_data,
@@ -63,6 +65,7 @@ from tests.fixtures import (
     make_supported_versions_data,
     make_system_data,
     make_system_details_data,
+    make_user_data,
     make_wallboxes_data,
     make_weather_data,
 )
@@ -975,6 +978,38 @@ class TestCmdVersions:
         assert "b2c" in out
         assert "1.10.0" in out
         assert "1.73.0" in out
+
+
+# ---------------------------------------------------------------------------
+# me
+# ---------------------------------------------------------------------------
+
+class TestCmdMe:
+    def test_prints_profile_and_connected_systems(self, capsys) -> None:
+        client = MagicMock()
+        client.get_user.return_value = User.from_dict(make_user_data())
+        with patch("onekommafive.cli._client", return_value=client):
+            _run("me")
+        out = capsys.readouterr().out
+        # Profile fields
+        assert FAKE_USER_ID in out
+        assert "John Doe" in out
+        assert "user@example.com" in out
+        assert "ACTIVE" in out
+        assert "auth0|abcdef1234567890" in out
+        # Connected systems (2 entries in fixture)
+        assert "Connected systems (2)" in out
+        assert "My Home System" in out
+        assert "Musterstraße 1" in out  # via _format_address
+        assert "Demo System" in out
+        assert "Trogen" in out
+
+    def test_omits_phone_when_null(self, capsys) -> None:
+        client = MagicMock()
+        client.get_user.return_value = User.from_dict(make_user_data())
+        with patch("onekommafive.cli._client", return_value=client):
+            _run("me")
+        assert "Phone:" not in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------

@@ -32,6 +32,7 @@ Usage:
     python cli.py notifications
     python cli.py notification-settings
     python cli.py versions
+    python cli.py me
     python cli.py ems
     python cli.py set-ems auto|manual
 
@@ -473,6 +474,27 @@ def cmd_versions(args: argparse.Namespace) -> None:
     print(f"{'b2c':<10}  {v.b2c.target_version or '—':<10}  {v.b2c.minimum_supported_version or '—'}")
 
 
+def cmd_me(args: argparse.Namespace) -> None:
+    u = _client().get_user()
+    name = " ".join(filter(None, [u.first_name, u.last_name])) or "—"
+    print(f"User:      {u.id}")
+    print(f"Name:      {name}")
+    print(f"Email:     {u.email or '—'}")
+    if u.phone:
+        print(f"Phone:     {u.phone}")
+    print(f"Status:    {u.status or '—'}")
+    if u.external_id:
+        print(f"External:  {u.external_id}")
+    if u.created_at:
+        print(f"Created:   {u.created_at}")
+    if u.connected_systems:
+        print()
+        print(f"Connected systems ({len(u.connected_systems)}):")
+        for s in u.connected_systems:
+            print(f"  {s.system_id}  {s.name or '—'}")
+            print(f"    {_format_address(s)}")
+
+
 def cmd_impact(args: argparse.Namespace) -> None:
     system = _get_system()
     i = system.get_impact_overview()
@@ -908,6 +930,7 @@ def main() -> None:
     sub.add_parser("notifications", help="Recent push/in-app notifications")
     sub.add_parser("notification-settings", help="Notification preferences per category")
     sub.add_parser("versions", help="API compatibility (b2b/b2c target and minimum versions)")
+    sub.add_parser("me", help="Authenticated user profile + connected systems")
 
     sub.add_parser("impact", help="Lifetime CO2 savings (site + community)")
     sub.add_parser("trader", help="Lifetime energy-trading savings (€)")
@@ -987,6 +1010,7 @@ def main() -> None:
         "notifications": cmd_notifications,
         "notification-settings": cmd_notification_settings,
         "versions": cmd_versions,
+        "me": cmd_me,
         "impact": cmd_impact,
         "trader": cmd_trader,
         "ai-summary": cmd_ai_summary,
