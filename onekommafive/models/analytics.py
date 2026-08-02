@@ -143,6 +143,21 @@ class HeartbeatAiSummary:
     heartbeat_price_eur_per_kwh: float | None
     """Effective average Heartbeat electricity price for the window, in EUR/kWh."""
 
+    peak_price_avoided_eur: float | None
+    """Savings from avoiding peak-price grid consumption via battery
+    discharge in the window, in EUR (from ``peakPriceAvoided.priceAvoided``).
+    Top-level ``priceAvoided`` field is empirically always ``null``; the
+    populated value sits nested here."""
+
+    peak_battery_charging_cost_eur: float | None
+    """Cost incurred to charge the battery for the peak-price-avoidance
+    strategy in the window, in EUR (from ``peakPriceAvoided.batteryChargingCost``)."""
+
+    peak_grid_charging_cost_eur: float | None
+    """Cost of the grid consumption that would have occurred without the
+    strategy in the window, in EUR (from ``peakPriceAvoided.gridChargingCost``).
+    Net saving = :attr:`peak_price_avoided_eur` = grid - battery."""
+
     raw: dict[str, Any] = field(repr=False)
 
     @classmethod
@@ -160,6 +175,7 @@ class HeartbeatAiSummary:
         ee = data.get("energyEarned") or {}
         co2 = data.get("co2Saved") or {}
         hbp = data.get("heartbeatPrice") or {}
+        ppa = data.get("peakPriceAvoided") or {}
         feed_in_price = (ee.get("feedInPrice") or {}).get("price")
 
         return cls(
@@ -174,5 +190,8 @@ class HeartbeatAiSummary:
             production_kwh=_val(co2.get("production")),
             car_travel_emission_km=_val(co2.get("carTravelEmission")),
             heartbeat_price_eur_per_kwh=_amount(hbp.get("price")),
+            peak_price_avoided_eur=_amount(ppa.get("priceAvoided")),
+            peak_battery_charging_cost_eur=_amount(ppa.get("batteryChargingCost")),
+            peak_grid_charging_cost_eur=_amount(ppa.get("gridChargingCost")),
             raw=data,
         )

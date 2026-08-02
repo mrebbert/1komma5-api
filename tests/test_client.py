@@ -24,6 +24,7 @@ from tests.fixtures import (
     FAKE_TOKEN_SET,
     make_client,
     make_supported_versions_data,
+    make_user_data,
 )
 
 # ---------------------------------------------------------------------------
@@ -210,6 +211,25 @@ class TestGetUser:
         client = make_client()
         with pytest.raises(RequestError, match="Failed to get user"):
             client.get_user()
+
+    @resp_lib.activate
+    def test_full_profile_fields_parsed(self) -> None:
+        resp_lib.add(
+            resp_lib.GET,
+            "https://customer-identity.1komma5grad.com/api/v1/users/me",
+            json=make_user_data(),
+            status=200,
+        )
+        user = make_client().get_user()
+        assert user.first_name == "John"
+        assert user.last_name == "Doe"
+        assert user.phone is None
+        assert user.status == "ACTIVE"
+        assert user.external_id == "auth0|abcdef1234567890"
+        assert len(user.connected_systems) == 2
+        assert user.connected_systems[0].name == "My Home System"
+        assert user.connected_systems[0].address_city == "Hamburg"
+        assert user.connected_systems[1].name == "Demo System"
 
 
 # ---------------------------------------------------------------------------

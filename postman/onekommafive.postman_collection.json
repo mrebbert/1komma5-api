@@ -174,7 +174,7 @@
               "host": ["{{identityUrl}}"],
               "path": ["api", "v1", "users", "me"]
             },
-            "description": "Returns the authenticated user's profile (id, email, name)."
+            "description": "Returns the authenticated user's profile: id, email, first/last name, phone, status, external_id, and the `connectedSystems` list (all sites the user has access to, with per-site name and address). Use `connectedSystems[i].systemId` to switch between multi-site accounts."
           },
           "response": []
         }
@@ -277,7 +277,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v2", "sites", "{{siteId}}", "details"]
             },
-            "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), `empReferenceId`, `impactedByEnwg` (§14a EnWG flag), embedded `customer` block, and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those. Note: v2 and v3 return byte-identical payloads (verified live) — no reason to switch."
+            "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), `empReferenceId`, `impactedByEnwg` (§14a EnWG flag), `gridConnectionPointPhases`, `maxCurrentPerPhaseAmpere`, embedded `customer` block, and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those. Note: v2 and v3 return byte-identical payloads (verified live) — no reason to switch."
           },
           "response": []
         }
@@ -867,7 +867,7 @@
                 }
               ]
             },
-            "description": "Aggregated Heartbeat-AI metrics (selfSufficiency, energyEarned, co2Saved, heartbeatPrice) for a resolution window. QUIRK: only `resolution=1M` returns all metrics. `1W` and `1Y` return only `co2Saved` + `production` + `carTravelEmission`; `selfSufficiency` and `energyEarned` come back as `null`."
+            "description": "Aggregated Heartbeat-AI metrics (selfSufficiency, energyEarned, co2Saved, heartbeatPrice, peakPriceAvoided) for a resolution window. QUIRK 1: only `resolution=1M` returns all metrics — `1W` and `1Y` return only `co2Saved` + `production` + `carTravelEmission`; `selfSufficiency` and `energyEarned` come back as `null`. QUIRK 2: top-level `priceAvoided`/`batteryChargingCost`/`gridChargingCost` are empirically always `null` — the actual values sit inside the `peakPriceAvoided` block."
           },
           "response": []
         },

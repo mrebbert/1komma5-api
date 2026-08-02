@@ -541,6 +541,8 @@ def make_site_details_data() -> dict:
         "electricityContractActive": True,
         "impactedByEnwg": False,
         "empReferenceId": "emp-ref-0001",
+        "gridConnectionPointPhases": 3,
+        "maxCurrentPerPhaseAmpere": 63.0,
         "empDetails": {
             "empConnectionId": "gw-0001-0000-0000-0000-000000000001",
             "empConfigurationId": "cfg-0001-0000-0000-0000-000000000001",
@@ -584,10 +586,37 @@ def make_user_data() -> dict:
     """Return a /users/me v1 response payload (minimal, for CLI/system tests)."""
     return {
         "id": FAKE_USER_ID,
+        "createdAt": "2025-01-23T08:19:57.274Z",
         "firstName": "John",
         "lastName": "Doe",
+        "externalId": "auth0|abcdef1234567890",
         "email": "user@example.com",
+        "phone": None,
         "status": "ACTIVE",
+        "connectedSystems": [
+            {
+                "systemId": FAKE_SYSTEM_ID,
+                "systemName": "My Home System",
+                "addressName": None,
+                "addressLine1": "Musterstraße 1",
+                "addressLine2": None,
+                "addressZipCode": "20095",
+                "addressCity": "Hamburg",
+                "addressCountry": "DE",
+                "technicalContactId": "tc-0001",
+            },
+            {
+                "systemId": FAKE_SYSTEM_ID_2,
+                "systemName": "Demo System",
+                "addressName": "1KOMMA5° Showroom",
+                "addressLine1": "Schulstraße 2",
+                "addressLine2": None,
+                "addressZipCode": "95183",
+                "addressCity": "Trogen",
+                "addressCountry": "DE",
+                "technicalContactId": "tc-demo",
+            },
+        ],
     }
 
 
@@ -684,7 +713,11 @@ def make_heartbeat_ai_summary_data(resolution: str = "1M") -> dict:
         },
         "heartbeatPrice": {"price": {"amount": "0.0745", "currency": "EUR"}, "unit": "kWh"},
         "heartbeatPriceSocialStanding": None,
-        "peakPriceAvoided": None,
+        "peakPriceAvoided": {
+            "priceAvoided":        {"amount": "22.50", "currency": "EUR"},
+            "batteryChargingCost": {"amount": "37.68", "currency": "EUR"},
+            "gridChargingCost":    {"amount": "60.18", "currency": "EUR"},
+        },
     }
     if resolution == "1M":
         body["selfSufficiency"] = {

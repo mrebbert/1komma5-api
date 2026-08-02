@@ -22,7 +22,7 @@ from .optimizations import OptimizationEvent, OptimizationEvents, SelfSufficienc
 from .prices import ComparisonPrice, MarketPrices, PriceCustomizations, PriceGuarantee
 from .sites import Asset, SiteDetails, SiteStatus, SmartMeter
 from .system import DeviceGateway, SystemCustomer, SystemDetails, SystemInfo
-from .user import User
+from .user import ConnectedSystem, User
 from .weather import WEATHER_SYMBOLS, WeatherData, WeatherDay, WeatherSlot
 
 __all__ = [
@@ -30,6 +30,7 @@ __all__ = [
     "Asset",
     "ChargingMode",
     "ComparisonPrice",
+    "ConnectedSystem",
     "Customer",
     "DeviceGateway",
     "EmsManualDevice",

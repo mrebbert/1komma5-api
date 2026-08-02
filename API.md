@@ -74,19 +74,26 @@ Antwortstruktur (Auszug):
   "lastName": "...",
   "externalId": "auth0|...",
   "email": "...",
+  "phone": null,
   "status": "ACTIVE",
+  "createdAt": "ISO8601",
   "connectedSystems": [
     {
       "systemId": "<uuid>",
       "systemName": "...",
+      "addressName": null,
       "addressLine1": "...",
+      "addressLine2": null,
       "addressZipCode": "...",
       "addressCity": "...",
-      "addressCountry": "DE"
+      "addressCountry": "DE",
+      "technicalContactId": "<uuid>"
     }
   ]
 }
 ```
+
+`connectedSystems` listet alle Anlagen, für die der eingeloggte Nutzer eine Zugriffs­berechtigung hat. Bei Multi-System-Nutzern (Familien, Installer-Konten) enthält die Liste mehrere Einträge.
 
 ---
 
@@ -981,9 +988,15 @@ Antwortstruktur (`resolution=1M`):
   },
   "heartbeatPrice": { "price": { "amount": "0.0745", "currency": "EUR" }, "unit": "kWh" },
   "heartbeatPriceSocialStanding": null,
-  "peakPriceAvoided": null
+  "peakPriceAvoided": {
+    "priceAvoided":        { "amount": "22.50", "currency": "EUR" },
+    "batteryChargingCost": { "amount": "37.68", "currency": "EUR" },
+    "gridChargingCost":    { "amount": "60.18", "currency": "EUR" }
+  }
 }
 ```
+
+`peakPriceAvoided` = Ersparnis durch strategisches Batterie-Entladen zur Vermeidung teurer Netzstunden: `priceAvoided` = Nettoersparnis, `gridChargingCost` = was Netzbezug ohne Strategie gekostet hätte, `batteryChargingCost` = was das strategische Batterieladen gekostet hat (Nettoersparnis = grid − battery). Top-level Felder gleichen Namens (`priceAvoided`, `batteryChargingCost`, `gridChargingCost`) sind empirisch immer `null` — der Wert steht ausschließlich im nested Block.
 
 Bei `resolution=1W` / `1Y`:
 
@@ -1199,6 +1212,8 @@ Antwortstruktur (anonymisiert):
     "installationDate": "YYYY-MM-DD"
   },
   "empReferenceId": "<uuid>",
+  "gridConnectionPointPhases": 3,
+  "maxCurrentPerPhaseAmpere": 63,
   "physicalAttributes": {},
   "addressLine1": "Musterstraße 1",
   "addressZipCode": "20095",
@@ -1232,6 +1247,7 @@ Hinweise:
 - `emsState` / `emsStateReasons` = aktueller EMS-Runtime-Zustand (bislang beobachtet: `OPERATIONAL` mit leerer Reason-Liste; bei Störungen vermutlich mit Codes).
 - `empDetails` enthält die **Kopplungswerte** des Gateways (`serialNumber`, `startCode`) — sicherheitsrelevant, nicht protokollieren/teilen.
 - `impactedByEnwg` = regulatorisches Flag für §14a EnWG (Steuerung / reduzierte Netzentgelte für steuerbare Verbrauchseinrichtungen).
+- `gridConnectionPointPhases` / `maxCurrentPerPhaseAmpere` = Netzanschluss-Kapazität (Anzahl Phasen; max. Ampere pro Phase). Bei manchen Anlagen `null`.
 - `customer` ist der eingebettete Kurz-Block; für den vollen Datensatz (Adresse, Phone, `crmBranchLocation`) siehe **Customer-Datensatz (v3)**.
 - `earliestMeasurement`, `energyTraderActive`, `electricityContractActive` sind auch via `/systems/{id}/details` verfügbar — hier redundant, aber praktisch weil in einem Response.
 - Keine `deviceGateways` — dafür `/systems/{id}/details` verwenden.

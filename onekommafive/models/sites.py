@@ -200,6 +200,14 @@ class SiteDetails:
     emp_reference_id: str | None
     """Additional Energy-Management-Provider reference identifier (opaque)."""
 
+    grid_connection_point_phases: int | None
+    """Number of phases of the grid connection (typically ``3`` for a
+    standard German household). ``None`` when the API returns null."""
+
+    max_current_per_phase_ampere: float | None
+    """Maximum current per phase in **amperes** (typical residential values:
+    ``32``, ``63``, ``80``). ``None`` when the API returns null."""
+
     created_at: str | None
     updated_at: str | None
 
@@ -250,6 +258,8 @@ class SiteDetails:
                 bool(data["impactedByEnwg"]) if "impactedByEnwg" in data else None
             ),
             emp_reference_id=data.get("empReferenceId"),
+            grid_connection_point_phases=data.get("gridConnectionPointPhases"),
+            max_current_per_phase_ampere=data.get("maxCurrentPerPhaseAmpere"),
             created_at=data.get("createdAt"),
             updated_at=data.get("updatedAt"),
             emp_details=data.get("empDetails"),

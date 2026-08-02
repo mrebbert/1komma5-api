@@ -659,6 +659,9 @@ class TestCmdAiSummary:
         assert "73.0%" in out
         assert "30.41" in out
         assert "210.5" in out
+        assert "22.50" in out  # peak_price_avoided_eur
+        assert "37.68" in out  # peak_battery_charging_cost_eur
+        assert "60.18" in out  # peak_grid_charging_cost_eur
 
     def test_defaults_to_1m_resolution(self, mock_system) -> None:
         mock_system.get_heartbeat_ai_summary.return_value = HeartbeatAiSummary.from_dict(
@@ -873,6 +876,26 @@ class TestCmdSiteDetails:
         assert "TOU" in out
         assert "OPERATIONAL" in out
         assert "Hamburg" in out
+
+    def test_prints_v0_1_41_and_v0_1_42_fields(self, mock_system, capsys) -> None:
+        """Regression: fields mapped in v0.1.41 (customer, earliest_measurement,
+        energy_trader_active, electricity_contract_active, impacted_by_enwg,
+        emp_reference_id) and v0.1.42 (grid_connection_point_phases,
+        max_current_per_phase_ampere) must all appear in the CLI output."""
+        mock_system.get_site_details.return_value = SiteDetails.from_dict(make_site_details_data())
+        _run("site-details")
+        out = capsys.readouterr().out
+        # v0.1.41 fields
+        assert "John Doe" in out  # embedded customer
+        assert "2025-01-24" in out  # earliest_measurement
+        assert "Energy trading:" in out
+        assert "Electricity ctr" in out
+        assert "§14a EnWG" in out
+        assert "emp-ref-0001" in out
+        # v0.1.42 fields
+        assert "Grid phases:" in out
+        assert "3" in out
+        assert "63 A" in out
 
 
 # ---------------------------------------------------------------------------

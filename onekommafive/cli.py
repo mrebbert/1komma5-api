@@ -390,9 +390,26 @@ def cmd_site_details(args: argparse.Namespace) -> None:
     if d.address_latitude is not None and d.address_longitude is not None:
         print(f"Coordinates:       {d.address_latitude:.4f}, {d.address_longitude:.4f}")
     print(f"Customer ID:       {d.customer_id or '—'}")
+    if d.customer is not None:
+        name = " ".join(filter(None, [d.customer.first_name, d.customer.last_name])) or "—"
+        print(f"Customer:          {name}  <{d.customer.email or '—'}>")
     if d.technical_contact_name:
         print(f"Installer:         {d.technical_contact_name}")
     print(f"Dynamic Pulse:     {'yes' if d.dynamic_pulse_compatible else 'no'}")
+    if d.energy_trader_active is not None:
+        print(f"Energy trading:    {'yes' if d.energy_trader_active else 'no'}")
+    if d.electricity_contract_active is not None:
+        print(f"Electricity ctr.:  {'yes' if d.electricity_contract_active else 'no'}")
+    if d.impacted_by_enwg is not None:
+        print(f"§14a EnWG:         {'yes' if d.impacted_by_enwg else 'no'}")
+    if d.grid_connection_point_phases is not None:
+        print(f"Grid phases:       {d.grid_connection_point_phases}")
+    if d.max_current_per_phase_ampere is not None:
+        print(f"Max A/phase:       {d.max_current_per_phase_ampere:g} A")
+    if d.earliest_measurement:
+        print(f"Earliest measurement: {d.earliest_measurement}")
+    if d.emp_reference_id:
+        print(f"EMP reference:     {d.emp_reference_id}")
     print(f"Updated:           {d.updated_at or '—'}")
 
 
@@ -497,6 +514,11 @@ def cmd_ai_summary(args: argparse.Namespace) -> None:
         print(f"CO2 saved:   {s.co2_saved_kg:.1f} kg{car}{prod}")
     if s.heartbeat_price_eur_per_kwh is not None:
         print(f"HB price:    {s.heartbeat_price_eur_per_kwh:.4f} €/kWh")
+    if s.peak_price_avoided_eur is not None:
+        detail = ""
+        if s.peak_grid_charging_cost_eur is not None and s.peak_battery_charging_cost_eur is not None:
+            detail = f"  (grid {s.peak_grid_charging_cost_eur:.2f} € − battery {s.peak_battery_charging_cost_eur:.2f} €)"
+        print(f"Peak avoided:{s.peak_price_avoided_eur:>7.2f} €{detail}")
 
 
 def cmd_savings(args: argparse.Namespace) -> None:

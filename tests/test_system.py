@@ -1058,6 +1058,8 @@ class TestGetSiteDetails:
         assert result.customer is not None
         assert result.customer.first_name == "John"
         assert result.customer.email == "user@example.com"
+        assert result.grid_connection_point_phases == 3
+        assert result.max_current_per_phase_ampere == pytest.approx(63.0)
 
     @resp_lib.activate
     def test_handles_missing_optional_fields(self) -> None:
@@ -1073,6 +1075,8 @@ class TestGetSiteDetails:
         assert result.impacted_by_enwg is None
         assert result.earliest_measurement is None
         assert result.emp_reference_id is None
+        assert result.grid_connection_point_phases is None
+        assert result.max_current_per_phase_ampere is None
 
     @resp_lib.activate
     def test_raises_on_server_error(self) -> None:
@@ -1252,6 +1256,19 @@ class TestGetHeartbeatAiSummary:
         assert result.feed_in_price_eur_per_kwh == pytest.approx(0.0803)
         assert result.co2_saved_kg == pytest.approx(210.5)
         assert result.heartbeat_price_eur_per_kwh == pytest.approx(0.0745)
+        assert result.peak_price_avoided_eur == pytest.approx(22.50)
+        assert result.peak_battery_charging_cost_eur == pytest.approx(37.68)
+        assert result.peak_grid_charging_cost_eur == pytest.approx(60.18)
+
+    @resp_lib.activate
+    def test_peak_price_avoided_absent_yields_none(self) -> None:
+        body = make_heartbeat_ai_summary_data("1M")
+        body["peakPriceAvoided"] = None
+        resp_lib.add(resp_lib.GET, self._URL, json=body, status=200)
+        result = _make_system().get_heartbeat_ai_summary()
+        assert result.peak_price_avoided_eur is None
+        assert result.peak_battery_charging_cost_eur is None
+        assert result.peak_grid_charging_cost_eur is None
 
     @resp_lib.activate
     def test_1w_leaves_self_sufficiency_none(self) -> None:
