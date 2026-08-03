@@ -1,185 +1,63 @@
-# 1Komma5°
+# 1KOMMA5° Python API Client
 
 [![Tests](https://github.com/mrebbert/1komma5-api/actions/workflows/tests.yml/badge.svg)](https://github.com/mrebbert/1komma5-api/actions/workflows/tests.yml)
 [![PyPI](https://img.shields.io/pypi/v/onekommafive)](https://pypi.org/project/onekommafive/)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-Unofficial Python client for the [1KOMMA5°](https://1komma5grad.com) Heartbeat API — the home energy management platform behind heat pumps, solar inverters, battery storage, and EV chargers.
+**`onekommafive`** is an unofficial Python client for the [1KOMMA5°](https://1komma5grad.com) Heartbeat home-energy-management API — the platform behind 1KOMMA5°'s heat pumps, solar inverters, battery storage systems, and EV chargers (wallboxes).
 
-## Disclaimer
+Read live power flows, control EV charging, monitor Dynamic Pulse market prices, drive the AI energy-management system (EMS), and pull weather forecasts — from Python or a built-in `1k5` command-line interface.
 
-This project is 100% vibe coded. I do not have the means to test this integration broadly across different hardware configurations — a lot of it is "it works for me". Use at your own risk.
+> ⚠️ **Unofficial**. The API is undocumented and reverse-engineered from the mobile app; it may change without notice. Not affiliated with or endorsed by 1KOMMA5°.
 
-This project is not affiliated with or endorsed by 1KOMMA5°. The API is undocumented and was reverse-engineered from the mobile app. It may change without notice.
+## Table of contents
 
-My personal setup, on which this library has been tested:
-
-| Component | Model |
-|-----------|-------|
-| Hybrid Inverter | Sungrow SH6.0RT-V112 |
-| Battery | Sungrow SBR256 |
-| Wallbox | go-e homeFix 11 kW |
-| EV | Volkswagen ID.5 |
-| Heat pump | Stiebel Eltron WPL-A 10 HK 400 Premium |
-| Smart meter | DTSU666 |
-
-## Features
-
-- OAuth2 + PKCE authentication (matches the mobile app flow), with automatic token refresh
-- System metadata (address, status, features) — `SystemInfo`
-- Extended system metadata (customer, installer, smart meter, gateways, earliest measurement) — `SystemDetails`
-- Site status & hardware asset inventory (inverter, heat pump, meter, EV charger with manufacturer / model / serial / firmware / network) — `SiteStatus`, `Asset`
-- Active feature flags for a customer + site (e.g. `DYNAMIC_TARIFF`, `TIME_OF_USE_OPTIMIZATION`, `SMART_CHARGING`)
-- Live power snapshot (PV, battery, grid, consumption, heat pumps, EV chargers, ACs, self-sufficiency) — API v3
-- Energy summary and timeseries for today or any historical date range — API v2/v3, `1h` or `15m` resolution
-- EV charger state and control (charging mode, current SoC, target SoC, departure time, vehicle profile)
-- Available EV charging modes per site
-- EMS settings (auto/manual, Time-of-Use, per-device manual overrides for EV charger, battery, heat pump)
-- Market electricity prices with grid costs and VAT — API v4, EUR/kWh, `1h` or `15m` resolution
-- AI optimisation decisions (battery and EV charging actions with market price context)
-- Weather forecast: daily summary (today/tomorrow) and 3-hour slots for 48 h — with named weather symbols
-- Built-in CLI (`1k5`) for quick terminal access
-
-## Requirements
-
-- Python 3.11+
-- A 1KOMMA5° account with at least one registered system
+- [Installation](#installation)
+- [Quick start](#quick-start)
+  - [Command-line interface](#command-line-interface)
+  - [Python library](#python-library)
+- [Features](#features)
+- [Reference](#reference)
+  - [CLI commands](#cli-commands)
+  - [Python models](#python-models)
+  - [Endpoint reference](#endpoint-reference)
+- [Development](#development)
+  - [Running tests](#running-tests)
+  - [Linting and pre-commit](#linting-and-pre-commit)
+  - [API version monitoring](#api-version-monitoring)
+- [Compatibility](#compatibility)
+- [Related projects](#related-projects)
+- [Credits](#credits)
+- [License](#license)
 
 ## Installation
 
+Requires **Python 3.11 or newer**.
+
 ```bash
 pip install onekommafive
-
-# with dev dependencies (pytest, responses, …)
-pip install ".[dev]"
 ```
 
-## Library usage
+With development extras (pytest, responses, ruff):
 
-```python
-from onekommafive import Client, Systems
-
-client = Client("user@example.com", "s3cr3t")
-systems = Systems(client).get_systems()
-system = systems[0]
-
-# System metadata
-info = system.info()
-print(f"{info.name} — {info.address_city}, {info.status}")
-
-# Live overview (API v3)
-ov = system.get_live_overview()
-print(f"PV: {ov.pv_power} W  Battery: {ov.battery_power} W ({ov.battery_soc:.1f}%)")
-print(f"Grid: {ov.grid_power} W  (import {ov.grid_consumption_power} W  export {ov.grid_feed_in_power} W)")
-print(f"Consumption: {ov.consumption_power} W")
-print(f"Heat pumps: {ov.heat_pumps_power} W  EV chargers: {ov.ev_chargers_power} W")
-print(f"Self-sufficiency: {ov.self_sufficiency:.0%}")
-
-# Market prices today (API v4) — resolution "1h" or "15m", prices in EUR/kWh
-import datetime
-today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-mp = system.get_prices(today, today.replace(hour=23, minute=59, second=59), resolution="1h")
-print(f"Avg spot: {mp.average_price:.4f}  +grid: {mp.average_price_with_grid_costs:.4f}  all-in: {mp.average_price_all_in:.4f} EUR/kWh")
-for ts, price in sorted(mp.prices.items()):
-    print(f"  {ts}  spot {price:.4f}  all-in {mp.prices_with_grid_costs_and_vat[ts]:.4f} EUR/kWh")
-
-# Energy today (API v2) — resolution "1h" or "15m"
-ed = system.get_energy_today(resolution="1h")
-print(f"Produced: {ed.energy_produced_kwh:.2f} kWh  Self-sufficiency: {ed.self_sufficiency:.0%}")
-print(f"Grid supply: {ed.grid_supply_kwh:.2f} kWh  Feed-in: {ed.grid_feed_in_kwh:.2f} kWh")
-for ts, slot in ed.timeseries.items():
-    print(f"  {ts}  PV {slot.production} kW  Bat SoC {slot.battery_soc:.0%}")
-
-# Historical energy (API v3) — any date range, resolution "1h" or "15m"
-yesterday = datetime.date.today() - datetime.timedelta(days=1)
-ed = system.get_energy_historical(from_date=yesterday, to_date=yesterday, resolution="1h")
-print(f"Yesterday produced: {ed.energy_produced_kwh:.2f} kWh")
-
-# Available EV charging modes for this site
-modes = system.get_displayed_ev_charging_modes()
-print("Available modes:", [m.value for m in modes])
-
-# EV chargers — read state and set mode
-for ev in system.get_ev_chargers():
-    print(f"{ev.manufacturer()} {ev.model()} ({ev.capacity_wh()/1000:.0f} kWh)")
-    print(f"  Mode: {ev.charging_mode().value}  SoC: {ev.current_soc()} %  Target: {ev.target_soc()} %")
-
-from onekommafive.models import ChargingMode
-ev = system.get_ev_chargers()[0]
-ev.set_charging_mode(ChargingMode.SOLAR_CHARGE)
-ev.set_target_soc(90.0)               # Zielladezustand 90 %
-ev.set_primary_departure_time("07:30")  # tägliche Abfahrtzeit
-
-# EMS settings
-settings = system.get_ems_settings()
-print(f"EMS auto mode: {settings.auto_mode}  ToU: {settings.time_of_use_enabled}")
-for dev in settings.manual_devices:
-    print(f"  {dev.type}: {dev.raw}")
-system.set_ems_mode(auto=True)
-
-# Weather forecast
-from onekommafive.models import WEATHER_SYMBOLS
-w = system.get_weather()
-print(f"Heute:  {w.today.weather_description}  {w.today.temperature_celsius} °C  Sonne: {w.today.sunshine_minutes:.0f} min")
-print(f"Morgen: {w.tomorrow.weather_description}  {w.tomorrow.temperature_celsius} °C")
-for slot in w.forecasts:
-    print(f"  {slot.period_start}  {slot.weather_description}  {slot.temperature_celsius} °C  {slot.precipitation_mm} mm")
-
-# AI optimisation decisions
-import datetime
-start = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-end = start.replace(hour=23, minute=59, second=59)
-opt = system.get_optimizations(start=start, end=end)
-for ev in opt.events:
-    print(f"{ev.from_time}  {ev.asset:<8}  {ev.decision}  {ev.market_price:.2f} EUR/MWh  SoC {ev.state_of_charge}%")
+```bash
+pip install "onekommafive[dev]"
 ```
 
-## CLI
+## Quick start
 
-Set credentials via environment variables:
+Set your 1KOMMA5° credentials once via environment variables. All CLI commands and the token cache pick them up automatically:
 
 ```bash
 export ONEKOMMAFIVE_USERNAME="user@example.com"
 export ONEKOMMAFIVE_PASSWORD="s3cr3t"
-# optional: select a specific system by UUID
+
+# Optional — pin to a specific system (default: first system on the account)
 export ONEKOMMAFIVE_SYSTEM="<system-uuid>"
 ```
 
-```
-1k5 info                                 System metadata (address, status, features)
-1k5 details                              Extended system metadata (customer, installer, gateways)
-1k5 assets                               Site connection status + installed hardware assets
-1k5 features                             Active feature flags (customer_id auto-resolved via details)
-1k5 features --customer-id <uuid>        Active feature flags for a specific customer
-1k5 live                                 Live power overview
-1k5 weather                              Weather forecast (today + tomorrow)
-1k5 weather --forecasts                  + 3-hour slots for the next 48 h
-1k5 energy-today                         Energy summary and timeseries for today (hourly)
-1k5 energy-today --resolution 15m        15-minute resolution
-1k5 energy-historical --from YYYY-MM-DD --to YYYY-MM-DD
-                                         Historical energy for a date range (hourly)
-1k5 energy-historical --from ... --to ... --resolution 15m
-1k5 prices                               Market prices for today (hourly, EUR/kWh)
-1k5 prices --resolution 15m             15-minute resolution
-1k5 ev                                   EV charger status and schedule
-1k5 ev-modes                             Available EV charging modes for this site
-1k5 set-ev-mode SOLAR_CHARGE             Set charging mode on first EV charger
-1k5 set-ev-mode QUICK_CHARGE --ev <id>   Set mode on a specific charger
-1k5 set-ev-target-soc 90                 Set target SoC to 90 % on first EV charger
-1k5 set-ev-target-soc 80 --ev <id>       Set target SoC on a specific charger
-1k5 set-ev-departure 07:30               Set primary departure time on first EV charger
-1k5 set-ev-departure 06:00 --ev <id>     Set departure time on a specific charger
-1k5 optimizations                        AI optimisation decisions for today
-1k5 optimizations --from 2026-03-19      Decisions for a specific day
-1k5 optimizations --from 2026-03-19T08:00 --to 2026-03-19T20:00
-                                         Decisions for a time window
-1k5 ems                                  EMS settings (mode, ToU, device overrides)
-1k5 set-ems auto                         Enable automatic EMS optimisation
-1k5 set-ems manual                       Enable manual EMS override
-```
-
-Example output:
+### Command-line interface
 
 ```
 $ 1k5 live
@@ -194,70 +72,117 @@ EV chargers:  +0 W
 Heat pumps:   +2000 W
 ACs:          +1500 W
 Self-suff.:   0.0%
+```
 
-$ 1k5 info
-System:       xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Name:         My Home System
-Status:       ACTIVE
-Address:      Musterstraße 1, 20095 Hamburg, DE
-Coordinates:  53.5000, 10.0000
-Customer ID:  cust-0001
-Dynamic Pulse:        yes
-Energy trading:       yes
-Electricity contract: yes
-Created:      2025-01-23T08:09:40.042Z
-Updated:      2025-10-08T15:28:18.743Z
+```
+$ 1k5 ai-summary
+System:      xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Resolution:  1M
+Self-suff.:  73.0%   (solar 331.2 kWh, battery 301.3 kWh)
+Earned:      30.41 €   (378.7 kWh sold @ 0.0803 €/kWh)
+CO2 saved:   365.0 kg, ≈ 1431 car km (PV 1005.4 kWh)
+HB price:    0.0746 €/kWh
+Peak avoided: 22.50 €  (grid 60.18 € − battery 37.68 €)
+```
 
-$ 1k5 prices --resolution 1h
-System:        xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Period:        2026-02-28 – 2026-02-28
+See [CLI commands](#cli-commands) for the full list and `1k5 --help` for every option.
 
-                            avg        high        low  EUR/kWh
-Spot                     0.0520      0.0952     -0.0003
-+ Grid                   0.1896      0.2328      0.1373
-All-in (incl. VAT)       0.2256      0.2770      0.1634
+### Python library
 
-Grid costs:    0.1637 EUR/kWh  (VAT 19%,  energy tax 0.1376)
+```python
+from onekommafive import Client, Systems
 
-Timestamp                   Spot      + Grid    All-in
------------------------------------------------------------
-2026-02-28T00:00Z          0.0763      0.2139      0.2545
-2026-02-28T01:00Z          0.0747      0.2123      0.2526
-...
+client = Client("user@example.com", "s3cr3t")
+system = Systems(client).get_systems()[0]
 
-$ 1k5 energy-today
-System:       xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Produced:     30.76 kWh
-Consumed:     26.50 kWh
-Self-suff.:   61.0%
-Grid supply:  10.33 kWh    Feed-in:  6.76 kWh
-Bat charge:   22.42 kWh    Bat discharge:  14.58 kWh
-Savings:      6.48 €
-EV total:     5.00 kWh     Heat pump total:  12.00 kWh
-Household:    13.50 kWh
+# Live overview
+ov = system.get_live_overview()
+print(f"PV: {ov.pv_power} W  Battery: {ov.battery_power} W ({ov.battery_soc:.1f}%)")
+print(f"Grid: {ov.grid_power} W  Self-sufficiency: {ov.self_sufficiency:.0%}")
 
-Timestamp                     PV     Grid+    Grid-    Bat%   Bat kW
-----------------------------------------------------------------------
-2026-03-08T12:00Z           5.008    0.334    0.053   53.6%   +4.688
-2026-03-08T13:00Z           3.500    0.500    0.000   62.0%   +2.000
+# Market prices for today (EUR/kWh, hourly)
+import datetime
+today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+mp = system.get_prices(today, today.replace(hour=23, minute=59, second=59))
+print(f"Avg spot: {mp.average_price:.4f}  all-in: {mp.average_price_all_in:.4f} EUR/kWh")
 
-$ 1k5 weather
-System:   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Heute:    Regen                         16.1 °C  ☀ 6.4 h  🌧 5.2 mm (87%)  ↑2026-03-11 05:57  ↓2026-03-11 17:32
-Morgen:   Heiter                        14.3 °C  ☀ 4.1 h  🌧 1.0 mm (20%)  ↑2026-03-12 05:55  ↓2026-03-12 17:34
+# Switch the EV to solar-only charging
+from onekommafive.models import ChargingMode
+ev = system.get_ev_chargers()[0]
+ev.set_charging_mode(ChargingMode.SOLAR_CHARGE)
+ev.set_target_soc(90.0)
+ev.set_primary_departure_time("07:30")
 
-$ 1k5 weather --forecasts
-System:   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Heute:    Regen                         16.1 °C  ☀ 6.4 h  🌧 5.2 mm (87%)  ↑2026-03-11 05:57  ↓2026-03-11 17:32
-Morgen:   Heiter                        14.3 °C  ☀ 4.1 h  🌧 1.0 mm (20%)  ↑2026-03-12 05:55  ↓2026-03-12 17:34
+# Aggregated AI performance (self-sufficiency, earnings, CO2, peak-price avoided)
+summary = system.get_heartbeat_ai_summary(resolution="1M")
+print(f"{summary.self_sufficiency_percent:.0%} autonomous, "
+      f"{summary.earned_amount_eur:.2f} € earned, "
+      f"{summary.co2_saved_kg:.0f} kg CO2 saved")
+```
 
-Zeit (UTC)           Wetter                         Temp    Wind      Regen   Prob   Sonne
---------------------------------------------------------------------------------------------
-2026-03-11 15:00     Regen                          10.2°C  3.8 m/s   1.1 mm   51%   0 min
-2026-03-11 18:00     Regen (Nacht)                   8.5°C  2.9 m/s   0.5 mm   40%   0 min
-2026-03-11 21:00     Klar (Nacht)                    7.1°C  1.8 m/s   0.0 mm    5%   0 min
-...
+Every response is a fully-typed [dataclass](#python-models) — the entire surface has type hints.
 
+## Features
+
+**Live and historical**
+- Live power snapshot — PV, battery, grid, consumption, per-device flows, self-sufficiency
+- Energy summary and timeseries for today or any historical range (`1h` / `15m`)
+- Market electricity prices with grid costs and VAT (`1h` / `15m`)
+- Weather forecast — today, tomorrow, plus 3-hour slots for 48 h
+- Aggregated Heartbeat savings (EUR) for any date range
+
+**Control**
+- EV charger — charging mode, target SoC, departure time, current SoC
+- EMS — automatic or manual override, Time-of-Use, per-device manual settings
+
+**AI and analytics**
+- AI optimisation decisions (battery / EV charging, with market-price context)
+- Self-sufficiency events — granular battery-discharge trace
+- Heartbeat AI performance summary — self-sufficiency, feed-in earnings, CO₂ saved, peak-price avoided
+- Lifetime CO₂ savings (site, community, global estimate)
+- Lifetime and monthly energy-trader savings
+
+**Metadata and configuration**
+- System, site, and full customer records
+- Site status and hardware asset inventory (inverter, heat pump, meter, EV charger — with manufacturer / model / serial / firmware / network address)
+- Active feature flags per site (Dynamic Pulse, Time-of-Use optimisation, smart charging)
+- Wallbox hardware (distinct from vehicle-side EV profile)
+- Smart-meter registration (ENTSO-E control-area EIC, DSO BDEW code, concession fee)
+- User profile plus every site the user is authorised for
+- Notifications and per-category channel preferences
+- User-configured and comparison prices, contractual price guarantee
+- API version compatibility check
+
+**Cross-cutting**
+- OAuth2 + PKCE authentication matching the mobile-app flow, with automatic silent token refresh
+- Optional persistent token cache (`chmod 600`, user-bound) — subsequent CLI calls skip the login round-trip
+- Built-in `1k5` CLI covering every read endpoint and all mutations
+- 348 unit tests, live-verified against real accounts
+- Ruff-clean, CodeQL-clean, pre-commit hooks
+
+## Reference
+
+### CLI commands
+
+Set credentials with `ONEKOMMAFIVE_USERNAME` / `ONEKOMMAFIVE_PASSWORD` env vars (see [Quick start](#quick-start)), then:
+
+| Category | Commands |
+|----------|----------|
+| System & metadata | `info`, `details`, `site-details`, `assets`, `features`, `customer`, `me` |
+| Live & energy | `live`, `energy-today`, `energy-historical`, `savings` |
+| Prices | `prices`, `price-config`, `comparison-price`, `price-guarantee` |
+| EV & wallbox | `ev`, `ev-modes`, `set-ev-mode`, `set-ev-target-soc`, `set-ev-departure`, `wallboxes` |
+| EMS | `ems`, `set-ems` |
+| AI & analytics | `optimizations`, `ai-decisions`, `ai-summary`, `impact`, `trader`, `monthly-trading` |
+| Notifications | `notifications`, `notification-settings` |
+| Weather & meta | `weather`, `smart-meter`, `versions` |
+
+Run `1k5 --help` or `1k5 <command> --help` for parameters and defaults.
+
+<details>
+<summary>Example output — <code>1k5 optimizations</code></summary>
+
+```
 $ 1k5 optimizations
 System:  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 Period:  2026-03-19 – 2026-03-19
@@ -267,93 +192,70 @@ Timestamp               Asset     Decision                    Price    SoC
 --------------------------------------------------------------------------------
 2026-03-19 00:00:00     BATTERY   BATTERY_NO_DISCHARGE        29.79     55%
 2026-03-19 00:00:00     EV        EV_CHARGE_FROM_GRID         29.79     55%
-2026-03-19 01:00:00     BATTERY   BATTERY_NO_DISCHARGE        29.90     55%
 2026-03-19 10:00:00     BATTERY   BATTERY_CHARGE_FROM_GRID    18.82     24%
-2026-03-19 12:00:00     BATTERY   BATTERY_CHARGE_FROM_GRID    16.37     63%
 2026-03-19 14:00:00     BATTERY   BATTERY_CHARGE_FROM_GRID    21.46     92%
 2026-03-19 16:00:00     BATTERY   BATTERY_NO_DISCHARGE        28.44     87%
 2026-03-19 22:30:00     BATTERY   BATTERY_NO_DISCHARGE        31.97      —
-
-$ 1k5 ems
-System:       xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-EMS mode:     AUTO
-Time-of-Use:  enabled
-Consent:      yes
-Updated:      2026-02-21T18:28:27.452Z
-
-Manual device settings:
-  EV_CHARGER  Wallbox  →  QUICK_CHARGE  (Id4)
-  BATTERY     Forecast charging: disabled
-  HEAT_PUMP   <heat-pump-id>  Solar surplus: yes  (max 2.0 kW)
 ```
 
-## API versions used
+</details>
 
-| Endpoint | API version |
-|----------|-------------|
-| List / get systems | v2 |
-| System detail | **v4** |
-| System details (extended, with gateways/customer) | v1 |
-| Site status & assets | v2 |
-| Active feature flags (customer-identity) | v1 |
-| Live power overview | **v3** |
-| Energy today | v2 |
-| Energy historical | **v3** |
-| Market prices | **v4** |
-| EV chargers (read / set) | v1 |
-| Available EV charging modes | v1 |
-| EMS (read / set) | v1 |
-| AI optimisation decisions | v1 |
-| Weather forecast | v1 |
+<details>
+<summary>Example output — <code>1k5 weather --forecasts</code></summary>
 
-## Models
+```
+$ 1k5 weather --forecasts
+System:   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Heute:    Regen                         16.1 °C  ☀ 6.4 h  🌧 5.2 mm (87%)  ↑2026-03-11 05:57  ↓17:32
+Morgen:   Heiter                        14.3 °C  ☀ 4.1 h  🌧 1.0 mm (20%)  ↑2026-03-12 05:55  ↓17:34
 
-| Class | Description |
-|-------|-------------|
-| `SystemInfo` | System metadata (address, status, feature flags) |
-| `SystemDetails` | Extended system metadata: customer, installer, smart meter, gateways, earliest measurement |
-| `SystemCustomer` | Customer contact details embedded in `SystemDetails` |
-| `DeviceGateway` | One device gateway (e.g. GridX box) installed at the site |
-| `SiteStatus` | Overall site connection status + asset inventory |
-| `Asset` | One hardware asset (inverter, heat pump, meter, EV charger) with manufacturer/model/serial/firmware/network |
-| `LiveOverview` | Real-time power snapshot (W), incl. net grid power, separate import/export, smart devices and self-sufficiency |
-| `EnergyData` | Energy summary (kWh totals, self-sufficiency, savings) and per-slot timeseries |
-| `EnergySlot` | One timeseries slot — PV production, per-device consumption (kW), grid flows, battery SoC and charge/discharge |
-| `MarketPrices` | Spot prices, grid costs and VAT per slot (EUR/kWh) |
-| `EmsSettings` | EMS mode, Time-of-Use flag, per-device manual overrides |
-| `EmsManualDevice` | One device entry in the EMS manual settings |
-| `EVCharger` | EV charger state, vehicle profile, schedule and controls |
-| `OptimizationEvents` | AI optimisation decisions for a time range |
-| `OptimizationEvent` | A single decision (asset, action, market price, SoC) |
-| `WeatherData` | Weather forecast: daily summaries + 3-hour slots |
-| `WeatherDay` | Daily summary (temp, sunshine, precipitation, sunrise/sunset, symbol) |
-| `WeatherSlot` | One 3-hour forecast slot (temp, wind, precipitation, sunshine, symbol) |
-| `WEATHER_SYMBOLS` | Dict mapping symbol IDs to descriptions (incl. night variants) |
-| `ChargingMode` | `SMART_CHARGE` / `QUICK_CHARGE` / `SOLAR_CHARGE` |
-
-## API version monitoring
-
-[`scripts/probe_versions.md`](scripts/probe_versions.md) probes all known endpoints for newer API versions than the ones currently used in the client. Run it after a 1KOMMA5° app update to catch version bumps early.
-
-```bash
-ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... \
-PYTHONPATH=. python scripts/probe_versions.py
+Zeit (UTC)           Wetter                         Temp    Wind      Regen   Prob   Sonne
+--------------------------------------------------------------------------------------------
+2026-03-11 15:00     Regen                          10.2°C  3.8 m/s   1.1 mm   51%   0 min
+2026-03-11 18:00     Regen (Nacht)                   8.5°C  2.9 m/s   0.5 mm   40%   0 min
+2026-03-11 21:00     Klar (Nacht)                    7.1°C  1.8 m/s   0.0 mm    5%   0 min
 ```
 
-## Running tests
+</details>
+
+### Python models
+
+Every endpoint returns a typed [dataclass](https://docs.python.org/3/library/dataclasses.html) from `onekommafive.models`:
+
+| Domain | Classes |
+|--------|---------|
+| System | `SystemInfo`, `SystemDetails`, `SystemCustomer`, `DeviceGateway`, `SiteStatus`, `Asset`, `SiteDetails`, `SmartMeter` |
+| User & customer | `User`, `ConnectedSystem`, `Customer` |
+| Live & energy | `LiveOverview`, `EnergyData`, `EnergySlot`, `HeartbeatSavings` |
+| Prices | `MarketPrices`, `PriceCustomizations`, `ComparisonPrice`, `PriceGuarantee` |
+| EV & EMS | `EVCharger`, `ChargingMode`, `Wallbox`, `EmsSettings`, `EmsManualDevice` |
+| Weather | `WeatherData`, `WeatherDay`, `WeatherSlot`, `WEATHER_SYMBOLS` |
+| AI & analytics | `OptimizationEvents`, `OptimizationEvent`, `SelfSufficiencyEvents`, `HeartbeatAiSummary`, `ImpactOverview`, `EnergyTrader`, `MonthlyTradingSavings` |
+| Notifications | `Notification`, `NotificationsList`, `NotificationSettings`, `NotificationChannelSettings` |
+| API meta | `SupportedVersions`, `VersionInfo` |
+
+Every model exposes a `raw` attribute (`dict[str, Any]`) with the full untouched API response for fields that are not (yet) mapped.
+
+### Endpoint reference
+
+Complete curl-level reference for every HTTP endpoint — URLs, query parameters, response JSON, and every known API quirk — is in **[API.md](API.md)**.
+
+## Development
+
+### Running tests
 
 ```bash
-pip install ".[dev]"
+pip install "onekommafive[dev]"
 pytest
 ```
 
-Integration tests (require credentials, read-only):
+Integration tests (require credentials, read-only, no mutations):
 
 ```bash
 ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... pytest tests/test_integration.py -v
 ```
 
-## Linting and pre-commit
+### Linting and pre-commit
 
 Lint with [ruff](https://docs.astral.sh/ruff/):
 
@@ -367,24 +269,42 @@ Install the [pre-commit](https://pre-commit.com/) hooks once after cloning:
 pre-commit install
 ```
 
-The hooks run ruff and a few basic checks on every commit. CI also runs ruff and CodeQL on every push and pull request.
+The hooks run ruff on every commit. CI runs ruff and CodeQL on every push and pull request.
+
+### API version monitoring
+
+[`scripts/probe_versions.py`](scripts/probe_versions.md) probes every known endpoint for newer API versions than the ones currently used by the client. Run it after a 1KOMMA5° app update to catch version bumps early:
+
+```bash
+ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... \
+PYTHONPATH=. python scripts/probe_versions.py
+```
+
+## Compatibility
+
+This project is developed against the author's own 1KOMMA5° installation. It has not been tested broadly across hardware configurations — a lot of it is "it works for me". Use at your own risk.
+
+Reference setup:
+
+| Component | Model |
+|-----------|-------|
+| Hybrid inverter | Sungrow SH6.0RT-V112 |
+| Battery | Sungrow SBR256 |
+| Wallbox | go-e homeFix 11 kW |
+| EV | Volkswagen ID.5 |
+| Heat pump | Stiebel Eltron WPL-A 10 HK 400 Premium |
+| Smart meter | Chint DTSU666 |
 
 ## Related projects
 
 ### [1komma5-ha](https://github.com/mrebbert/1komma5-ha)
 
-A Home Assistant integration built on top of this library. Exposes your 1KOMMA5° system as sensors, switches and controls directly in Home Assistant.
+A Home Assistant integration built on top of this library. Exposes your 1KOMMA5° system as sensors, switches, and controls directly in Home Assistant.
 
 ## Credits
 
-This project would not exist without the prior work of the Home Assistant community.
-
-### [hacs_1komma5grad](https://github.com/BirknerAlex/hacs_1komma5grad) by [Alexander Birkner](https://github.com/BirknerAlex)
-
-The unofficial Home Assistant / HACS integration for 1KOMMA5°. Large parts of this library — in particular the API endpoint discovery, the request/response structures, the OAuth2 + PKCE authentication flow, and the overall understanding of the Heartbeat API — are directly derived from or heavily inspired by that project. If you use Home Assistant, that integration is the right tool; this library is just a standalone Python wrapper built on the same knowledge.
-
-> **Please respect the original authors' work.** The 1KOMMA5° API is undocumented and was reverse-engineered by the community. Use responsibly.
+Large parts of this project are inspired by and based on the work of [Alex Birkner](https://github.com/BirknerAlex) and his [hacs_1komma5grad](https://github.com/BirknerAlex/hacs_1komma5grad) integration. Many thanks for paving the way.
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
