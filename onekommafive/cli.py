@@ -30,6 +30,7 @@ Usage:
     python cli.py ai-decisions [--from YYYY-MM-DD[THH:MM]] [--to YYYY-MM-DD[THH:MM]]
     python cli.py site-details
     python cli.py customer [--customer-id UUID]
+    python cli.py subscriptions [--customer-id UUID]
     python cli.py notifications
     python cli.py notification-settings
     python cli.py versions
@@ -431,6 +432,45 @@ def cmd_customer(args: argparse.Namespace) -> None:
     print(f"Type:       {c.customer_type or '—'}")
     if c.crm_branch_location:
         print(f"Branch:     {c.crm_branch_location}")
+
+
+def cmd_subscriptions(args: argparse.Namespace) -> None:
+    system = _get_system()
+    customer_id = _resolve_customer_id(args, system)
+    result = system.get_subscriptions(customer_id)
+
+    print(f"Customer:  {customer_id}")
+    print(f"Subscriptions ({result.total_items}):")
+    if not result.subscriptions:
+        return
+    print()
+    header = f"  {'Type':<18} {'Status':<8} {'Price/month':>12}  {'Notice':>8}   {'Renewal':<10} Since"
+    print(header)
+    print("  " + "-" * (len(header) - 2))
+
+    monthly_total = 0.0
+    for s in result.subscriptions:
+        price_str = f"{s.price_eur:.2f} €" if s.price_eur is not None else "—"
+        if s.price_eur:
+            monthly_total += s.price_eur
+        notice = (
+            f"{s.notice_period_number} mo"
+            if s.notice_period_number is not None and (s.notice_period_interval or "").upper() == "MONTHS"
+            else (str(s.notice_period_number) if s.notice_period_number is not None else "—")
+        )
+        since = s.signed_date[:10] if s.signed_date else (s.start_date[:10] if s.start_date else "—")
+        print(f"  {s.type:<18} {s.status:<8} {price_str:>12}  {notice:>8}   {s.renewal or '—':<10} {since}")
+
+    # DYNAMIC_PULSE price guarantee detail line
+    for s in result.subscriptions:
+        if s.type == "DYNAMIC_PULSE" and s.price_guarantee_value is not None:
+            version = f" ({s.price_guarantee_version})" if s.price_guarantee_version else ""
+            print()
+            print(f"  DYNAMIC_PULSE price guarantee: {s.price_guarantee_value:g} {s.price_guarantee_unit or ''}{version}")
+            break
+
+    print()
+    print(f"Total monthly: {monthly_total:.2f} €")
 
 
 def cmd_notifications(args: argparse.Namespace) -> None:
@@ -972,6 +1012,12 @@ def main() -> None:
         help="Customer UUID (default: looked up via system details)",
     )
 
+    subs_p = sub.add_parser("subscriptions", help="Customer contracts / subscriptions with monthly cost")
+    subs_p.add_argument(
+        "--customer-id", dest="customer_id", metavar="UUID", default=None,
+        help="Customer UUID (default: looked up via system details)",
+    )
+
     sub.add_parser("notifications", help="Recent push/in-app notifications")
     sub.add_parser("notification-settings", help="Notification preferences per category")
     sub.add_parser("versions", help="API compatibility (b2b/b2c target and minimum versions)")
@@ -1054,6 +1100,7 @@ def main() -> None:
         "ai-decisions": cmd_ai_decisions,
         "site-details": cmd_site_details,
         "customer": cmd_customer,
+        "subscriptions": cmd_subscriptions,
         "notifications": cmd_notifications,
         "notification-settings": cmd_notification_settings,
         "versions": cmd_versions,

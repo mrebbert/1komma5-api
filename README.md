@@ -168,7 +168,7 @@ Set credentials with `ONEKOMMAFIVE_USERNAME` / `ONEKOMMAFIVE_PASSWORD` env vars 
 
 | Category | Commands |
 |----------|----------|
-| System & metadata | `info`, `details`, `site-details`, `assets`, `features`, `customer`, `me` |
+| System & metadata | `info`, `details`, `site-details`, `assets`, `features`, `customer`, `subscriptions`, `me` |
 | Live & energy | `live`, `energy-today`, `energy-historical`, `savings` |
 | Prices | `prices`, `price-config`, `comparison-price`, `price-guarantee` |
 | EV & wallbox | `ev`, `ev-modes`, `set-ev-mode`, `set-ev-target-soc`, `set-ev-departure`, `wallboxes` |

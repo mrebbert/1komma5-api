@@ -32,6 +32,7 @@ from onekommafive.models import (
     SiteDetails,
     SiteStatus,
     SmartMeter,
+    SubscriptionsList,
     SystemDetails,
     SystemInfo,
     Wallbox,
@@ -66,6 +67,7 @@ from tests.fixtures import (
     make_site_details_data,
     make_smart_meter_data,
     make_status_and_assets_data,
+    make_subscriptions_data,
     make_system_data,
     make_system_details_data,
     make_user_data,
@@ -1112,6 +1114,120 @@ class TestGetCustomer:
         resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
         with pytest.raises(RequestError, match="Failed to get customer"):
             _make_system().get_customer(self._CUSTOMER_ID)
+
+
+# ---------------------------------------------------------------------------
+# Subscriptions (customer-identity v1)
+# ---------------------------------------------------------------------------
+
+class TestGetSubscriptions:
+    _CUSTOMER_ID = "cust-0001"
+    _URL = f"{_IDENTITY_BASE}/api/v1/customers/{_CUSTOMER_ID}/subscriptions"
+
+    @resp_lib.activate
+    def test_returns_all_four_subscription_types(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_subscriptions_data(), status=200)
+        result = _make_system().get_subscriptions(self._CUSTOMER_ID)
+        assert isinstance(result, SubscriptionsList)
+        types = {s.type for s in result.subscriptions}
+        assert types == {"DYNAMIC_PULSE", "SMART_METER", "HEARTBEAT", "ENERGY_TRADER"}
+
+    @resp_lib.activate
+    def test_universal_fields_parsed(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_subscriptions_data(), status=200)
+        subs = {s.type: s for s in _make_system().get_subscriptions(self._CUSTOMER_ID).subscriptions}
+        dp = subs["DYNAMIC_PULSE"]
+        assert dp.id == "sub-dp-0000-0000-0000-000000000001"
+        assert dp.status == "ACTIVE"
+        assert dp.price_eur == 0
+        assert dp.currency == "EURO"
+        assert dp.billing_frequency == "MONTHLY"
+        assert dp.notice_period_interval == "MONTHS"
+        assert dp.notice_period_number == 1
+        assert dp.renewal == "AUTOMATIC"
+        assert dp.payment_method == "DIRECT_DEBIT"
+        assert dp.country_code == "DE"
+        assert dp.terms_and_conditions_url == "https://1k5.link/tos-dynamic-pulse"
+        assert dp.site_id == FAKE_SYSTEM_ID
+        assert dp.customer_id == "cust-0001"
+
+    @resp_lib.activate
+    def test_dynamic_pulse_specific_fields(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_subscriptions_data(), status=200)
+        subs = {s.type: s for s in _make_system().get_subscriptions(self._CUSTOMER_ID).subscriptions}
+        dp = subs["DYNAMIC_PULSE"]
+        assert dp.electricity_contract_number == "600000001"
+        assert dp.market_location_id == "50000000001"
+        assert dp.price_guarantee_value == 12
+        assert dp.price_guarantee_unit == "ct/kWh"
+        assert dp.price_guarantee_version == "DE_PRICE_GUARANTEE_V2"
+
+    @resp_lib.activate
+    def test_smart_meter_type_recognized_but_hardware_fields_not_mapped(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_subscriptions_data(), status=200)
+        subs = {s.type: s for s in _make_system().get_subscriptions(self._CUSTOMER_ID).subscriptions}
+        sm = subs["SMART_METER"]
+        assert sm.type == "SMART_METER"
+        assert sm.notice_period_number == 24
+        assert sm.price_eur is None  # SMART_METER has null price
+        # SMART_METER-specific hardware fields must NOT be mapped as attributes
+        for attr in ("meter_id", "supplier", "device_manufacturer", "device_measuring_type"):
+            assert not hasattr(sm, attr), f"{attr!r} must not be a mapped attribute (kept in raw only)"
+
+    @resp_lib.activate
+    def test_raw_preserves_pii_fields(self) -> None:
+        """Regression protection: PII fields must stay in raw, NOT be mapped as attributes.
+
+        Breaks the moment someone accidentally maps IBAN / metadata.payload
+        / statusHistory / CRM IDs onto Subscription.
+        """
+        resp_lib.add(resp_lib.GET, self._URL, json=make_subscriptions_data(), status=200)
+        subs = {s.type: s for s in _make_system().get_subscriptions(self._CUSTOMER_ID).subscriptions}
+        dp = subs["DYNAMIC_PULSE"]
+        # PII is available via raw
+        assert dp.raw["paymentIban"] == "DE00000000000000000000"
+        assert dp.raw["metadata"]["payload"]["payment_iban"] == "DE00000000000000000000"
+        assert dp.raw["metadata"]["payload"]["former_supplier_id"] == "9900000000000"
+        assert dp.raw["lumenazaContractId"] == "600000001"
+        assert dp.raw["deliveryAddressStreet"] == "Musterstraße"
+        assert len(dp.raw["statusHistory"]) == 1
+        # PII is NOT a Subscription attribute
+        for pii_attr in (
+            "payment_iban", "metadata_payload", "delivery_address_street",
+            "lumenaza_contract_id", "zoho_reference_id", "status_history",
+        ):
+            assert not hasattr(dp, pii_attr), f"{pii_attr!r} must not be a mapped attribute"
+
+    @resp_lib.activate
+    def test_pagination_metadata(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_subscriptions_data(), status=200)
+        result = _make_system().get_subscriptions(self._CUSTOMER_ID)
+        assert result.total_items == 4
+        assert result.page_index == 0
+        assert result.page_size == 15
+        assert result.total_pages == 1
+
+    @resp_lib.activate
+    def test_empty_list_when_no_subscriptions(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL,
+                     json={"data": [], "pageIndex": 0, "pageSize": 15, "totalPages": 0, "totalItems": 0},
+                     status=200)
+        result = _make_system().get_subscriptions(self._CUSTOMER_ID)
+        assert result.subscriptions == []
+        assert result.total_items == 0
+
+    @resp_lib.activate
+    def test_url_uses_identity_host(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_subscriptions_data(), status=200)
+        _make_system().get_subscriptions(self._CUSTOMER_ID)
+        assert "customer-identity" in resp_lib.calls[0].request.url
+        assert "heartbeat" not in resp_lib.calls[0].request.url
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get subscriptions"):
+            _make_system().get_subscriptions(self._CUSTOMER_ID)
 
 
 # ---------------------------------------------------------------------------

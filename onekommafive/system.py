@@ -28,6 +28,7 @@ from .models import (
     SiteDetails,
     SiteStatus,
     SmartMeter,
+    SubscriptionsList,
     SystemDetails,
     SystemInfo,
     Wallbox,
@@ -477,6 +478,30 @@ class System:
             error_label="Failed to get customer",
         )
         return Customer.from_dict(data)
+
+    def get_subscriptions(self, customer_id: str) -> SubscriptionsList:
+        """Fetch all customer subscriptions / contracts.
+
+        ``GET /api/v1/customers/{cid}/subscriptions`` (IDENTITY host).
+        Returns all active contracts for a customer — electricity
+        (``DYNAMIC_PULSE``), smart-meter (``SMART_METER``), platform
+        (``HEARTBEAT``), trading (``ENERGY_TRADER``) — with universal
+        contract metadata mapped and PII-heavy fields (IBAN, addresses,
+        CRM IDs, ``metadata.payload``, ``statusHistory``) retained only
+        in :attr:`~onekommafive.Subscription.raw`.
+
+        See :class:`~onekommafive.Subscription` for the mapped subset
+        and PII handling.
+
+        ``customer_id`` is available via :meth:`get_details` — same
+        pattern as :meth:`get_customer`.
+        """
+        data = self._client._request(
+            "GET",
+            f"{self._client.IDENTITY_API}/api/v1/customers/{customer_id}/subscriptions",
+            error_label="Failed to get subscriptions",
+        )
+        return SubscriptionsList.from_dict(data)
 
     def get_notifications(self) -> NotificationsList:
         """Fetch recent push/in-app notifications for the authenticated user.

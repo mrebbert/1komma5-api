@@ -31,6 +31,7 @@ from onekommafive.models import (
     SiteDetails,
     SiteStatus,
     SmartMeter,
+    SubscriptionsList,
     SupportedVersions,
     SystemDetails,
     SystemInfo,
@@ -64,6 +65,7 @@ from tests.fixtures import (
     make_site_details_data,
     make_smart_meter_data,
     make_status_and_assets_data,
+    make_subscriptions_data,
     make_supported_versions_data,
     make_system_data,
     make_system_details_data,
@@ -968,6 +970,60 @@ class TestCmdCustomer:
         mock_system.get_customer.return_value = Customer.from_dict(make_customer_data())
         _run("customer")
         mock_system.get_customer.assert_called_once_with("cust-from-details")
+
+
+# ---------------------------------------------------------------------------
+# subscriptions
+# ---------------------------------------------------------------------------
+
+class TestCmdSubscriptions:
+    def test_prints_all_types_and_total_monthly(self, mock_system, capsys) -> None:
+        mock_system.get_subscriptions.return_value = SubscriptionsList.from_dict(
+            make_subscriptions_data()
+        )
+        _run("subscriptions", "--customer-id", "cust-0001")
+        out = capsys.readouterr().out
+        for t in ("DYNAMIC_PULSE", "SMART_METER", "HEARTBEAT", "ENERGY_TRADER"):
+            assert t in out
+        assert "14.99" in out
+        assert "Total monthly" in out
+
+    def test_uses_explicit_customer_id(self, mock_system) -> None:
+        mock_system.get_subscriptions.return_value = SubscriptionsList.from_dict(
+            make_subscriptions_data()
+        )
+        _run("subscriptions", "--customer-id", "cust-explicit")
+        mock_system.get_subscriptions.assert_called_once_with("cust-explicit")
+
+    def test_falls_back_via_shared_helper(self, mock_system) -> None:
+        details = MagicMock()
+        details.customer_id = "cust-from-details"
+        mock_system.get_details.return_value = details
+        mock_system.get_subscriptions.return_value = SubscriptionsList.from_dict(
+            make_subscriptions_data()
+        )
+        _run("subscriptions")
+        mock_system.get_subscriptions.assert_called_once_with("cust-from-details")
+
+    def test_prints_dash_for_null_price(self, mock_system, capsys) -> None:
+        mock_system.get_subscriptions.return_value = SubscriptionsList.from_dict(
+            make_subscriptions_data()
+        )
+        _run("subscriptions", "--customer-id", "cust-0001")
+        out = capsys.readouterr().out
+        # SMART_METER row has null price — must render as em-dash, not 0.00 €
+        smart_meter_line = next(line for line in out.splitlines() if "SMART_METER" in line)
+        assert "—" in smart_meter_line
+        assert "0.00" not in smart_meter_line
+
+    def test_prints_price_guarantee_line_for_dynamic_pulse(self, mock_system, capsys) -> None:
+        mock_system.get_subscriptions.return_value = SubscriptionsList.from_dict(
+            make_subscriptions_data()
+        )
+        _run("subscriptions", "--customer-id", "cust-0001")
+        out = capsys.readouterr().out
+        assert "12 ct/kWh" in out
+        assert "DE_PRICE_GUARANTEE_V2" in out
 
 
 # ---------------------------------------------------------------------------

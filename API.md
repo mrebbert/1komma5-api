@@ -15,6 +15,7 @@ Requests unless noted send `Authorization: Bearer $BEARER_TOKEN`. All personal i
   - [Authenticated user profile](#authenticated-user-profile)
   - [Customer record (v3)](#customer-record-v3)
   - [Price guarantee](#price-guarantee)
+  - [Subscriptions](#subscriptions)
 - [System and site](#system-and-site)
   - [List systems](#list-systems)
   - [Single system (v4)](#single-system-v4)
@@ -250,6 +251,96 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 - Lives on the `customer-identity` host.
 - Observed versions: `DE_PRICE_GUARANTEE_V2` (Germany). The same version identifier also appears in the `priceGuaranteeVersion` field of individual subscription records.
+
+---
+
+### Subscriptions
+
+`GET /api/v1/customers/$CUSTOMER_ID/subscriptions` — all active service contracts for a customer. Typical composition: an electricity contract (`DYNAMIC_PULSE`), a smart-meter contract (`SMART_METER`), a platform-access contract (`HEARTBEAT`), and a trading contract (`ENERGY_TRADER`).
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/subscriptions" | jq .
+```
+
+**Response** (excerpt — one DYNAMIC_PULSE contract; PII fields anonymised)
+
+```json
+{
+  "data": [
+    {
+      "id": "<uuid>",
+      "type": "DYNAMIC_PULSE",
+      "status": "ACTIVE",
+      "customerId": "<uuid>",
+      "siteId": "<uuid>",
+      "countryCode": "DE",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601",
+      "signedDate": "ISO8601",
+      "startDate": "ISO8601",
+      "endDate": null,
+
+      "price": 0,
+      "currency": "EURO",
+      "billingFrequency": "MONTHLY",
+      "renewal": "AUTOMATIC",
+      "noticePeriodInterval": "MONTHS",
+      "noticePeriodNumber": 1,
+      "paymentMethod": "DIRECT_DEBIT",
+      "paymentIban": "<IBAN>",
+
+      "electricityContractNumber": "<number>",
+      "marketLocationId": "<11-digit-id>",
+      "priceGuaranteeUnit": "ct/kWh",
+      "priceGuaranteeValue": 12,
+      "priceGuaranteeVersion": "DE_PRICE_GUARANTEE_V2",
+      "heartbeatPriceGuarantee": "NONE",
+
+      "deliveryAddressStreet": "Musterstraße",
+      "deliveryAddressHouseNumber": "1",
+      "deliveryAddressZipCode": "20095",
+      "deliveryAddressCity": "Hamburg",
+
+      "termsAndConditionsLink": "https://1k5.link/tos-dynamic-pulse",
+
+      "statusHistory": [ /* contract state-transition history */ ],
+      "metadata": {
+        "version": "1",
+        "payload": {
+          /* Full Zoho booking record: IBAN, former supplier, hardware
+             selection, feature flags, address, salutation, delivery
+             preferences, Lumenaza IDs — all PII */
+        }
+      },
+      "crmDealId": null,
+      "lumenazaContractId": "<id>",
+      "lumenazaConsumerId": "<id>",
+      "zohoReferenceId": "<id>"
+    }
+  ],
+  "pageIndex": 0,
+  "pageSize": 15,
+  "totalPages": 1,
+  "totalItems": 4
+}
+```
+
+Other contract types share the universal fields (`id`, `type`, `status`, `price`, dates, notice period, renewal, `termsAndConditionsLink`) but have type-specific details:
+
+- `SMART_METER` — has `null` price, 24-month notice, plus `meterId`, `supplier`, `deviceManufacturer`, `deviceMeasuringType`, `marketLocationIdConsumption`/`FeedIn`, `crmBranchLocation` (installer name), `meterInstallationDate`.
+- `HEARTBEAT` — minimal shape, `price: 0`, `paymentMethod: "NO_PAYMENT"`.
+- `ENERGY_TRADER` — typical price 14.99 EUR / month.
+
+**Notes**
+
+- Lives on the `customer-identity` host.
+- `$CUSTOMER_ID` comes from the `customerId` field of `/api/v1/systems/{id}/details`.
+- **PII handling**: the response mixes universal contract metadata with heavy PII — `paymentIban`, complete delivery/billing addresses, CRM identifiers (`crmDealId`, `zohoReferenceId`, `lumenazaContractId`, `lumenazaConsumerId`, `crmInstallationId`), a `statusHistory` block, and an embedded `metadata.payload` with the full Zoho booking record (IBAN again, former supplier, feature flags, hardware selection). Callers building dashboards should stick to the universal fields; PII should never be logged or shared.
+- **SMART_METER duplication**: the same meter details are also served by `/sites/{id}/smart-meter`. Prefer that endpoint if you only need meter data.
+- **Invoices endpoint** (`GET /api/v1/customers/{cid}/subscriptions/{sub_id}/invoices`) exists but returns an empty list on accounts without generated invoices. Not documented here until a populated response is available for reference.
 
 ---
 

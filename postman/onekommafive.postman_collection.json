@@ -494,6 +494,20 @@
             "description": "Full customer profile — adds phone, address, `customerType`, `crmContactId`, `crmBranchLocation` on top of the embedded `SystemCustomer` (which only has id/name/email). Field naming quirks: `contactEmail` (not `email`), `addressCountry` as plain-name string (`\"Deutschland\"`) not ISO code."
           },
           "response": []
+        },
+        {
+          "name": "Get subscriptions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{identityUrl}}/api/v1/customers/{{customerId}}/subscriptions",
+              "host": ["{{identityUrl}}"],
+              "path": ["api", "v1", "customers", "{{customerId}}", "subscriptions"]
+            },
+            "description": "All customer contracts. Typical composition: DYNAMIC_PULSE (electricity), SMART_METER (24-mo notice), HEARTBEAT (0 EUR), ENERGY_TRADER (14.99 EUR/mo). Response is PII-heavy — includes `paymentIban`, delivery/billing addresses, CRM identifiers (Zoho/Lumenaza), a `statusHistory` block, and an embedded `metadata.payload` with the full Zoho booking record. The Python client (`System.get_subscriptions`) maps only the universal contract metadata (type/status/price/dates/notice/renewal/paymentMethod-enum/terms + DYNAMIC_PULSE contract-identity fields) and keeps all PII in `.raw`."
+          },
+          "response": []
         }
       ]
     },
