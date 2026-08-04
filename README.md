@@ -173,7 +173,7 @@ Set credentials with `ONEKOMMAFIVE_USERNAME` / `ONEKOMMAFIVE_PASSWORD` env vars 
 | Prices | `prices`, `price-config`, `comparison-price`, `price-guarantee` |
 | EV & wallbox | `ev`, `ev-modes`, `set-ev-mode`, `set-ev-target-soc`, `set-ev-departure`, `wallboxes` |
 | EMS | `ems`, `set-ems` |
-| AI & analytics | `optimizations`, `ai-decisions`, `ai-summary`, `impact`, `trader`, `monthly-trading` |
+| AI & analytics | `optimizations`, `ai-decisions`, `ai-summary`, `heartbeat-prices`, `impact`, `trader`, `monthly-trading` |
 | Notifications | `notifications`, `notification-settings` |
 | Weather & meta | `weather`, `smart-meter`, `versions` |
 

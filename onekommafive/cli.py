@@ -20,6 +20,7 @@ Usage:
     python cli.py impact
     python cli.py trader
     python cli.py ai-summary [--resolution 1W|1M|1Y]
+    python cli.py heartbeat-prices
     python cli.py price-config
     python cli.py comparison-price
     python cli.py price-guarantee [--customer-id UUID]
@@ -543,6 +544,50 @@ def cmd_ai_summary(args: argparse.Namespace) -> None:
         print(f"Peak avoided:{s.peak_price_avoided_eur:>7.2f} €{detail}")
 
 
+def cmd_heartbeat_prices(args: argparse.Namespace) -> None:
+    system = _get_system()
+    hb = system.get_heartbeat_prices()
+    windows = [
+        ("day",      hb.day),
+        ("week",     hb.week),
+        ("month",    hb.month),
+        ("half-y",   hb.half_year),
+        ("year",     hb.year),
+    ]
+
+    def _fmt(val, spec):
+        return format(val, spec) if val is not None else "—"
+
+    rows = [
+        ("PV produced (kWh)",         "pv_produced_kwh",                     ",.1f"),
+        ("Grid feed-in (kWh)",        "grid_feed_in_kwh",                    ",.1f"),
+        ("Grid feed-in comp. (€)",    "grid_feed_in_compensation_eur",       ",.2f"),
+        ("Grid consumed (kWh)",       "grid_consumed_kwh",                   ",.1f"),
+        ("Grid consumption cost (€)", "grid_consumption_cost_eur",           ",.2f"),
+        ("Total consumption (kWh)",   "total_consumption_kwh",               ",.1f"),
+        ("Total energy cost (€)",     "total_energy_cost_eur",               ",.2f"),
+        ("Heartbeat price (€/kWh)",   "heartbeat_price_eur_per_kwh",         ".4f"),
+        ("Comparison tariff (€/kWh)", "comparison_tariff_eur_per_kwh",       ".4f"),
+        ("Feed-in tariff (€/kWh)",    "grid_feed_in_tariff_eur_per_kwh",     ".4f"),
+        ("Grid buy price (€/kWh)",    "grid_consumption_price_eur_per_kwh",  ".4f"),
+    ]
+
+    print(f"System:  {system.id()}")
+    print()
+    # Header
+    print(f"{'Metric':<28}" + "".join(f"{lbl:>11}" for lbl, _ in windows))
+    print("-" * (28 + 11 * len(windows)))
+    for label, attr, spec in rows:
+        cells = "".join(f"{_fmt(getattr(w, attr), spec):>11}" for _, w in windows)
+        print(f"{label:<28}{cells}")
+
+    # Implausibility flags
+    flagged = [name for name, w in windows if w.should_report_implausible_pv_and_feed_in]
+    if flagged:
+        print()
+        print(f"⚠ Implausible PV/feed-in values reported for: {', '.join(flagged)}")
+
+
 def cmd_savings(args: argparse.Namespace) -> None:
     try:
         from_d = datetime.date.fromisoformat(args.from_date) if args.from_date else None
@@ -935,6 +980,8 @@ def main() -> None:
     sub.add_parser("impact", help="Lifetime CO2 savings (site + community)")
     sub.add_parser("trader", help="Lifetime energy-trading savings (€)")
 
+    sub.add_parser("heartbeat-prices", help="Financial breakdown per time window (PV, feed-in, grid, effective HB price)")
+
     ai_sum_p = sub.add_parser("ai-summary", help="Heartbeat-AI performance summary (self-sufficiency, earnings, CO2)")
     ai_sum_p.add_argument(
         "--resolution", metavar="RES", default="1M", choices=["1W", "1M", "1Y"],
@@ -1014,6 +1061,7 @@ def main() -> None:
         "impact": cmd_impact,
         "trader": cmd_trader,
         "ai-summary": cmd_ai_summary,
+        "heartbeat-prices": cmd_heartbeat_prices,
         "savings": cmd_savings,
         "energy-today": cmd_energy_today,
         "energy-historical": cmd_energy_historical,

@@ -698,6 +698,100 @@ def make_energy_trader_data() -> dict:
     }
 
 
+def _make_hb_price_window(
+    *,
+    pv_kwh: float,
+    pv_cost: str,
+    pv_price: str,
+    feed_in_kwh: float,
+    feed_in_comp: str,
+    feed_in_price: str,
+    grid_kwh: float,
+    grid_cost: str,
+    grid_price: str,
+    total_kwh: float,
+    total_cost: str,
+    hb_price: str,
+    comp_tariff: str = "0.274",
+    implausible: bool = False,
+) -> dict:
+    """Construct one window payload for /heartbeat-prices tests."""
+    return {
+        "shouldReportImplausiblePvAndFeedIn": implausible,
+        "shouldReportOverriddenPvCost": False,
+        "usesFeedInEarningsAsHbPrice": False,
+        "feedInDiscrepancy": 0.05,
+        "vat": 0.19,
+        "pvProduction": {
+            "cost": {"amount": pv_cost, "currency": "EUR"},
+            "price": {"price": {"amount": pv_price, "currency": "EUR"}, "unit": "kWh"},
+            "energyProduced": {"value": pv_kwh, "unit": "kWh"},
+        },
+        "gridFeedIn": {
+            "compensation": {"amount": feed_in_comp, "currency": "EUR"},
+            "price": {"price": {"amount": feed_in_price, "currency": "EUR"}, "unit": "kWh"},
+            "energyFedIn": {"value": feed_in_kwh, "unit": "kWh"},
+        },
+        "gridConsumption": {
+            "energyConsumed": {"value": grid_kwh, "unit": "kWh"},
+            "cost": {"amount": grid_cost, "currency": "EUR"},
+            "price": {"price": {"amount": grid_price, "currency": "EUR"}, "unit": "kWh"},
+        },
+        "totalConsumption": {"value": total_kwh, "unit": "kWh"},
+        "totalEnergyCost": {"amount": total_cost, "currency": "EUR"},
+        "heartbeatPrice": {"price": {"amount": hb_price, "currency": "EUR"}, "unit": "kWh"},
+        "comparisonTariff": {"price": {"amount": comp_tariff, "currency": "EUR"}, "unit": "kWh"},
+        "gridElectricityCost": {"amount": "10.0", "currency": "EUR"},
+        "energyTaxReduction": {"amount": "0", "currency": "EUR"},
+        "fixedCostsAndSavings": {"amount": "10.0", "currency": "EUR"},
+        "peakShavingSavings": None,
+        "swedishCostsAndSavings": None,
+    }
+
+
+def make_heartbeat_prices_data() -> dict:
+    """Return a /heartbeat-prices v3 response payload mirroring live API structure.
+
+    All five windows have identical shape. Values chosen so that the three
+    distinct price semantics (PV valuation, feed-in tariff, grid buy price)
+    can be uniquely asserted in tests.
+    """
+    return {
+        "day": _make_hb_price_window(
+            pv_kwh=35.0, pv_cost="1.75", pv_price="0.05",
+            feed_in_kwh=18.2, feed_in_comp="1.46", feed_in_price="0.0801",
+            grid_kwh=0.263, grid_cost="0.08", grid_price="0.3066",
+            total_kwh=17.0, total_cost="0.36", hb_price="0.0214",
+        ),
+        "week": _make_hb_price_window(
+            pv_kwh=241.9, pv_cost="12.09", pv_price="0.05",
+            feed_in_kwh=89.4, feed_in_comp="7.18", feed_in_price="0.0803",
+            grid_kwh=42.8, grid_cost="9.20", grid_price="0.2150",
+            total_kwh=195.3, total_cost="14.12", hb_price="0.0723",
+        ),
+        "month": _make_hb_price_window(
+            pv_kwh=990.3, pv_cost="49.51", pv_price="0.05",
+            feed_in_kwh=379.2, feed_in_comp="30.45", feed_in_price="0.0803",
+            grid_kwh=216.6, grid_cost="59.64", grid_price="0.2754",
+            total_kwh=827.6, total_cost="78.70", hb_price="0.0951",
+        ),
+        "halfYear": _make_hb_price_window(
+            pv_kwh=4805.2, pv_cost="240.26", pv_price="0.05",
+            feed_in_kwh=1391.1, feed_in_comp="111.71", feed_in_price="0.0803",
+            grid_kwh=3284.4, grid_cost="787.18", grid_price="0.2397",
+            total_kwh=6698.5, total_cost="915.74", hb_price="0.1367",
+            implausible=True,
+        ),
+        "year": _make_hb_price_window(
+            pv_kwh=7212.1, pv_cost="360.61", pv_price="0.05",
+            feed_in_kwh=1819.3, feed_in_comp="146.09", feed_in_price="0.0803",
+            grid_kwh=8807.7, grid_cost="2377.00", grid_price="0.2699",
+            total_kwh=14200.6, total_cost="2591.52", hb_price="0.1825",
+            implausible=True,
+        ),
+    }
+
+
 def make_heartbeat_ai_summary_data(resolution: str = "1M") -> dict:
     """Return a /heartbeat-ai/summary v2 response payload.
 

@@ -13,6 +13,7 @@ from .models import (
     EnergyData,
     EnergyTrader,
     HeartbeatAiSummary,
+    HeartbeatPrices,
     HeartbeatSavings,
     ImpactOverview,
     LiveOverview,
@@ -351,6 +352,28 @@ class System:
             error_label="Failed to get energy trader",
         )
         return EnergyTrader.from_dict(data)
+
+    def get_heartbeat_prices(self) -> HeartbeatPrices:
+        """Fetch the site's financial breakdown across five aggregation windows.
+
+        ``GET /api/v3/heartbeat-prices?siteId={id}`` — for each of
+        ``day`` / ``week`` / ``month`` / ``halfYear`` / ``year`` returns
+        PV production, grid feed-in, grid consumption, site totals, and
+        the effective per-kWh Heartbeat price.
+
+        See :class:`~onekommafive.HeartbeatPriceWindow` for the VAT
+        convention (**most likely gross**, matching the German consumer
+        UI) and the three distinct price semantics (PV valuation,
+        feed-in tariff, grid consumption price, effective Heartbeat
+        price, comparison tariff).
+        """
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v3/heartbeat-prices",
+            params={"siteId": self.id()},
+            error_label="Failed to get heartbeat prices",
+        )
+        return HeartbeatPrices.from_dict(data)
 
     def get_monthly_trading_savings(self) -> MonthlyTradingSavings:
         """Fetch the average monthly savings from Energy Trader activity.

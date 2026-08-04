@@ -50,6 +50,7 @@ Requests unless noted send `Authorization: Bearer $BEARER_TOKEN`. All personal i
   - [Impact overview (CO2)](#impact-overview-co2)
   - [Energy trader (lifetime)](#energy-trader-lifetime)
   - [Monthly trading savings](#monthly-trading-savings)
+  - [Heartbeat prices](#heartbeat-prices)
 - [Smart meter](#smart-meter)
   - [Smart meter registration](#smart-meter-registration)
 - [Notifications](#notifications)
@@ -1397,6 +1398,94 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ---
 
+### Heartbeat prices
+
+`GET /api/v3/heartbeat-prices?siteId={id}` — financial breakdown across **five aggregation windows** (`day`, `week`, `month`, `halfYear`, `year`). Each window has the same structure: PV production, grid feed-in, grid consumption, site totals, and the effective per-kWh Heartbeat price. This is the primary economic dashboard endpoint.
+
+**Query parameters**
+
+| Name | Required | Description |
+|------|----------|-------------|
+| `siteId` | yes | Site UUID as a **query parameter** — not a path segment. |
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v3/heartbeat-prices?siteId=$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+**Response** (one window shown — remaining windows have identical structure)
+
+```json
+{
+  "day":      { /* … same shape as year, populated for the trailing day … */ },
+  "week":     { /* … trailing week … */ },
+  "month":    { /* … trailing month … */ },
+  "halfYear": { /* … trailing 6 months … */ },
+  "year": {
+    "vat": 0.19,
+    "shouldReportImplausiblePvAndFeedIn": true,
+    "shouldReportOverriddenPvCost": false,
+    "usesFeedInEarningsAsHbPrice": false,
+    "feedInDiscrepancy": 50.46,
+    "pvProduction": {
+      "energyProduced": { "value": 7212.12, "unit": "kWh" },
+      "cost":  { "amount": "360.61", "currency": "EUR" },
+      "price": { "price": { "amount": "0.05", "currency": "EUR" }, "unit": "kWh" }
+    },
+    "gridFeedIn": {
+      "energyFedIn":   { "value": 1819.25, "unit": "kWh" },
+      "compensation":  { "amount": "146.09", "currency": "EUR" },
+      "price":         { "price": { "amount": "0.0803", "currency": "EUR" }, "unit": "kWh" }
+    },
+    "gridConsumption": {
+      "energyConsumed": { "value": 8807.68, "unit": "kWh" },
+      "cost":           { "amount": "2377.00", "currency": "EUR" },
+      "price":          { "price": { "amount": "0.2699", "currency": "EUR" }, "unit": "kWh" }
+    },
+    "totalConsumption": { "value": 14200.55, "unit": "kWh" },
+    "totalEnergyCost":  { "amount": "2591.52", "currency": "EUR" },
+    "heartbeatPrice":   { "price": { "amount": "0.1825", "currency": "EUR" }, "unit": "kWh" },
+    "comparisonTariff": { "price": { "amount": "0.2740", "currency": "EUR" }, "unit": "kWh" },
+    "gridElectricityCost":  { "amount": "123.30", "currency": "EUR" },
+    "energyTaxReduction":   { "amount": "0",      "currency": "EUR" },
+    "fixedCostsAndSavings": { "amount": "123.30", "currency": "EUR" },
+    "peakShavingSavings": null,
+    "swedishCostsAndSavings": null
+  }
+}
+```
+
+**Notes**
+
+**Three distinct price semantics — do not confuse:**
+
+| Field | Meaning |
+|-------|---------|
+| `pvProduction.price` | Heartbeat's **internal valuation** of own PV production. Empirically constant at `0.05 EUR/kWh` across all windows. **Not a market price** — an accounting convention. |
+| `gridFeedIn.price` | The **contractual feed-in tariff** the grid operator pays for exported energy. |
+| `gridConsumption.price` | The **effective per-kWh grid-purchase price** averaged over the window (varies with dynamic tariff). |
+| `heartbeatPrice.price` | The site's **effective all-in per-kWh price** for consumed energy — reflects the PV/battery/grid mix minus feed-in earnings plus fixed costs. |
+| `comparisonTariff.price` | Static grid-supplier reference (grundversorger) used for savings comparisons. |
+
+**VAT convention** (undocumented, working assumption):
+
+The values are presented **1:1 as displayed in the 1KOMMA5° app**. German consumer-app price displays are conventionally **gross** (VAT-inclusive), and `comparisonTariff ≈ 0.274 EUR/kWh` matches typical German utility gross tariffs. A net-vs-gross mismatch between site prices and grundversorger reference would be misleading UX — so the values are **most likely gross**. The `vat: 0.19` field is included but the API does not document whether it has been applied or is informational. If your application is sensitive to gross/net semantics, verify against your electricity invoice.
+
+**Quality flags** (per window):
+
+- `shouldReportImplausiblePvAndFeedIn: true` signals that PV/feed-in values in that window may be implausible (typically appears for `halfYear` and `year` when historical data has gaps).
+- `usesFeedInEarningsAsHbPrice` controls whether the `heartbeatPrice` calculation uses the actual feed-in earnings instead of the internal PV valuation.
+- `feedInDiscrepancy` — numeric metric of the discrepancy between measured and expected feed-in.
+
+**Regional/feature-flagged** (usually null, structure unknown when populated):
+
+- `peakShavingSavings` — presumably savings from peak-shaving strategy
+- `swedishCostsAndSavings` — Sweden-specific cost structure
+
+---
+
 ## Smart meter
 
 ### Smart meter registration
@@ -1598,6 +1687,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 | `heartbeat-ai/summary` | **kWh** / **EUR** / **kg** CO₂ / **km** car equivalent, prices as **string EUR/kWh** |
 | `impact-overview` | **kg** CO₂ (site + collective), **tons** (global estimate) |
 | `energy-trader`, `energy-trader-savings/.../month` | **EUR** |
+| `heartbeat-prices` | **kWh** / **EUR** / **EUR/kWh** (prices as **string**, most likely gross) |
 | `energy-savings` | **EUR** |
 | `price-customizations`, `comparison-price` | **String EUR/kWh** (base fee: **EUR/month**) |
 | `price-guarantee` | Value per `priceGuaranteeUnit` (e.g. `ct/kWh`) |

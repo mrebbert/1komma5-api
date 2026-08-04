@@ -195,3 +195,203 @@ class HeartbeatAiSummary:
             peak_grid_charging_cost_eur=_amount(ppa.get("gridChargingCost")),
             raw=data,
         )
+
+
+@dataclass
+class HeartbeatPriceWindow:
+    """Financial breakdown for one aggregation window.
+
+    Part of :class:`HeartbeatPrices`. Fields are grouped into three blocks:
+    PV production, grid feed-in, grid consumption — plus site totals and
+    a comparison-tariff reference.
+
+    **VAT convention**: prices in this response are presented as displayed
+    in the 1KOMMA5° app — most likely **gross** (VAT-inclusive), matching
+    the German consumer convention. The :attr:`vat` field (typically
+    ``0.19``) is included but the API does not document whether it has
+    been applied or is informational. :attr:`comparison_tariff_eur_per_kwh`
+    at ~0.27 EUR/kWh matches a typical German utility **gross** tariff,
+    which is consistent with the gross interpretation. If your application
+    is sensitive to gross/net semantics, verify against your electricity
+    invoice.
+
+    **Three distinct price semantics** (do not confuse):
+
+    - :attr:`pv_valuation_price_eur_per_kwh` is Heartbeat's **internal
+      accounting valuation** of the site's own PV production
+      (empirically constant at 0.05 EUR/kWh). **Not** a market price.
+    - :attr:`grid_feed_in_tariff_eur_per_kwh` is the **contractual
+      feed-in tariff** the grid operator pays for exported energy.
+    - :attr:`grid_consumption_price_eur_per_kwh` is the **effective
+      per-kWh grid-purchase price** averaged over the window.
+    - :attr:`heartbeat_price_eur_per_kwh` is the site's **effective
+      all-in per-kWh price** for consumed energy (mix of PV, battery
+      and grid, minus feed-in earnings, plus fixed costs).
+    - :attr:`comparison_tariff_eur_per_kwh` is the static
+      grid-supplier reference used for savings comparisons.
+    """
+
+    # PV production
+    pv_produced_kwh: float | None
+    """PV energy produced in the window, in kWh."""
+
+    pv_production_cost_eur: float | None
+    """Internal valuation of PV production (= produced × valuation price), in EUR."""
+
+    pv_valuation_price_eur_per_kwh: float | None
+    """Heartbeat's internal per-kWh valuation of own PV production, in EUR/kWh.
+    Empirically constant at 0.05 EUR/kWh. **Not a market price.**"""
+
+    # Grid feed-in
+    grid_feed_in_kwh: float | None
+    """Energy fed into the grid in the window, in kWh."""
+
+    grid_feed_in_compensation_eur: float | None
+    """Feed-in compensation received in the window, in EUR."""
+
+    grid_feed_in_tariff_eur_per_kwh: float | None
+    """Contractual feed-in tariff, in EUR/kWh."""
+
+    # Grid consumption
+    grid_consumed_kwh: float | None
+    """Energy drawn from the grid in the window, in kWh."""
+
+    grid_consumption_cost_eur: float | None
+    """Cost of grid consumption in the window, in EUR."""
+
+    grid_consumption_price_eur_per_kwh: float | None
+    """Effective per-kWh grid-purchase price averaged over the window, in EUR/kWh."""
+
+    # Site totals
+    total_consumption_kwh: float | None
+    """Total household consumption in the window (all sources), in kWh."""
+
+    total_energy_cost_eur: float | None
+    """Net total energy cost for the window, in EUR."""
+
+    heartbeat_price_eur_per_kwh: float | None
+    """Site's effective per-kWh price for consumed energy, in EUR/kWh.
+    All-in: reflects the PV / battery / grid mix minus feed-in earnings
+    plus fixed costs. See class docstring for VAT semantics."""
+
+    comparison_tariff_eur_per_kwh: float | None
+    """Static grid-supplier reference tariff for savings comparisons, in EUR/kWh."""
+
+    grid_electricity_cost_eur: float | None
+    """Grid-supplier fixed cost component in the window, in EUR."""
+
+    energy_tax_reduction_eur: float | None
+    """Applied energy-tax reduction in the window, in EUR (0 for German consumers)."""
+
+    fixed_costs_and_savings_eur: float | None
+    """Aggregated fixed cost / savings component in the window, in EUR."""
+
+    # Metadata and quality flags
+    vat: float
+    """VAT rate applied by the API (e.g. ``0.19`` for 19%). Role undocumented — see class docstring."""
+
+    should_report_implausible_pv_and_feed_in: bool
+    """API flag: values in this window may be implausible."""
+
+    should_report_overridden_pv_cost: bool
+    """API flag: PV cost was overridden by manual configuration."""
+
+    uses_feed_in_earnings_as_hb_price: bool
+    """API flag: whether the Heartbeat price calculation uses feed-in earnings
+    instead of the internal PV valuation."""
+
+    feed_in_discrepancy: float | None
+    """Numeric discrepancy metric between measured and expected feed-in."""
+
+    # Regional / feature-flagged blocks (structure unknown; passed through as raw)
+    peak_shaving_savings_raw: dict[str, Any] | None
+    """Raw ``peakShavingSavings`` block (usually ``None``; structure unknown when populated)."""
+
+    swedish_costs_and_savings_raw: dict[str, Any] | None
+    """Raw ``swedishCostsAndSavings`` block (usually ``None``; structure unknown when populated)."""
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "HeartbeatPriceWindow":
+        def _val(node: dict | None) -> float | None:
+            return node.get("value") if node else None
+
+        def _amount(node: dict | None) -> float | None:
+            if not node:
+                return None
+            a = node.get("amount")
+            return float(a) if a is not None else None
+
+        def _rate(node: dict | None) -> float | None:
+            """Extract per-unit rate from ``{price: {amount, currency}, unit}``."""
+            return _amount((node or {}).get("price"))
+
+        pv = data.get("pvProduction") or {}
+        fi = data.get("gridFeedIn") or {}
+        gc = data.get("gridConsumption") or {}
+        return cls(
+            pv_produced_kwh=_val(pv.get("energyProduced")),
+            pv_production_cost_eur=_amount(pv.get("cost")),
+            pv_valuation_price_eur_per_kwh=_rate(pv.get("price")),
+            grid_feed_in_kwh=_val(fi.get("energyFedIn")),
+            grid_feed_in_compensation_eur=_amount(fi.get("compensation")),
+            grid_feed_in_tariff_eur_per_kwh=_rate(fi.get("price")),
+            grid_consumed_kwh=_val(gc.get("energyConsumed")),
+            grid_consumption_cost_eur=_amount(gc.get("cost")),
+            grid_consumption_price_eur_per_kwh=_rate(gc.get("price")),
+            total_consumption_kwh=_val(data.get("totalConsumption")),
+            total_energy_cost_eur=_amount(data.get("totalEnergyCost")),
+            heartbeat_price_eur_per_kwh=_rate(data.get("heartbeatPrice")),
+            comparison_tariff_eur_per_kwh=_rate(data.get("comparisonTariff")),
+            grid_electricity_cost_eur=_amount(data.get("gridElectricityCost")),
+            energy_tax_reduction_eur=_amount(data.get("energyTaxReduction")),
+            fixed_costs_and_savings_eur=_amount(data.get("fixedCostsAndSavings")),
+            vat=float(data.get("vat", 0)),
+            should_report_implausible_pv_and_feed_in=bool(data.get("shouldReportImplausiblePvAndFeedIn")),
+            should_report_overridden_pv_cost=bool(data.get("shouldReportOverriddenPvCost")),
+            uses_feed_in_earnings_as_hb_price=bool(data.get("usesFeedInEarningsAsHbPrice")),
+            feed_in_discrepancy=data.get("feedInDiscrepancy"),
+            peak_shaving_savings_raw=data.get("peakShavingSavings"),
+            swedish_costs_and_savings_raw=data.get("swedishCostsAndSavings"),
+            raw=data,
+        )
+
+
+@dataclass
+class HeartbeatPrices:
+    """Financial breakdown across five aggregation windows.
+
+    Returned by :meth:`~onekommafive.System.get_heartbeat_prices`
+    (``GET /api/v3/heartbeat-prices?siteId={id}``). Each window carries
+    PV production, grid feed-in, grid consumption, site totals and the
+    effective Heartbeat per-kWh price for a trailing period ending "now".
+
+    Windows: :attr:`day`, :attr:`week`, :attr:`month`, :attr:`half_year`,
+    :attr:`year`. All have the identical :class:`HeartbeatPriceWindow`
+    shape.
+
+    See :class:`HeartbeatPriceWindow` for the VAT convention and the
+    three distinct price semantics.
+    """
+
+    day: HeartbeatPriceWindow
+    week: HeartbeatPriceWindow
+    month: HeartbeatPriceWindow
+    half_year: HeartbeatPriceWindow
+    """Trailing 6-month window (API field: ``halfYear``)."""
+
+    year: HeartbeatPriceWindow
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "HeartbeatPrices":
+        return cls(
+            day=HeartbeatPriceWindow.from_dict(data.get("day") or {}),
+            week=HeartbeatPriceWindow.from_dict(data.get("week") or {}),
+            month=HeartbeatPriceWindow.from_dict(data.get("month") or {}),
+            half_year=HeartbeatPriceWindow.from_dict(data.get("halfYear") or {}),
+            year=HeartbeatPriceWindow.from_dict(data.get("year") or {}),
+            raw=data,
+        )

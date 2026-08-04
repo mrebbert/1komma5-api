@@ -16,6 +16,7 @@ from onekommafive.models import (
     EnergyData,
     EnergyTrader,
     HeartbeatAiSummary,
+    HeartbeatPrices,
     HeartbeatSavings,
     ImpactOverview,
     LiveOverview,
@@ -49,6 +50,7 @@ from tests.fixtures import (
     make_energy_savings_data,
     make_energy_trader_data,
     make_heartbeat_ai_summary_data,
+    make_heartbeat_prices_data,
     make_impact_overview_data,
     make_live_overview_data,
     make_monthly_trading_savings_data,
@@ -687,6 +689,50 @@ class TestCmdAiSummary:
     def test_invalid_resolution_rejected(self, mock_system) -> None:
         with pytest.raises(SystemExit):
             _run("ai-summary", "--resolution", "1D")
+
+
+# ---------------------------------------------------------------------------
+# heartbeat-prices
+# ---------------------------------------------------------------------------
+
+class TestCmdHeartbeatPrices:
+    def test_prints_all_five_window_columns_and_key_prices(self, mock_system, capsys) -> None:
+        mock_system.get_heartbeat_prices.return_value = HeartbeatPrices.from_dict(
+            make_heartbeat_prices_data()
+        )
+        _run("heartbeat-prices")
+        out = capsys.readouterr().out
+        # All five window column headers
+        for col in ("day", "week", "month", "half-y", "year"):
+            assert col in out
+        # Key year-window prices (regression protection for price attribution)
+        assert "0.1825" in out  # heartbeat_price
+        assert "0.2740" in out  # comparison_tariff
+        assert "0.0803" in out  # feed_in_tariff
+        assert "0.2699" in out  # grid buy price
+        # Row labels
+        assert "PV produced" in out
+        assert "Heartbeat price" in out
+        assert "Comparison tariff" in out
+
+    def test_prints_implausibility_warning_when_flagged(self, mock_system, capsys) -> None:
+        mock_system.get_heartbeat_prices.return_value = HeartbeatPrices.from_dict(
+            make_heartbeat_prices_data()
+        )
+        _run("heartbeat-prices")
+        out = capsys.readouterr().out
+        assert "Implausible" in out
+        assert "half-y" in out
+        assert "year" in out
+
+    def test_omits_warning_when_no_flags(self, mock_system, capsys) -> None:
+        # Build a fixture where nothing is flagged
+        data = make_heartbeat_prices_data()
+        for w in data.values():
+            w["shouldReportImplausiblePvAndFeedIn"] = False
+        mock_system.get_heartbeat_prices.return_value = HeartbeatPrices.from_dict(data)
+        _run("heartbeat-prices")
+        assert "Implausible" not in capsys.readouterr().out
 
 
 # ---------------------------------------------------------------------------

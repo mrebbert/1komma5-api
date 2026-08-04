@@ -16,6 +16,8 @@ from onekommafive.models import (
     EnergyData,
     EnergyTrader,
     HeartbeatAiSummary,
+    HeartbeatPrices,
+    HeartbeatPriceWindow,
     HeartbeatSavings,
     ImpactOverview,
     LiveOverview,
@@ -50,6 +52,7 @@ from tests.fixtures import (
     make_energy_trader_data,
     make_ev_data,
     make_heartbeat_ai_summary_data,
+    make_heartbeat_prices_data,
     make_impact_overview_data,
     make_live_overview_data,
     make_monthly_trading_savings_data,
@@ -1240,6 +1243,70 @@ class TestGetEnergyTrader:
 # ---------------------------------------------------------------------------
 # Heartbeat AI summary (v2)
 # ---------------------------------------------------------------------------
+
+class TestGetHeartbeatPrices:
+    _URL = f"{_BASE}/api/v3/heartbeat-prices"
+
+    @resp_lib.activate
+    def test_returns_all_five_windows(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_prices_data(), status=200)
+        result = _make_system().get_heartbeat_prices()
+        assert isinstance(result, HeartbeatPrices)
+        for name in ("day", "week", "month", "half_year", "year"):
+            assert isinstance(getattr(result, name), HeartbeatPriceWindow)
+
+    @resp_lib.activate
+    def test_correct_price_attribution_year_window(self) -> None:
+        """Regression protection for the three distinct price semantics."""
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_prices_data(), status=200)
+        y = _make_system().get_heartbeat_prices().year
+        assert y.pv_valuation_price_eur_per_kwh == pytest.approx(0.05)
+        assert y.grid_feed_in_tariff_eur_per_kwh == pytest.approx(0.0803)
+        assert y.grid_consumption_price_eur_per_kwh == pytest.approx(0.2699)
+        assert y.heartbeat_price_eur_per_kwh == pytest.approx(0.1825)
+        assert y.comparison_tariff_eur_per_kwh == pytest.approx(0.274)
+
+    @resp_lib.activate
+    def test_energy_and_cost_values_extracted(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_prices_data(), status=200)
+        y = _make_system().get_heartbeat_prices().year
+        assert y.pv_produced_kwh == pytest.approx(7212.1)
+        assert y.grid_feed_in_kwh == pytest.approx(1819.3)
+        assert y.grid_feed_in_compensation_eur == pytest.approx(146.09)
+        assert y.grid_consumed_kwh == pytest.approx(8807.7)
+        assert y.grid_consumption_cost_eur == pytest.approx(2377.00)
+        assert y.total_consumption_kwh == pytest.approx(14200.6)
+        assert y.total_energy_cost_eur == pytest.approx(2591.52)
+
+    @resp_lib.activate
+    def test_implausibility_flag_per_window(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_prices_data(), status=200)
+        r = _make_system().get_heartbeat_prices()
+        assert r.day.should_report_implausible_pv_and_feed_in is False
+        assert r.week.should_report_implausible_pv_and_feed_in is False
+        assert r.month.should_report_implausible_pv_and_feed_in is False
+        assert r.half_year.should_report_implausible_pv_and_feed_in is True
+        assert r.year.should_report_implausible_pv_and_feed_in is True
+
+    @resp_lib.activate
+    def test_null_regional_fields_pass_through(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_prices_data(), status=200)
+        y = _make_system().get_heartbeat_prices().year
+        assert y.peak_shaving_savings_raw is None
+        assert y.swedish_costs_and_savings_raw is None
+
+    @resp_lib.activate
+    def test_url_and_site_id_query_param(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_heartbeat_prices_data(), status=200)
+        _make_system().get_heartbeat_prices()
+        assert f"siteId={FAKE_SYSTEM_ID}" in resp_lib.calls[0].request.url
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
+        with pytest.raises(RequestError, match="Failed to get heartbeat prices"):
+            _make_system().get_heartbeat_prices()
+
 
 class TestGetHeartbeatAiSummary:
     _URL = f"{_BASE}/api/v2/heartbeat-ai/summary"

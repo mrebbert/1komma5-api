@@ -809,6 +809,27 @@
             "description": "Average monthly Energy-Trader savings (`averagePastVariableSavings` in EUR). QUIRK: the path segment is the **site ID** (= systemId), NOT the customer ID — despite the misleading URL structure. Verified live: customer_id → HTTP 403, site_id → 200."
           },
           "response": []
+        },
+        {
+          "name": "Get heartbeat prices",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v3/heartbeat-prices?siteId={{siteId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v3", "heartbeat-prices"],
+              "query": [
+                {
+                  "key": "siteId",
+                  "value": "{{siteId}}",
+                  "description": "REQUIRED — site UUID as query param (not path segment)"
+                }
+              ]
+            },
+            "description": "Financial breakdown across five aggregation windows (`day`/`week`/`month`/`halfYear`/`year`): PV production, grid feed-in, grid consumption, site totals, effective per-kWh Heartbeat price. THREE DISTINCT PRICE SEMANTICS — do not confuse: (1) `pvProduction.price` is Heartbeat's internal PV valuation (≈0.05 EUR/kWh, not a market price); (2) `gridFeedIn.price` is the contractual feed-in tariff; (3) `gridConsumption.price` is the effective per-kWh grid buy price averaged over the window; `heartbeatPrice` is the site's effective all-in price; `comparisonTariff` is the grundversorger reference. VAT convention: values presented as displayed in the app — most likely gross (VAT-inclusive), matching the German consumer convention. The `vat: 0.19` field is included but its role is undocumented."
+          },
+          "response": []
         }
       ]
     },
