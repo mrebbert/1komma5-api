@@ -478,13 +478,13 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ### Site details (v2, superset)
 
-`GET /api/v2/sites/$ONEKOMMAFIVE_SYSTEM/details` — superset of the two `/systems/{id}` endpoints above. Adds bidding zone, EMP connection block, `impactedByEnwg`, grid-connection capacity and — most usefully — the current EMS runtime state (`emsMode`, `emsState`, `emsStateReasons`), which no other endpoint surfaces.
+`GET /api/v3/sites/$ONEKOMMAFIVE_SYSTEM/details` — superset of the two `/systems/{id}` endpoints above. Adds bidding zone, EMP connection block, `impactedByEnwg`, grid-connection capacity and — most usefully — the current EMS runtime state (`emsMode`, `emsState`, `emsStateReasons`), which no other endpoint surfaces.
 
 **Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/details" | jq .
+  "https://heartbeat.1komma5grad.com/api/v3/sites/$ONEKOMMAFIVE_SYSTEM/details" | jq .
 ```
 
 **Response**
@@ -553,13 +553,13 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ### Site status and assets
 
-`GET /api/v2/sites/$ONEKOMMAFIVE_SYSTEM/status-and-assets` — site connection status plus the installed hardware inventory (inverter, heat pump, meter, EV charger).
+`GET /api/v3/sites/$ONEKOMMAFIVE_SYSTEM/status-and-assets` — site connection status plus the installed hardware inventory (inverter, heat pump, meter, EV charger).
 
 **Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/status-and-assets" | jq .
+  "https://heartbeat.1komma5grad.com/api/v3/sites/$ONEKOMMAFIVE_SYSTEM/status-and-assets" | jq .
 ```
 
 **Response**

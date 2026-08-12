@@ -92,7 +92,7 @@ class System:
         """Return site connection status and installed asset inventory."""
         data = self._client._request(
             "GET",
-            self._sites_url("v2", "status-and-assets"),
+            self._sites_url("v3", "status-and-assets"),
             error_label="Failed to get site status and assets",
         )
         return SiteStatus.from_dict(data)
@@ -454,14 +454,14 @@ class System:
     # ------------------------------------------------------------------
 
     def get_site_details(self) -> SiteDetails:
-        """Fetch extended site metadata (``GET /api/v2/sites/{id}/details``).
+        """Fetch extended site metadata (``GET /api/v3/sites/{id}/details``).
 
         Superset of :meth:`info`/:meth:`get_details`: adds bidding zone,
         EMP connection block and — most useful — the current EMS runtime
         state (``ems_mode``, ``ems_state``, ``ems_state_reasons``).
         """
         data = self._client._request(
-            "GET", self._sites_url("v2", "details"),
+            "GET", self._sites_url("v3", "details"),
             error_label="Failed to get site details",
         )
         return SiteDetails.from_dict(data)

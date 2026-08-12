@@ -231,9 +231,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v2/sites/{{siteId}}/status-and-assets",
+              "raw": "{{baseUrl}}/api/v3/sites/{{siteId}}/status-and-assets",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "sites", "{{siteId}}", "status-and-assets"]
+              "path": ["api", "v3", "sites", "{{siteId}}", "status-and-assets"]
             },
             "description": "Site connection status plus hardware asset inventory: HYBRID inverter, HEAT_PUMP, METER, EV_CHARGER (manufacturer, model, serial, firmware, network). Note: serial field is `serialnumber` (lowercase n)."
           },
@@ -268,16 +268,16 @@
           "response": []
         },
         {
-          "name": "Get site details (v2, extended)",
+          "name": "Get site details (v3, extended)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v2/sites/{{siteId}}/details",
+              "raw": "{{baseUrl}}/api/v3/sites/{{siteId}}/details",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "sites", "{{siteId}}", "details"]
+              "path": ["api", "v3", "sites", "{{siteId}}", "details"]
             },
-            "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), `empReferenceId`, `impactedByEnwg` (EnWG regulatory flag — likely §14a controllable-consumption, but not documented by the API), `gridConnectionPointPhases`, `maxCurrentPerPhaseAmpere`, embedded `customer` block, and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those. Note: v2 and v3 return byte-identical payloads (verified live) — no reason to switch."
+            "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), `empReferenceId`, `impactedByEnwg` (EnWG regulatory flag — likely §14a controllable-consumption, but not documented by the API), `gridConnectionPointPhases`, `maxCurrentPerPhaseAmpere`, embedded `customer` block, and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those."
           },
           "response": []
         }

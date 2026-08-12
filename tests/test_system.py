@@ -81,7 +81,7 @@ _SYSTEM_BASE = f"{_BASE}/api/v1/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V2 = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V3 = f"{_BASE}/api/v3/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V4 = f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"
-_SITE_BASE_V2 = f"{_BASE}/api/v2/sites/{FAKE_SYSTEM_ID}"
+_SITE_BASE_V3 = f"{_BASE}/api/v3/sites/{FAKE_SYSTEM_ID}"
 _OPTIMIZATIONS_URL = f"{_BASE}/api/v1/heartbeat-ai/optimizations"
 _SELF_SUFFICIENCY_URL = f"{_BASE}/api/v1/heartbeat-ai/self-sufficiency"
 _USERS_ME_URL = f"{_IDENTITY_BASE}/api/v1/users/me"
@@ -642,7 +642,7 @@ class TestGetStatusAndAssets:
     def test_returns_site_status_instance(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SITE_BASE_V2}/status-and-assets",
+            f"{_SITE_BASE_V3}/status-and-assets",
             json=make_status_and_assets_data(),
             status=200,
         )
@@ -655,7 +655,7 @@ class TestGetStatusAndAssets:
     def test_flattens_connection_and_network(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SITE_BASE_V2}/status-and-assets",
+            f"{_SITE_BASE_V3}/status-and-assets",
             json=make_status_and_assets_data(),
             status=200,
         )
@@ -671,7 +671,7 @@ class TestGetStatusAndAssets:
     def test_extracts_optional_fields(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SITE_BASE_V2}/status-and-assets",
+            f"{_SITE_BASE_V3}/status-and-assets",
             json=make_status_and_assets_data(),
             status=200,
         )
@@ -689,7 +689,7 @@ class TestGetStatusAndAssets:
     def test_raises_on_server_error(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SITE_BASE_V2}/status-and-assets",
+            f"{_SITE_BASE_V3}/status-and-assets",
             json={"error": "error"},
             status=500,
         )
@@ -1032,11 +1032,11 @@ class TestGetSelfSufficiencyEvents:
 
 
 # ---------------------------------------------------------------------------
-# Site details (v2)
+# Site details (v3)
 # ---------------------------------------------------------------------------
 
 class TestGetSiteDetails:
-    _URL = f"{_BASE}/api/v2/sites/{FAKE_SYSTEM_ID}/details"
+    _URL = f"{_BASE}/api/v3/sites/{FAKE_SYSTEM_ID}/details"
 
     @resp_lib.activate
     def test_returns_extended_fields(self) -> None:
