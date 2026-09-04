@@ -506,6 +506,58 @@ class TestGetPrices:
                 datetime.datetime(2024, 6, 2),
             )
 
+    @resp_lib.activate
+    def test_snaps_unaligned_end_up_to_next_1h_boundary(self) -> None:
+        """v4 rejects non-hour-aligned timestamps with HTTP 422 — the SDK
+        snaps to the resolution grid so callers don't have to."""
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V4}/charts/market-prices",
+                     json=make_price_data(), status=200)
+        _make_system().get_prices(
+            start=datetime.datetime(2024, 6, 1, 0, 0, 0),
+            end=datetime.datetime(2024, 6, 1, 23, 59, 59),
+        )
+        qs = resp_lib.calls[0].request.url
+        assert "from=2024-06-01T00%3A00%3A00Z" in qs
+        assert "to=2024-06-02T00%3A00%3A00Z" in qs
+
+    @resp_lib.activate
+    def test_snaps_unaligned_start_down_and_end_up(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V4}/charts/market-prices",
+                     json=make_price_data(), status=200)
+        _make_system().get_prices(
+            start=datetime.datetime(2024, 6, 1, 0, 7, 0),
+            end=datetime.datetime(2024, 6, 1, 23, 42, 0),
+        )
+        qs = resp_lib.calls[0].request.url
+        assert "from=2024-06-01T00%3A00%3A00Z" in qs
+        assert "to=2024-06-02T00%3A00%3A00Z" in qs
+
+    @resp_lib.activate
+    def test_snaps_15m_resolution_to_quarter_hour(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V4}/charts/market-prices",
+                     json=make_price_data(), status=200)
+        _make_system().get_prices(
+            start=datetime.datetime(2024, 6, 1, 0, 8, 17),
+            end=datetime.datetime(2024, 6, 1, 0, 22, 0),
+            resolution="15m",
+        )
+        qs = resp_lib.calls[0].request.url
+        assert "from=2024-06-01T00%3A00%3A00Z" in qs
+        assert "to=2024-06-01T00%3A30%3A00Z" in qs
+        assert "resolution=15m" in qs
+
+    @resp_lib.activate
+    def test_already_aligned_timestamps_pass_through_unchanged(self) -> None:
+        resp_lib.add(resp_lib.GET, f"{_SYSTEM_BASE_V4}/charts/market-prices",
+                     json=make_price_data(), status=200)
+        _make_system().get_prices(
+            start=datetime.datetime(2024, 6, 1, 0, 0, 0),
+            end=datetime.datetime(2024, 6, 2, 0, 0, 0),
+        )
+        qs = resp_lib.calls[0].request.url
+        assert "from=2024-06-01T00%3A00%3A00Z" in qs
+        assert "to=2024-06-02T00%3A00%3A00Z" in qs
+
 
 # ---------------------------------------------------------------------------
 # Energy today

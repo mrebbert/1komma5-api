@@ -248,7 +248,7 @@ def cmd_prices(args: argparse.Namespace) -> None:
     system = _get_system()
     today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     start = today
-    end = today.replace(hour=23, minute=59, second=59)
+    end = today + datetime.timedelta(days=1)
     mp: MarketPrices = system.get_prices(
         start=start,
         end=end,
@@ -256,7 +256,7 @@ def cmd_prices(args: argparse.Namespace) -> None:
     )
     vat_pct = f"{mp.vat * 100:.0f}%"
     print(f"System:        {system.id()}")
-    print(f"Period:        {start.date()} – {end.date()}")
+    print(f"Period:        {start.date()}")
     print()
     print(f"{'':25}  {'avg':>9}  {'high':>9}  {'low':>9}  EUR/kWh")
     print(f"{'Spot':25}  {mp.average_price:>9.4f}  {mp.highest_price:>9.4f}  {mp.lowest_price:>9.4f}")

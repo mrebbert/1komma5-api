@@ -244,6 +244,19 @@ class TestCmdPrices:
         with pytest.raises(SystemExit):
             _run("prices", "--resolution", "2h")
 
+    def test_end_is_hour_aligned_next_midnight(self, mock_system) -> None:
+        """Regression: v4 market-prices rejects non-hour-aligned end (HTTP 422).
+
+        End must land on a resolution boundary; midnight of the next day
+        covers all 24 hourly slots without tripping validation.
+        """
+        mock_system.get_prices.return_value = MarketPrices.from_dict(make_price_data())
+        _run("prices")
+        kwargs = mock_system.get_prices.call_args.kwargs
+        start, end = kwargs["start"], kwargs["end"]
+        assert (end.hour, end.minute, end.second, end.microsecond) == (0, 0, 0, 0)
+        assert (end - start) == datetime.timedelta(days=1)
+
 
 # ---------------------------------------------------------------------------
 # ev

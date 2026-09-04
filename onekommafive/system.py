@@ -40,6 +40,38 @@ if TYPE_CHECKING:
     from .ev_charger import EVCharger
 
 
+_PRICE_RESOLUTION_SECONDS = {"1h": 3600, "15m": 900}
+
+
+def _align_price_range(
+    start: datetime.datetime,
+    end: datetime.datetime,
+    resolution: str,
+) -> tuple[datetime.datetime, datetime.datetime]:
+    """Snap start down and end up to the resolution boundary.
+
+    The v4 /charts/market-prices endpoint validates that both timestamps
+    align to the resolution grid (whole hour for "1h", 15-min slot for
+    "15m") and returns HTTP 422 otherwise. Unknown resolutions pass
+    through unchanged so the API surfaces its own error.
+    """
+    step = _PRICE_RESOLUTION_SECONDS.get(resolution)
+    if step is None:
+        return start, end
+
+    epoch = datetime.datetime(1970, 1, 1, tzinfo=start.tzinfo)
+
+    def _floor(ts: datetime.datetime) -> datetime.datetime:
+        delta = int((ts - epoch).total_seconds())
+        return ts - datetime.timedelta(seconds=delta % step, microseconds=ts.microsecond)
+
+    def _ceil(ts: datetime.datetime) -> datetime.datetime:
+        floored = _floor(ts)
+        return floored if floored == ts else floored + datetime.timedelta(seconds=step)
+
+    return _floor(start), _ceil(end)
+
+
 class System:
     """A single 1KOMMA5° energy system (site).
 
@@ -239,7 +271,16 @@ class System:
         end: datetime.datetime,
         resolution: str = "1h",
     ) -> MarketPrices:
-        """Fetch market electricity prices for ``[start, end]`` (``"1h"`` or ``"15m"``)."""
+        """Fetch market electricity prices for ``[start, end]`` (``"1h"`` or ``"15m"``).
+
+        The v4 endpoint rejects timestamps that don't sit on the
+        resolution boundary (HTTP 422 ``Validation failed``). This
+        method snaps ``start`` down and ``end`` up to the nearest
+        boundary so callers can pass natural ranges (e.g. today
+        00:00 – today 23:59:59) without hitting that constraint.
+        The snapped range always covers the requested window.
+        """
+        start, end = _align_price_range(start, end, resolution)
         data = self._client._request(
             "GET", self._systems_url("v4", "charts", "market-prices"),
             params={
