@@ -329,7 +329,7 @@ def cmd_wallboxes(args: argparse.Namespace) -> None:
         return
     for w in boxes:
         print(f"  {w.name or '—'}")
-        print(f"    Hardware ID:  {w.gridx_hardware_id or '—'}")
+        print(f"    ID:           {w.id or '—'}")
         print(f"    Assigned EV:  {w.assigned_ev_id or '—'}")
 
 

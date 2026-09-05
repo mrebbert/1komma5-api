@@ -19,7 +19,7 @@ from tests.fixtures import (
 )
 
 _BASE_URL = (
-    f"https://heartbeat.1komma5grad.com/api/v1/systems/{FAKE_SYSTEM_ID}/devices/evs/{FAKE_EV_ID}"
+    f"https://heartbeat.1komma5grad.com/api/v2/sites/{FAKE_SYSTEM_ID}/assets/evs/{FAKE_EV_ID}"
 )
 
 
@@ -53,11 +53,11 @@ class TestEvChargerProperties:
         charger = _make_charger()
         assert charger.name() == "My Car"
 
-    def test_name_returns_none_when_no_profile(self) -> None:
+    def test_name_returns_none_when_absent(self) -> None:
         client = make_client()
         system = MagicMock()
         system.id.return_value = FAKE_SYSTEM_ID
-        data = {"id": FAKE_EV_ID, "chargeSettings": {"chargingMode": "QUICK_CHARGE"}}
+        data = {"id": FAKE_EV_ID, "chargingMode": "QUICK_CHARGE"}
         charger = EVCharger(client, system, data)
         assert charger.name() is None
 
@@ -84,8 +84,9 @@ class TestEvChargerProperties:
     def test_min_charging_current_a(self) -> None:
         assert _make_charger().min_charging_current_a() == pytest.approx(2.0)
 
-    def test_safety_range_km(self) -> None:
-        assert _make_charger().safety_range_km() == pytest.approx(0.0)
+    def test_safety_range_km_returns_none_on_site_scoped(self) -> None:
+        """v0.2.0+: site-scoped v2 API dropped the safety-range field."""
+        assert _make_charger().safety_range_km() is None
 
     def test_assigned_charger_id(self) -> None:
         assert _make_charger().assigned_charger_id() == FAKE_CHARGER_ID
@@ -93,11 +94,13 @@ class TestEvChargerProperties:
     def test_manual_soc_timestamp(self) -> None:
         assert _make_charger().manual_soc_timestamp() == "2026-02-27T17:49:55.213Z"
 
-    def test_updated_at(self) -> None:
-        assert _make_charger().updated_at() == "2026-02-28T07:35:39.367Z"
+    def test_updated_at_returns_none_on_site_scoped(self) -> None:
+        """v0.2.0+: site-scoped v2 API dropped the top-level updatedAt field."""
+        assert _make_charger().updated_at() is None
 
-    def test_charging_mode_updated_at(self) -> None:
-        assert _make_charger().charging_mode_updated_at() == "2026-02-28T07:35:39.367Z"
+    def test_charging_mode_updated_at_returns_none_on_site_scoped(self) -> None:
+        """v0.2.0+: site-scoped v2 API dropped the chargingModeUpdatedAt field."""
+        assert _make_charger().charging_mode_updated_at() is None
 
     def test_default_soc_as_percentage(self) -> None:
         assert _make_charger().default_soc() == pytest.approx(35.0)
@@ -106,24 +109,41 @@ class TestEvChargerProperties:
         assert _make_charger().target_soc() == pytest.approx(80.0)
 
     def test_primary_schedule_days_empty_list(self) -> None:
+        """v0.2.0+: site-scoped v2 API dropped the primary-schedule-days
+        field; SDK returns an empty list."""
         assert _make_charger().primary_schedule_days() == []
 
     def test_primary_schedule_departure_time(self) -> None:
         assert _make_charger().primary_schedule_departure_time() == "12:00"
 
-    def test_primary_schedule_departure_soc_as_percentage(self) -> None:
-        assert _make_charger().primary_schedule_departure_soc() == pytest.approx(100.0)
+    def test_primary_schedule_departure_soc_aliases_target_soc(self) -> None:
+        """v0.2.0+: v2 API consolidated the primary-schedule-departure-SoC
+        and targetSoc into a single value. The SDK fallback returns
+        target_soc() so HA sensors keep working with correct semantics."""
+        charger = _make_charger()
+        assert charger.primary_schedule_departure_soc() == charger.target_soc()
+        assert charger.primary_schedule_departure_soc() == pytest.approx(80.0)
 
-    def test_secondary_schedule_fields_none_when_not_set(self) -> None:
+    def test_secondary_schedule_fields_none_on_site_scoped(self) -> None:
+        """v0.2.0+: site-scoped v2 API dropped both secondary-schedule fields."""
         charger = _make_charger()
         assert charger.secondary_schedule_departure_time() is None
         assert charger.secondary_schedule_departure_soc() is None
 
-    def test_manufacturer_none_when_profile_absent(self) -> None:
+    def test_capacity_wh_normalizes_kwh_unit(self) -> None:
+        """Enphase-style users get capacity in kWh; SDK normalises to Wh."""
         client = make_client()
         system = MagicMock()
         system.id.return_value = FAKE_SYSTEM_ID
-        data = {"id": FAKE_EV_ID, "chargeSettings": {"chargingMode": "QUICK_CHARGE"}}
+        data = make_ev_data(capacity_unit="kWh")
+        charger = EVCharger(client, system, data)
+        assert charger.capacity_wh() == pytest.approx(77000.0)
+
+    def test_manufacturer_and_capacity_none_when_fields_absent(self) -> None:
+        client = make_client()
+        system = MagicMock()
+        system.id.return_value = FAKE_SYSTEM_ID
+        data = {"id": FAKE_EV_ID, "chargingMode": "QUICK_CHARGE"}
         charger = EVCharger(client, system, data)
         assert charger.manufacturer() is None
         assert charger.capacity_wh() is None
@@ -169,7 +189,7 @@ class TestSetChargingMode:
 
         import json
         body = json.loads(resp_lib.calls[0].request.body)
-        assert body["chargeSettings"]["chargingMode"] == "QUICK_CHARGE"
+        assert body == {"chargingMode": "QUICK_CHARGE"}
 
     @resp_lib.activate
     def test_updates_internal_state_after_success(self) -> None:
@@ -255,7 +275,7 @@ class TestSetTargetSoc:
 
         import json
         body = json.loads(resp_lib.calls[0].request.body)
-        assert body["chargeSettings"]["targetSoc"] == pytest.approx(0.9)
+        assert body == {"targetSoc": pytest.approx(0.9)}
 
     @resp_lib.activate
     def test_updates_internal_state_after_success(self) -> None:
@@ -295,7 +315,7 @@ class TestSetPrimaryDepartureTime:
 
         import json
         body = json.loads(resp_lib.calls[0].request.body)
-        assert body["chargeSettings"]["primaryScheduleDepartureTime"] == "07:30"
+        assert body == {"departureTime": "07:30"}
 
     @resp_lib.activate
     def test_updates_internal_state_after_success(self) -> None:

@@ -187,33 +187,32 @@ def make_ev_data(
     ev_id: str = FAKE_EV_ID,
     charging_mode: str = "SMART_CHARGE",
     manual_soc: float | None = 0.8,
+    capacity_unit: str = "Wh",
 ) -> dict:
-    """Return an EV charger response payload matching the actual API shape."""
+    """Return an EV vehicle-profile response matching the site-scoped
+    v2 API shape (``GET /api/v2/sites/{id}/assets/evs``).
+
+    Pass ``capacity_unit="kWh"`` to exercise the SDK's unit-normalisation
+    path (some real users' payloads use kWh).
+    """
+    capacity_value = 77.0 if capacity_unit == "kWh" else 77000
     data: dict = {
         "id": ev_id,
-        "profile": {
-            "name": "My Car",
-            "manufacturer": " Volkswagen ",
-            "model": "Id.4",
-            "capacity": {"value": 77000, "unit": "Wh"},
-            "averageConsumption": None,
-            "minChargingCurrent": {"value": 2, "unit": "A"},
-            "safetyRange": {"value": 0, "unit": "km"},
-        },
+        "type": "EV",
+        "empType": "GRIDX",
+        "name": "My Car",
+        "connectionStatus": {"status": "UNKNOWN"},
+        "manufacturer": " Volkswagen ",
+        "model": "Id.4",
+        "capacity": {"value": capacity_value, "unit": capacity_unit},
+        "chargingMode": charging_mode,
+        "departureTime": "12:00",
+        "targetSoc": 0.8,
+        "chargerId": "cccccccc-0000-0000-0000-000000000001",
+        "dataSource": "USER_INPUT",
         "manualSocTimestamp": "2026-02-27T17:49:55.213Z",
-        "assignedChargerId": "cccccccc-0000-0000-0000-000000000001",
-        "chargeSettings": {
-            "chargingMode": charging_mode,
-            "defaultSoc": 0.35,
-            "targetSoc": 0.8,
-            "chargingModeUpdatedAt": "2026-02-28T07:35:39.367Z",
-            "primaryScheduleDays": [],
-            "primaryScheduleDepartureTime": "12:00",
-            "primaryScheduleDepartureSoc": 1.0,
-            "secondaryScheduleDepartureTime": None,
-            "secondaryScheduleDepartureSoc": None,
-        },
-        "updatedAt": "2026-02-28T07:35:39.367Z",
+        "defaultSoc": 0.35,
+        "minChargingCurrent": {"value": 2, "unit": "A"},
     }
     if manual_soc is not None:
         data["manualSoc"] = manual_soc
@@ -437,10 +436,11 @@ def make_price_guarantee_data(value: int | None = 12) -> dict:
 
 
 def make_wallboxes_data() -> list[dict]:
-    """Return a /devices/ev-chargers v1 response payload (list of wallboxes)."""
+    """Return a site-scoped ``/api/v1/sites/{id}/assets/ev-chargers``
+    v0.2.0+ response payload (list of wallboxes)."""
     return [
         {
-            "gridxHardwareId": "wb-0001-0000-0000-0000-000000000001",
+            "id": "wb-0001-0000-0000-0000-000000000001",
             "name": "Wallbox",
             "assignedEvId": FAKE_EV_ID,
         }
