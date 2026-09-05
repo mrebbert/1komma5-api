@@ -68,7 +68,7 @@
       "key": "evId",
       "value": "",
       "type": "string",
-      "description": "EV charger ID (from /systems/{id}/devices/evs)."
+      "description": "EV charger ID (from /sites/{id}/assets/evs)."
     },
     {
       "key": "userId",
@@ -641,7 +641,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs",
+              "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs"]
             },
@@ -655,11 +655,11 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/ev-chargers",
+              "raw": "{{baseUrl}}/api/v1/sites/{{systemId}}/assets/ev-chargers",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "systems", "{{systemId}}", "devices", "ev-chargers"]
             },
-            "description": "Physical wallbox hardware (`gridxHardwareId`, `name`, `assignedEvId`). Distinct from `/devices/evs` which returns the vehicle-side profiles. `assignedEvId` links to an entry in `/devices/evs`."
+            "description": "Physical wallbox hardware (`id`, `name`, `assignedEvId`). Site-scoped v1 endpoint (v0.2.0+); works on both GridX-native and non-GridX/Enphase setups. Distinct from `/assets/evs` which returns the vehicle-side profiles. `assignedEvId` links to an entry in `/assets/evs`."
           },
           "response": []
         },
@@ -692,7 +692,7 @@
               "raw": "{\n  \"chargeSettings\": {\n    \"chargingMode\": \"SMART_CHARGE\"\n  }\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs/{{evId}}",
+              "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
             },
@@ -715,7 +715,7 @@
               "raw": "{\n  \"chargeSettings\": {\n    \"targetSoc\": 0.8\n  }\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs/{{evId}}",
+              "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
             },
@@ -738,7 +738,7 @@
               "raw": "{\n  \"manualSoc\": 0.45\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs/{{evId}}",
+              "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
             },
@@ -761,7 +761,7 @@
               "raw": "{\n  \"chargeSettings\": {\n    \"primaryScheduleDepartureTime\": \"07:30\"\n  }\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/devices/evs/{{evId}}",
+              "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
             },
