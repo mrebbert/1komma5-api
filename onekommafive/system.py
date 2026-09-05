@@ -172,11 +172,16 @@ class System:
         ]
 
     def get_ev_chargers(self) -> list[EVCharger]:
-        """Retrieve all EV charger devices registered to this system."""
+        """Retrieve all EV (vehicle-side) charging profiles bound to this site.
+
+        Uses the site-scoped ``GET /api/v2/sites/{id}/assets/evs`` endpoint
+        (v0.2.0+). Universally supported across GridX-native and
+        non-GridX (e.g. Enphase-based) setups.
+        """
         from .ev_charger import EVCharger
 
         data = self._client._request(
-            "GET", self._systems_url("v1", "devices", "evs"),
+            "GET", self._sites_url("v2", "assets", "evs"),
             error_label="Failed to get EV chargers",
         )
         return [EVCharger(self._client, self, ev) for ev in data]
@@ -347,13 +352,18 @@ class System:
     # ------------------------------------------------------------------
 
     def get_wallboxes(self) -> list[Wallbox]:
-        """Fetch physical wallbox hardware for this system.
+        """Fetch physical wallbox hardware for this site.
+
+        Uses the site-scoped ``GET /api/v1/sites/{id}/assets/ev-chargers``
+        endpoint (v0.2.0+). Universally supported; non-GridX setups
+        (e.g. Enphase) no longer 422 the way the legacy
+        ``/systems/{id}/devices/ev-chargers`` route did.
 
         Complements :meth:`get_ev_chargers` which returns the vehicle-side
         charging profiles.
         """
         data = self._client._request(
-            "GET", self._systems_url("v1", "devices", "ev-chargers"),
+            "GET", self._sites_url("v1", "assets", "ev-chargers"),
             error_label="Failed to get wallboxes",
         )
         return [Wallbox.from_dict(w) for w in data or []]

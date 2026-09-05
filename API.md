@@ -940,7 +940,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ### List EV chargers
 
-`GET /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs` — the **vehicle-side** charging profiles registered to a system (charging mode, target SoC, departure schedule).
+`GET /api/v2/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs` — the **vehicle-side** charging profiles registered to a system (charging mode, target SoC, departure schedule).
 
 For the physical wallbox hardware, see [List wallboxes (hardware)](#list-wallboxes-hardware).
 
@@ -948,43 +948,40 @@ For the physical wallbox hardware, see [List wallboxes (hardware)](#list-wallbox
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs" | jq .
+  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs" | jq .
 ```
 
-**Response** (array)
+**Response** (array; single flat object per vehicle)
 
 ```json
 [
   {
     "id": "<uuid>",
-    "profile": {
-      "name": "...",
-      "manufacturer": "...",
-      "model": "...",
-      "capacity": { "value": 77000, "unit": "Wh" },
-      "minChargingCurrent": { "value": 2, "unit": "A" }
-    },
-    "manualSoc": 0.5,
+    "type": "EV",
+    "empType": "GRIDX",
+    "name": "...",
+    "connectionStatus": { "status": "UNKNOWN" },
+    "manufacturer": "...",
+    "model": "...",
+    "capacity": { "value": 77000, "unit": "Wh" },
+    "chargingMode": "SMART_CHARGE",
+    "departureTime": "06:30",
+    "targetSoc": 0.8,
+    "chargerId": "<uuid>",
+    "manualSoc": 0.8,
+    "dataSource": "USER_INPUT",
     "manualSocTimestamp": "ISO8601",
-    "assignedChargerId": "<uuid>",
-    "chargeSettings": {
-      "defaultSoc": 0.35,
-      "targetSoc": 0.8,
-      "chargingMode": "SMART_CHARGE",
-      "primaryScheduleDays": [],
-      "primaryScheduleDepartureTime": "06:30",
-      "primaryScheduleDepartureSoc": 1,
-      "secondaryScheduleDepartureTime": null,
-      "secondaryScheduleDepartureSoc": null
-    }
+    "defaultSoc": 0.35,
+    "minChargingCurrent": { "value": 2, "unit": "A" }
   }
 ]
 ```
 
 **Notes**
 
-- **`capacity.unit` is Wh, not kWh** (77 000 Wh = 77 kWh).
+- **`capacity.unit` varies per user** (`Wh` or `kWh` — the Python SDK normalises to Wh in `EVCharger.capacity_wh()`).
 - `manualSoc` is a decimal in `[0, 1]` (not a percentage), and is set manually because the wallbox has no SoC feedback channel.
+- `departureTime` is the (single) scheduled departure for smart charging; the vehicle is expected to reach `targetSoc` by that time. The v1-era distinction between `targetSoc` and `primaryScheduleDepartureSoc` was consolidated in v2 — the app UI now shows one SoC value for scheduled departure.
 
 ---
 
@@ -1022,9 +1019,9 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ### Update EV settings
 
-`PATCH /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID` — update charging mode, target SoC, current SoC, or departure time.
+`PATCH /api/v2/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/$EV_ID` — update charging mode, target SoC, current SoC, or departure time.
 
-Each call sends a partial body matching the target field.
+Each call sends a partial flat body with just the field to change. The endpoint also still accepts the legacy nested form (`{"chargeSettings": {...}}`), but new callers should prefer the flat form.
 
 **Set charging mode**
 
@@ -1033,8 +1030,8 @@ Each call sends a partial body matching the target field.
 curl -s -X PATCH \
   -H "Authorization: Bearer $BEARER_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"chargeSettings": {"chargingMode": "SOLAR_CHARGE"}}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+  -d '{"chargingMode": "SOLAR_CHARGE"}' \
+  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/$EV_ID" | jq .
 ```
 
 **Set current SoC** (decimal `0.0`–`1.0`)
@@ -1044,7 +1041,7 @@ curl -s -X PATCH \
   -H "Authorization: Bearer $BEARER_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"manualSoc": 0.8}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/$EV_ID" | jq .
 ```
 
 **Set target SoC** (decimal `0.0`–`1.0`)
@@ -1053,33 +1050,33 @@ curl -s -X PATCH \
 curl -s -X PATCH \
   -H "Authorization: Bearer $BEARER_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"chargeSettings": {"targetSoc": 0.9}}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+  -d '{"targetSoc": 0.9}' \
+  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/$EV_ID" | jq .
 ```
 
-**Set primary departure time** (format `HH:MM`)
+**Set departure time** (format `HH:MM`)
 
 ```bash
 curl -s -X PATCH \
   -H "Authorization: Bearer $BEARER_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"chargeSettings": {"primaryScheduleDepartureTime": "07:30"}}' \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/evs/$EV_ID" | jq .
+  -d '{"departureTime": "07:30"}' \
+  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/$EV_ID" | jq .
 ```
 
 ---
 
 ### List wallboxes (hardware)
 
-`GET /api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/ev-chargers` — the **physical wallbox hardware** assigned to a system (GridX hardware ID, name, currently-paired EV).
+`GET /api/v1/sites/$ONEKOMMAFIVE_SYSTEM/assets/ev-chargers` — the **physical wallbox hardware** assigned to a site (wallbox id, name, currently-paired EV).
 
-Distinct from [List EV chargers](#list-ev-chargers) which returns the vehicle-side profile. `assignedEvId` links to an entry in `/devices/evs`.
+Distinct from [List EV chargers](#list-ev-chargers) which returns the vehicle-side profile. `assignedEvId` links to an entry in `/assets/evs`.
 
 **Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://heartbeat.1komma5grad.com/api/v1/systems/$ONEKOMMAFIVE_SYSTEM/devices/ev-chargers" | jq .
+  "https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/assets/ev-chargers" | jq .
 ```
 
 **Response** (array)
@@ -1087,12 +1084,14 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 ```json
 [
   {
-    "gridxHardwareId": "<uuid>",
+    "id": "<uuid>",
     "name": "Wallbox",
     "assignedEvId": "<uuid>"
   }
 ]
 ```
+
+The legacy `/api/v1/systems/{id}/devices/ev-chargers` route returned `gridxHardwareId` in place of `id`. That path is gone from the SDK as of v0.2.0 because it returned HTTP 422 error_code 30401 on non-GridX (e.g. Enphase-based) setups; the site-scoped path above works universally.
 
 ---
 
@@ -1783,7 +1782,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 | `price-customizations`, `comparison-price` | **String EUR/kWh** (base fee: **EUR/month**) |
 | `price-guarantee` | Value per `priceGuaranteeUnit` (e.g. `ct/kWh`) |
 | `smart-meter` | Concession fee in **EUR/kWh** |
-| `devices/evs` | Capacity in **Wh**, charging current in **A** |
+| `assets/evs` | Capacity in **Wh** or **kWh** (user-dependent — Python SDK normalises to Wh), charging current in **A** |
 | `ems/actions/get-settings` | **kW** (`maxSolarSurplusUsage`) |
 
 ---
@@ -1826,7 +1825,7 @@ Consolidated reference of every non-obvious behaviour documented above:
 
 - `heartbeat-ai/optimizations` + `heartbeat-ai/self-sufficiency`: `data.marketPrice` is empirically much lower than the spot price from `charts/market-prices` (factor ~4–5). Likely the feed-in / trader-side price rather than the grid-purchase price — not documented by the API.
 - `heartbeat-ai/summary` top-level fields `priceAvoided` / `batteryChargingCost` / `gridChargingCost` are empirically always `null`; the populated values sit inside the `peakPriceAvoided` block.
-- `/devices/evs` returns the **vehicle-side** profile (charging mode, target SoC, schedules). `/devices/ev-chargers` returns the **physical wallbox hardware**. They are complementary — link them via `assignedEvId`.
+- `/assets/evs` returns the **vehicle-side** profile (charging mode, target SoC, schedules). `/assets/ev-chargers` returns the **physical wallbox hardware**. They are complementary — link them via `assignedEvId`.
 - `/sites/{id}/details` **v2 and v3 return byte-identical payloads** (verified 2026-08-02). Do NOT include `deviceGateways` — use `/systems/{id}/details` for those.
 
 **Unit surprises**

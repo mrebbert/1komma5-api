@@ -81,6 +81,8 @@ _SYSTEM_BASE = f"{_BASE}/api/v1/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V2 = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V3 = f"{_BASE}/api/v3/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V4 = f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"
+_SITE_BASE_V1 = f"{_BASE}/api/v1/sites/{FAKE_SYSTEM_ID}"
+_SITE_BASE_V2 = f"{_BASE}/api/v2/sites/{FAKE_SYSTEM_ID}"
 _SITE_BASE_V3 = f"{_BASE}/api/v3/sites/{FAKE_SYSTEM_ID}"
 _OPTIMIZATIONS_URL = f"{_BASE}/api/v1/heartbeat-ai/optimizations"
 _SELF_SUFFICIENCY_URL = f"{_BASE}/api/v1/heartbeat-ai/self-sufficiency"
@@ -290,7 +292,7 @@ class TestGetEvChargers:
     def test_returns_list_of_ev_charger_instances(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE}/devices/evs",
+            f"{_SITE_BASE_V2}/assets/evs",
             json=[make_ev_data()],
             status=200,
         )
@@ -303,7 +305,7 @@ class TestGetEvChargers:
     def test_returns_empty_list_when_no_ev_chargers(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE}/devices/evs",
+            f"{_SITE_BASE_V2}/assets/evs",
             json=[],
             status=200,
         )
@@ -313,7 +315,7 @@ class TestGetEvChargers:
     def test_raises_on_server_error(self) -> None:
         resp_lib.add(
             resp_lib.GET,
-            f"{_SYSTEM_BASE}/devices/evs",
+            f"{_SITE_BASE_V2}/assets/evs",
             json={"error": "error"},
             status=500,
         )
@@ -961,7 +963,7 @@ class TestGetPriceGuarantee:
 # ---------------------------------------------------------------------------
 
 class TestGetWallboxes:
-    _URL = f"{_SYSTEM_BASE}/devices/ev-chargers"
+    _URL = f"{_SITE_BASE_V1}/assets/ev-chargers"
 
     @resp_lib.activate
     def test_returns_list_of_wallboxes(self) -> None:
@@ -970,8 +972,18 @@ class TestGetWallboxes:
         assert len(boxes) == 1
         assert isinstance(boxes[0], Wallbox)
         assert boxes[0].name == "Wallbox"
-        assert boxes[0].gridx_hardware_id == "wb-0001-0000-0000-0000-000000000001"
+        assert boxes[0].id == "wb-0001-0000-0000-0000-000000000001"
         assert boxes[0].assigned_ev_id == "ev-1111-1111-1111-111111111111"
+
+    @resp_lib.activate
+    def test_gridx_hardware_id_is_none_on_site_scoped_response(self) -> None:
+        """The site-scoped v0.2.0+ response no longer surfaces the legacy
+        `gridxHardwareId` field. Regression protection: the attribute
+        stays declared on the model (for backwards-compatible presence
+        checks in HA diagnostics) but resolves to None."""
+        resp_lib.add(resp_lib.GET, self._URL, json=make_wallboxes_data(), status=200)
+        boxes = _make_system().get_wallboxes()
+        assert boxes[0].gridx_hardware_id is None
 
     @resp_lib.activate
     def test_returns_empty_list_when_none(self) -> None:
