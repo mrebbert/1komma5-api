@@ -124,7 +124,12 @@ class EVCharger:
         return []
 
     def primary_schedule_departure_time(self) -> str | None:
-        """Return the primary departure time as ``'HH:MM'``, or ``None``."""
+        """Return the scheduled departure time as ``'HH:MM'``, or ``None``.
+
+        The site-scoped v2 API has a single departure-time slot per
+        vehicle (the ``primary``/``secondary`` distinction is a v1
+        anachronism); this reader keeps its historical name.
+        """
         return self._data.get("departureTime")
 
     def primary_schedule_departure_soc(self) -> float | None:
@@ -249,9 +254,12 @@ class EVCharger:
         self._data["targetSoc"] = soc_decimal
 
     def set_primary_departure_time(self, time: str) -> None:
-        """Set the primary schedule departure time.
+        """Set the scheduled departure time.
 
         No-ops silently when *time* matches the current departure time.
+        The method name keeps its ``primary`` prefix for backwards
+        compatibility (v1 API had ``primary``/``secondary`` slots; v2
+        has a single slot).
 
         Args:
             time: Departure time as ``'HH:MM'``, e.g. ``'06:00'``.
@@ -266,7 +274,7 @@ class EVCharger:
             "PATCH",
             self._url(),
             json={"departureTime": time},
-            error_label="Failed to set primary departure time",
+            error_label="Failed to set departure time",
         )
         self._data["departureTime"] = time
 

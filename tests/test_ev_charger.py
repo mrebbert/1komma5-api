@@ -335,5 +335,5 @@ class TestSetPrimaryDepartureTime:
         resp_lib.add(resp_lib.PATCH, _BASE_URL, json={"error": "bad request"}, status=400)
 
         charger = _make_charger()
-        with pytest.raises(RequestError, match="Failed to set primary departure time"):
+        with pytest.raises(RequestError, match="Failed to set departure time"):
             charger.set_primary_departure_time("07:30")

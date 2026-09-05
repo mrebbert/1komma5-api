@@ -725,10 +725,10 @@ def cmd_ev(args: argparse.Namespace) -> None:
         print(f"    Charger:   {ev.assigned_charger_id() or '—'}")
         print(f"    Mode:      {ev.charging_mode().value}")
         print(f"    SoC:       {soc}  (target {target}  default {default})")
-        if ev.primary_schedule_days():
-            days = ", ".join(ev.primary_schedule_days())
-            print(f"    Schedule:  {days}  dep. {ev.primary_schedule_departure_time()}  SoC {_pct(ev.primary_schedule_departure_soc())}")
-        print(f"    Updated:   {ev.updated_at() or '—'}")
+        if ev.primary_schedule_departure_time():
+            print(f"    Departure: {ev.primary_schedule_departure_time()}")
+        if ev.updated_at():
+            print(f"    Updated:   {ev.updated_at()}")
 
 
 def cmd_ev_modes(args: argparse.Namespace) -> None:
@@ -784,7 +784,7 @@ def cmd_set_ev_target_soc(args: argparse.Namespace) -> None:
 def cmd_set_ev_departure(args: argparse.Namespace) -> None:
     ev = _resolve_ev(args)
     ev.set_primary_departure_time(args.time)
-    print(f"EV {ev.id()}: primary departure time set to {args.time}")
+    print(f"EV {ev.id()}: departure time set to {args.time}")
 
 
 def cmd_ems(args: argparse.Namespace) -> None:
@@ -975,7 +975,7 @@ def main() -> None:
         "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
     )
 
-    set_dep_p = sub.add_parser("set-ev-departure", help="Set EV primary departure time")
+    set_dep_p = sub.add_parser("set-ev-departure", help="Set EV departure time")
     set_dep_p.add_argument("time", metavar="HH:MM", help="Departure time, e.g. 07:30")
     set_dep_p.add_argument(
         "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
