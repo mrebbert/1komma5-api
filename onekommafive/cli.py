@@ -750,13 +750,19 @@ def cmd_set_ev_mode(args: argparse.Namespace) -> None:
         valid = ", ".join(m.value for m in ChargingMode)
         sys.exit(f"Error: invalid mode {args.mode!r}. Valid values: {valid}")
 
-    ev = _resolve_ev(args)
-    ev.set_charging_mode(mode)
-    print(f"EV {ev.id()}: charging mode set to {mode.value}")
+    for ev in _resolve_evs(args):
+        ev.set_charging_mode(mode)
+        print(f"EV {ev.id()}: charging mode set to {mode.value}")
 
 
 def _resolve_ev(args):
-    """Return the targeted EVCharger from args (--ev or first charger)."""
+    """Return the targeted EVCharger from args.
+
+    ``--ev <id>`` picks a specific one. Without it, the CLI defaults to
+    the single registered charger. When several are registered without
+    ``--ev``, the command aborts with a listing so the caller cannot
+    accidentally steer the wrong vehicle.
+    """
     system = _get_system()
     chargers = system.get_ev_chargers()
     if not chargers:
@@ -766,7 +772,29 @@ def _resolve_ev(args):
         if ev is None:
             sys.exit(f"Error: EV charger {args.ev!r} not found")
         return ev
+    if len(chargers) > 1:
+        lines = ["Error: multiple EV chargers registered, --ev is required. Registered:"]
+        for c in chargers:
+            label = " ".join(filter(None, [c.manufacturer(), c.model()])) or c.name() or "—"
+            lines.append(f"  {c.id()}  {label}")
+        sys.exit("\n".join(lines))
     return chargers[0]
+
+
+def _resolve_evs(args):
+    """Return the list of EVCharger objects a setter should act on.
+
+    ``--all-evs`` targets every registered charger. ``--ev <id>`` picks
+    one. Without either flag, the single-charger default applies via
+    :func:`_resolve_ev`.
+    """
+    if getattr(args, "all_evs", False):
+        system = _get_system()
+        chargers = system.get_ev_chargers()
+        if not chargers:
+            sys.exit("Error: no EV chargers registered on this system")
+        return chargers
+    return [_resolve_ev(args)]
 
 
 def cmd_set_ev_target_soc(args: argparse.Namespace) -> None:
@@ -776,15 +804,15 @@ def cmd_set_ev_target_soc(args: argparse.Namespace) -> None:
         sys.exit(f"Error: invalid SoC value {args.soc!r} — must be a number between 0 and 100")
     if not 0.0 <= soc <= 100.0:
         sys.exit(f"Error: SoC must be between 0 and 100, got {soc}")
-    ev = _resolve_ev(args)
-    ev.set_target_soc(soc)
-    print(f"EV {ev.id()}: target SoC set to {soc:.0f}%")
+    for ev in _resolve_evs(args):
+        ev.set_target_soc(soc)
+        print(f"EV {ev.id()}: target SoC set to {soc:.0f}%")
 
 
 def cmd_set_ev_departure(args: argparse.Namespace) -> None:
-    ev = _resolve_ev(args)
-    ev.set_primary_departure_time(args.time)
-    print(f"EV {ev.id()}: departure time set to {args.time}")
+    for ev in _resolve_evs(args):
+        ev.set_primary_departure_time(args.time)
+        print(f"EV {ev.id()}: departure time set to {args.time}")
 
 
 def cmd_ems(args: argparse.Namespace) -> None:
@@ -966,19 +994,35 @@ def main() -> None:
         "--ev",
         metavar="EV_ID",
         default=None,
-        help="EV charger ID (default: first charger)",
+        help="EV charger ID (required when several are registered)",
+    )
+    set_ev_p.add_argument(
+        "--all-evs",
+        dest="all_evs",
+        action="store_true",
+        help="Apply to every registered EV charger",
     )
 
     set_soc_p = sub.add_parser("set-ev-target-soc", help="Set EV target state-of-charge")
     set_soc_p.add_argument("soc", metavar="SOC", help="Target SoC in percent (0–100)")
     set_soc_p.add_argument(
-        "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
+        "--ev", metavar="EV_ID", default=None,
+        help="EV charger ID (required when several are registered)",
+    )
+    set_soc_p.add_argument(
+        "--all-evs", dest="all_evs", action="store_true",
+        help="Apply to every registered EV charger",
     )
 
     set_dep_p = sub.add_parser("set-ev-departure", help="Set EV departure time")
     set_dep_p.add_argument("time", metavar="HH:MM", help="Departure time, e.g. 07:30")
     set_dep_p.add_argument(
-        "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
+        "--ev", metavar="EV_ID", default=None,
+        help="EV charger ID (required when several are registered)",
+    )
+    set_dep_p.add_argument(
+        "--all-evs", dest="all_evs", action="store_true",
+        help="Apply to every registered EV charger",
     )
 
     sub.add_parser("price-config", help="User-configured energy prices (grid, comparison, monthly base)")
