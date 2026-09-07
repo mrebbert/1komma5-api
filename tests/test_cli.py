@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from onekommafive.cli import main
+from onekommafive.errors import RequestError
 from onekommafive.models import (
     ChargingMode,
     ComparisonPrice,
@@ -714,6 +715,18 @@ class TestCmdWallboxes:
         assert "HOMEfix 11kW" in out
         assert "057.5" in out
         assert "CONNECTED" in out
+
+    def test_survives_request_error_from_enrichment_call(self, mock_system, capsys) -> None:
+        """The enrichment call is best-effort: a RequestError must not
+        break the primary wallbox listing."""
+        mock_system.get_wallboxes.return_value = [Wallbox.from_dict(w) for w in make_wallboxes_data()]
+        mock_system.get_status_and_assets.side_effect = RequestError("boom")
+        _run("wallboxes")
+        out = capsys.readouterr().out
+        assert "Wallbox" in out
+        assert "wb-0001" in out
+        # Enrichment lines are absent because the call failed
+        assert "Manufacturer" not in out
 
 
 # ---------------------------------------------------------------------------
