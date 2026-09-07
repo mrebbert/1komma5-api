@@ -384,6 +384,11 @@ class Client:
         if response.status_code != 200:
             raise AuthenticationError(f"Token refresh failed: {response.text}")
 
-        self._token_set = response.json()
+        # Merge into the existing token set instead of replacing it. Auth0
+        # only returns a new refresh_token when server-side rotation is on;
+        # otherwise the refresh response omits the field. Overwriting the
+        # whole token set would clobber our still-valid refresh_token,
+        # forcing a full password login on the next refresh cycle.
+        self._token_set = {**self._token_set, **response.json()}
         self._save_token_cache()
         return self._token_set["access_token"]

@@ -178,6 +178,53 @@ class TestRefreshToken:
         with pytest.raises(AuthenticationError, match="Token refresh failed"):
             client._refresh_token()
 
+    @resp_lib.activate
+    def test_preserves_refresh_token_when_response_omits_it(self) -> None:
+        """Regression: Auth0 responses with server-side rotation OFF omit
+        the refresh_token field. Previously the SDK overwrote _token_set
+        with the response, dropping the still-valid refresh_token and
+        causing subsequent refreshes to fail with 'No refresh token found'.
+        """
+        resp_lib.add(
+            resp_lib.POST,
+            _TOKEN_URL,
+            json={
+                "access_token": "new-access-token",
+                "id_token": "new-id-token",
+                "expires_in": 86400,
+                "token_type": "Bearer",
+                # NOTE: no refresh_token in the response
+            },
+            status=200,
+        )
+        client = Client("u", "p")
+        client._token_set = {**FAKE_TOKEN_SET, "refresh_token": "original-refresh"}
+
+        client._refresh_token()
+
+        assert client._token_set["access_token"] == "new-access-token"
+        assert client._token_set["refresh_token"] == "original-refresh"
+
+    @resp_lib.activate
+    def test_updates_refresh_token_when_response_rotates_it(self) -> None:
+        """Companion test: when Auth0 does rotate, the new refresh_token
+        replaces the old one (dict merge picks the newer value)."""
+        resp_lib.add(
+            resp_lib.POST,
+            _TOKEN_URL,
+            json={
+                "access_token": "new-access-token",
+                "refresh_token": "rotated-refresh",
+            },
+            status=200,
+        )
+        client = Client("u", "p")
+        client._token_set = {**FAKE_TOKEN_SET, "refresh_token": "original-refresh"}
+
+        client._refresh_token()
+
+        assert client._token_set["refresh_token"] == "rotated-refresh"
+
 
 # ---------------------------------------------------------------------------
 # get_user
