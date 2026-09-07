@@ -55,6 +55,7 @@ fresh login.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime
 import os
 import sys
@@ -333,15 +334,13 @@ def cmd_wallboxes(args: argparse.Namespace) -> None:
     # Enrich each wallbox with manufacturer/model/firmware/connection status
     # from the assets endpoint. Match heuristic (name-based, HA-parity): the
     # two endpoints use independent UUIDs, so name is the only join key.
-    # Only swallow the SDK's own RequestError — programming errors
-    # (AttributeError etc.) still surface so bugs don't hide.
+    # RequestError from the secondary call is best-effort — swallow only that
+    # via contextlib.suppress; programming errors still surface loudly.
     assets_by_name: dict[str, Any] = {}
-    try:
+    with contextlib.suppress(RequestError):
         for asset in system.get_status_and_assets().assets:
             if asset.type == "EV_CHARGER" and asset.name:
                 assets_by_name[asset.name] = asset
-    except RequestError:
-        pass
 
     for w in boxes:
         print(f"  {w.name or '—'}")
@@ -739,12 +738,10 @@ def cmd_ev(args: argparse.Namespace) -> None:
     # instead of a bare UUID — helpful in multi-wallbox setups. Best-effort;
     # only the SDK's RequestError is swallowed so real code bugs still surface.
     wallbox_names: dict[str, str] = {}
-    try:
+    with contextlib.suppress(RequestError):
         for wb in system.get_wallboxes():
             if wb.id and wb.name:
                 wallbox_names[wb.id] = wb.name
-    except RequestError:
-        pass
 
     for ev in chargers:
         soc = f"{ev.current_soc():.0f}%" if ev.current_soc() is not None else "—"
