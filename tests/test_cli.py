@@ -303,6 +303,18 @@ class TestCmdEv:
         _run("ev")
         assert "—" in capsys.readouterr().out
 
+    def test_charger_shows_wallbox_name_when_available(self, mock_system, capsys) -> None:
+        """Cross-endpoint lookup: charger_id resolves to wallbox name."""
+        ev = self._ev_mock()
+        ev.assigned_charger_id.return_value = "wb-0001"
+        mock_system.get_ev_chargers.return_value = [ev]
+        wallbox_payload = {"id": "wb-0001", "name": "Garage Wallbox", "assignedEvId": FAKE_EV_ID}
+        mock_system.get_wallboxes.return_value = [Wallbox.from_dict(wallbox_payload)]
+        _run("ev")
+        out = capsys.readouterr().out
+        assert "Garage Wallbox" in out
+        assert "wb-0001" in out
+
 
 # ---------------------------------------------------------------------------
 # ev-modes
@@ -364,6 +376,38 @@ class TestCmdSetEvMode:
         with pytest.raises(SystemExit):
             _run("set-ev-mode", "TURBO_CHARGE")
 
+    def test_multi_ev_without_flag_exits_with_listing(self, mock_system, capsys) -> None:
+        """Fail-fast so a caller cannot silently steer the wrong vehicle."""
+        ev1 = self._ev("ev-aaa")
+        ev1.manufacturer.return_value = "Volkswagen"
+        ev1.model.return_value = "Id.4"
+        ev1.name.return_value = None
+        ev2 = self._ev("ev-bbb")
+        ev2.manufacturer.return_value = "Tesla"
+        ev2.model.return_value = "Model 3"
+        ev2.name.return_value = None
+        mock_system.get_ev_chargers.return_value = [ev1, ev2]
+        with pytest.raises(SystemExit) as exc:
+            _run("set-ev-mode", "SMART_CHARGE")
+        msg = str(exc.value)
+        assert "multiple EV chargers" in msg
+        assert "--ev" in msg
+        assert "ev-aaa" in msg
+        assert "ev-bbb" in msg
+        ev1.set_charging_mode.assert_not_called()
+        ev2.set_charging_mode.assert_not_called()
+
+    def test_all_evs_flag_applies_to_every_charger(self, mock_system, capsys) -> None:
+        ev1 = self._ev("ev-aaa")
+        ev2 = self._ev("ev-bbb")
+        mock_system.get_ev_chargers.return_value = [ev1, ev2]
+        _run("set-ev-mode", "SOLAR_CHARGE", "--all-evs")
+        ev1.set_charging_mode.assert_called_once_with(ChargingMode.SOLAR_CHARGE)
+        ev2.set_charging_mode.assert_called_once_with(ChargingMode.SOLAR_CHARGE)
+        out = capsys.readouterr().out
+        assert "ev-aaa" in out
+        assert "ev-bbb" in out
+
 
 # ---------------------------------------------------------------------------
 # set-ev-target-soc
@@ -405,6 +449,29 @@ class TestCmdSetEvTargetSoc:
         with pytest.raises(SystemExit):
             _run("set-ev-target-soc", "80")
 
+    def test_multi_ev_without_flag_exits(self, mock_system) -> None:
+        ev1 = self._ev("ev-aaa")
+        ev1.manufacturer.return_value = None
+        ev1.model.return_value = None
+        ev1.name.return_value = None
+        ev2 = self._ev("ev-bbb")
+        ev2.manufacturer.return_value = None
+        ev2.model.return_value = None
+        ev2.name.return_value = None
+        mock_system.get_ev_chargers.return_value = [ev1, ev2]
+        with pytest.raises(SystemExit):
+            _run("set-ev-target-soc", "80")
+        ev1.set_target_soc.assert_not_called()
+        ev2.set_target_soc.assert_not_called()
+
+    def test_all_evs_flag_applies_to_every_charger(self, mock_system) -> None:
+        ev1 = self._ev("ev-aaa")
+        ev2 = self._ev("ev-bbb")
+        mock_system.get_ev_chargers.return_value = [ev1, ev2]
+        _run("set-ev-target-soc", "75", "--all-evs")
+        ev1.set_target_soc.assert_called_once_with(75.0)
+        ev2.set_target_soc.assert_called_once_with(75.0)
+
 
 # ---------------------------------------------------------------------------
 # set-ev-departure
@@ -435,6 +502,29 @@ class TestCmdSetEvDeparture:
         mock_system.get_ev_chargers.return_value = []
         with pytest.raises(SystemExit):
             _run("set-ev-departure", "07:30")
+
+    def test_multi_ev_without_flag_exits(self, mock_system) -> None:
+        ev1 = self._ev("ev-aaa")
+        ev1.manufacturer.return_value = None
+        ev1.model.return_value = None
+        ev1.name.return_value = None
+        ev2 = self._ev("ev-bbb")
+        ev2.manufacturer.return_value = None
+        ev2.model.return_value = None
+        ev2.name.return_value = None
+        mock_system.get_ev_chargers.return_value = [ev1, ev2]
+        with pytest.raises(SystemExit):
+            _run("set-ev-departure", "07:30")
+        ev1.set_primary_departure_time.assert_not_called()
+        ev2.set_primary_departure_time.assert_not_called()
+
+    def test_all_evs_flag_applies_to_every_charger(self, mock_system) -> None:
+        ev1 = self._ev("ev-aaa")
+        ev2 = self._ev("ev-bbb")
+        mock_system.get_ev_chargers.return_value = [ev1, ev2]
+        _run("set-ev-departure", "06:00", "--all-evs")
+        ev1.set_primary_departure_time.assert_called_once_with("06:00")
+        ev2.set_primary_departure_time.assert_called_once_with("06:00")
 
 
 # ---------------------------------------------------------------------------
@@ -598,6 +688,32 @@ class TestCmdWallboxes:
         mock_system.get_wallboxes.return_value = []
         _run("wallboxes")
         assert "No wallboxes" in capsys.readouterr().out
+
+    def test_enriches_from_status_and_assets_when_names_match(self, mock_system, capsys) -> None:
+        """Multi-wallbox parity with the HA integration: name-match against
+        /status-and-assets brings in manufacturer/model/firmware/connection."""
+        mock_system.get_wallboxes.return_value = [Wallbox.from_dict(w) for w in make_wallboxes_data()]
+        status_payload = {
+            "status": "CONNECTED",
+            "assets": [
+                {
+                    "id": "asset-1",
+                    "type": "EV_CHARGER",
+                    "name": "Wallbox",
+                    "manufacturer": "go-e",
+                    "model": "HOMEfix 11kW",
+                    "firmware": "057.5",
+                    "connectionStatus": {"status": "CONNECTED"},
+                },
+            ],
+        }
+        mock_system.get_status_and_assets.return_value = SiteStatus.from_dict(status_payload)
+        _run("wallboxes")
+        out = capsys.readouterr().out
+        assert "go-e" in out
+        assert "HOMEfix 11kW" in out
+        assert "057.5" in out
+        assert "CONNECTED" in out
 
 
 # ---------------------------------------------------------------------------
