@@ -62,6 +62,7 @@ from pathlib import Path
 from typing import Any
 
 from onekommafive import Client, Systems
+from onekommafive.errors import RequestError
 from onekommafive.models import ChargingMode, MarketPrices
 
 # Token cache for the CLI: skips the OAuth2 login round-trip on subsequent
@@ -332,13 +333,15 @@ def cmd_wallboxes(args: argparse.Namespace) -> None:
     # Enrich each wallbox with manufacturer/model/firmware/connection status
     # from the assets endpoint. Match heuristic (name-based, HA-parity): the
     # two endpoints use independent UUIDs, so name is the only join key.
+    # Only swallow the SDK's own RequestError — programming errors
+    # (AttributeError etc.) still surface so bugs don't hide.
     assets_by_name: dict[str, Any] = {}
     try:
         for asset in system.get_status_and_assets().assets:
             if asset.type == "EV_CHARGER" and asset.name:
                 assets_by_name[asset.name] = asset
-    except Exception:
-        pass  # asset-enrichment is best-effort; wallbox output stays usable
+    except RequestError:
+        pass
 
     for w in boxes:
         print(f"  {w.name or '—'}")
@@ -733,13 +736,14 @@ def cmd_ev(args: argparse.Namespace) -> None:
     print()
 
     # Look up wallbox names so the "Charger:" line reads "Wallbox (uuid)"
-    # instead of a bare UUID — helpful in multi-wallbox setups. Best-effort.
+    # instead of a bare UUID — helpful in multi-wallbox setups. Best-effort;
+    # only the SDK's RequestError is swallowed so real code bugs still surface.
     wallbox_names: dict[str, str] = {}
     try:
         for wb in system.get_wallboxes():
             if wb.id and wb.name:
                 wallbox_names[wb.id] = wb.name
-    except Exception:
+    except RequestError:
         pass
 
     for ev in chargers:
