@@ -59,6 +59,7 @@ import datetime
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from onekommafive import Client, Systems
 from onekommafive.models import ChargingMode, MarketPrices
@@ -327,10 +328,28 @@ def cmd_wallboxes(args: argparse.Namespace) -> None:
     if not boxes:
         print("No wallboxes registered.")
         return
+
+    # Enrich each wallbox with manufacturer/model/firmware/connection status
+    # from the assets endpoint. Match heuristic (name-based, HA-parity): the
+    # two endpoints use independent UUIDs, so name is the only join key.
+    assets_by_name: dict[str, Any] = {}
+    try:
+        for asset in system.get_status_and_assets().assets:
+            if asset.type == "EV_CHARGER" and asset.name:
+                assets_by_name[asset.name] = asset
+    except Exception:
+        pass  # asset-enrichment is best-effort; wallbox output stays usable
+
     for w in boxes:
         print(f"  {w.name or '—'}")
         print(f"    ID:           {w.id or '—'}")
         print(f"    Assigned EV:  {w.assigned_ev_id or '—'}")
+        asset = assets_by_name.get(w.name) if w.name else None
+        if asset:
+            print(f"    Manufacturer: {asset.manufacturer or '—'}")
+            print(f"    Model:        {asset.model or '—'}")
+            print(f"    Firmware:     {asset.firmware or '—'}")
+            print(f"    Connection:   {asset.connection_status or '—'}")
 
 
 def cmd_smart_meter(args: argparse.Namespace) -> None:
@@ -712,6 +731,17 @@ def cmd_ev(args: argparse.Namespace) -> None:
         return
     print(f"System: {system.id()}")
     print()
+
+    # Look up wallbox names so the "Charger:" line reads "Wallbox (uuid)"
+    # instead of a bare UUID — helpful in multi-wallbox setups. Best-effort.
+    wallbox_names: dict[str, str] = {}
+    try:
+        for wb in system.get_wallboxes():
+            if wb.id and wb.name:
+                wallbox_names[wb.id] = wb.name
+    except Exception:
+        pass
+
     for ev in chargers:
         soc = f"{ev.current_soc():.0f}%" if ev.current_soc() is not None else "—"
         vehicle_parts = filter(None, [ev.manufacturer(), ev.model()])
@@ -719,10 +749,16 @@ def cmd_ev(args: argparse.Namespace) -> None:
         capacity = f"{ev.capacity_wh() / 1000:.0f} kWh" if ev.capacity_wh() is not None else "—"
         target = _pct(ev.target_soc())
         default = _pct(ev.default_soc())
+        charger_id = ev.assigned_charger_id()
+        charger_label = (
+            f"{wallbox_names[charger_id]} ({charger_id})"
+            if charger_id and charger_id in wallbox_names
+            else (charger_id or "—")
+        )
         print(f"  {ev.id()}")
         print(f"    Name:      {ev.name() or '—'}")
         print(f"    Vehicle:   {vehicle}  ({capacity})")
-        print(f"    Charger:   {ev.assigned_charger_id() or '—'}")
+        print(f"    Charger:   {charger_label}")
         print(f"    Mode:      {ev.charging_mode().value}")
         print(f"    SoC:       {soc}  (target {target}  default {default})")
         if ev.primary_schedule_departure_time():
@@ -750,13 +786,19 @@ def cmd_set_ev_mode(args: argparse.Namespace) -> None:
         valid = ", ".join(m.value for m in ChargingMode)
         sys.exit(f"Error: invalid mode {args.mode!r}. Valid values: {valid}")
 
-    ev = _resolve_ev(args)
-    ev.set_charging_mode(mode)
-    print(f"EV {ev.id()}: charging mode set to {mode.value}")
+    for ev in _resolve_evs(args):
+        ev.set_charging_mode(mode)
+        print(f"EV {ev.id()}: charging mode set to {mode.value}")
 
 
 def _resolve_ev(args):
-    """Return the targeted EVCharger from args (--ev or first charger)."""
+    """Return the targeted EVCharger from args.
+
+    ``--ev <id>`` picks a specific one. Without it, the CLI defaults to
+    the single registered charger. When several are registered without
+    ``--ev``, the command aborts with a listing so the caller cannot
+    accidentally steer the wrong vehicle.
+    """
     system = _get_system()
     chargers = system.get_ev_chargers()
     if not chargers:
@@ -766,7 +808,29 @@ def _resolve_ev(args):
         if ev is None:
             sys.exit(f"Error: EV charger {args.ev!r} not found")
         return ev
+    if len(chargers) > 1:
+        lines = ["Error: multiple EV chargers registered, --ev is required. Registered:"]
+        for c in chargers:
+            label = " ".join(filter(None, [c.manufacturer(), c.model()])) or c.name() or "—"
+            lines.append(f"  {c.id()}  {label}")
+        sys.exit("\n".join(lines))
     return chargers[0]
+
+
+def _resolve_evs(args):
+    """Return the list of EVCharger objects a setter should act on.
+
+    ``--all-evs`` targets every registered charger. ``--ev <id>`` picks
+    one. Without either flag, the single-charger default applies via
+    :func:`_resolve_ev`.
+    """
+    if getattr(args, "all_evs", False):
+        system = _get_system()
+        chargers = system.get_ev_chargers()
+        if not chargers:
+            sys.exit("Error: no EV chargers registered on this system")
+        return chargers
+    return [_resolve_ev(args)]
 
 
 def cmd_set_ev_target_soc(args: argparse.Namespace) -> None:
@@ -776,15 +840,15 @@ def cmd_set_ev_target_soc(args: argparse.Namespace) -> None:
         sys.exit(f"Error: invalid SoC value {args.soc!r} — must be a number between 0 and 100")
     if not 0.0 <= soc <= 100.0:
         sys.exit(f"Error: SoC must be between 0 and 100, got {soc}")
-    ev = _resolve_ev(args)
-    ev.set_target_soc(soc)
-    print(f"EV {ev.id()}: target SoC set to {soc:.0f}%")
+    for ev in _resolve_evs(args):
+        ev.set_target_soc(soc)
+        print(f"EV {ev.id()}: target SoC set to {soc:.0f}%")
 
 
 def cmd_set_ev_departure(args: argparse.Namespace) -> None:
-    ev = _resolve_ev(args)
-    ev.set_primary_departure_time(args.time)
-    print(f"EV {ev.id()}: departure time set to {args.time}")
+    for ev in _resolve_evs(args):
+        ev.set_primary_departure_time(args.time)
+        print(f"EV {ev.id()}: departure time set to {args.time}")
 
 
 def cmd_ems(args: argparse.Namespace) -> None:
@@ -966,19 +1030,35 @@ def main() -> None:
         "--ev",
         metavar="EV_ID",
         default=None,
-        help="EV charger ID (default: first charger)",
+        help="EV charger ID (required when several are registered)",
+    )
+    set_ev_p.add_argument(
+        "--all-evs",
+        dest="all_evs",
+        action="store_true",
+        help="Apply to every registered EV charger",
     )
 
     set_soc_p = sub.add_parser("set-ev-target-soc", help="Set EV target state-of-charge")
     set_soc_p.add_argument("soc", metavar="SOC", help="Target SoC in percent (0–100)")
     set_soc_p.add_argument(
-        "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
+        "--ev", metavar="EV_ID", default=None,
+        help="EV charger ID (required when several are registered)",
+    )
+    set_soc_p.add_argument(
+        "--all-evs", dest="all_evs", action="store_true",
+        help="Apply to every registered EV charger",
     )
 
     set_dep_p = sub.add_parser("set-ev-departure", help="Set EV departure time")
     set_dep_p.add_argument("time", metavar="HH:MM", help="Departure time, e.g. 07:30")
     set_dep_p.add_argument(
-        "--ev", metavar="EV_ID", default=None, help="EV charger ID (default: first charger)"
+        "--ev", metavar="EV_ID", default=None,
+        help="EV charger ID (required when several are registered)",
+    )
+    set_dep_p.add_argument(
+        "--all-evs", dest="all_evs", action="store_true",
+        help="Apply to every registered EV charger",
     )
 
     sub.add_parser("price-config", help="User-configured energy prices (grid, comparison, monthly base)")
