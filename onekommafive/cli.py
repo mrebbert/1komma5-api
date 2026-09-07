@@ -59,6 +59,7 @@ import datetime
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from onekommafive import Client, Systems
 from onekommafive.models import ChargingMode, MarketPrices
@@ -327,10 +328,28 @@ def cmd_wallboxes(args: argparse.Namespace) -> None:
     if not boxes:
         print("No wallboxes registered.")
         return
+
+    # Enrich each wallbox with manufacturer/model/firmware/connection status
+    # from the assets endpoint. Match heuristic (name-based, HA-parity): the
+    # two endpoints use independent UUIDs, so name is the only join key.
+    assets_by_name: dict[str, Any] = {}
+    try:
+        for asset in system.get_status_and_assets().assets:
+            if asset.type == "EV_CHARGER" and asset.name:
+                assets_by_name[asset.name] = asset
+    except Exception:
+        pass  # asset-enrichment is best-effort; wallbox output stays usable
+
     for w in boxes:
         print(f"  {w.name or '—'}")
         print(f"    ID:           {w.id or '—'}")
         print(f"    Assigned EV:  {w.assigned_ev_id or '—'}")
+        asset = assets_by_name.get(w.name) if w.name else None
+        if asset:
+            print(f"    Manufacturer: {asset.manufacturer or '—'}")
+            print(f"    Model:        {asset.model or '—'}")
+            print(f"    Firmware:     {asset.firmware or '—'}")
+            print(f"    Connection:   {asset.connection_status or '—'}")
 
 
 def cmd_smart_meter(args: argparse.Namespace) -> None:
@@ -712,6 +731,17 @@ def cmd_ev(args: argparse.Namespace) -> None:
         return
     print(f"System: {system.id()}")
     print()
+
+    # Look up wallbox names so the "Charger:" line reads "Wallbox (uuid)"
+    # instead of a bare UUID — helpful in multi-wallbox setups. Best-effort.
+    wallbox_names: dict[str, str] = {}
+    try:
+        for wb in system.get_wallboxes():
+            if wb.id and wb.name:
+                wallbox_names[wb.id] = wb.name
+    except Exception:
+        pass
+
     for ev in chargers:
         soc = f"{ev.current_soc():.0f}%" if ev.current_soc() is not None else "—"
         vehicle_parts = filter(None, [ev.manufacturer(), ev.model()])
@@ -719,10 +749,16 @@ def cmd_ev(args: argparse.Namespace) -> None:
         capacity = f"{ev.capacity_wh() / 1000:.0f} kWh" if ev.capacity_wh() is not None else "—"
         target = _pct(ev.target_soc())
         default = _pct(ev.default_soc())
+        charger_id = ev.assigned_charger_id()
+        charger_label = (
+            f"{wallbox_names[charger_id]} ({charger_id})"
+            if charger_id and charger_id in wallbox_names
+            else (charger_id or "—")
+        )
         print(f"  {ev.id()}")
         print(f"    Name:      {ev.name() or '—'}")
         print(f"    Vehicle:   {vehicle}  ({capacity})")
-        print(f"    Charger:   {ev.assigned_charger_id() or '—'}")
+        print(f"    Charger:   {charger_label}")
         print(f"    Mode:      {ev.charging_mode().value}")
         print(f"    SoC:       {soc}  (target {target}  default {default})")
         if ev.primary_schedule_departure_time():
