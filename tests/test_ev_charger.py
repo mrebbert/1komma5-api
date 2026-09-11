@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import MagicMock
 
 import pytest
@@ -187,7 +188,6 @@ class TestSetChargingMode:
         charger = _make_charger(charging_mode="SMART_CHARGE")
         charger.set_charging_mode(ChargingMode.QUICK_CHARGE)
 
-        import json
         body = json.loads(resp_lib.calls[0].request.body)
         assert body == {"chargingMode": "QUICK_CHARGE"}
 
@@ -229,7 +229,6 @@ class TestSetCurrentSoc:
         charger = _make_charger(charging_mode="SMART_CHARGE")
         charger.set_current_soc(80.0)
 
-        import json
         body = json.loads(resp_lib.calls[0].request.body)
         assert body["manualSoc"] == pytest.approx(0.8)
 
@@ -240,7 +239,6 @@ class TestSetCurrentSoc:
         charger = _make_charger(charging_mode="SMART_CHARGE")
         charger.set_current_soc(0.0)
 
-        import json
         body = json.loads(resp_lib.calls[0].request.body)
         assert body["manualSoc"] == pytest.approx(0.0)
 
@@ -273,7 +271,6 @@ class TestSetTargetSoc:
         charger = _make_charger()
         charger.set_target_soc(90.0)
 
-        import json
         body = json.loads(resp_lib.calls[0].request.body)
         assert body == {"targetSoc": pytest.approx(0.9)}
 
@@ -313,7 +310,6 @@ class TestSetPrimaryDepartureTime:
         charger = _make_charger()
         charger.set_primary_departure_time("07:30")
 
-        import json
         body = json.loads(resp_lib.calls[0].request.body)
         assert body == {"departureTime": "07:30"}
 

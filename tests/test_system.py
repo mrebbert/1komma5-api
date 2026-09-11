@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 
 import pytest
 import responses as resp_lib
@@ -384,7 +385,6 @@ class TestSetEmsMode:
         _make_system().set_ems_mode(auto=True)  # must not raise
 
         body = resp_lib.calls[0].request.body
-        import json
         payload = json.loads(body)
         assert payload["overrideAutoSettings"] is False
 
@@ -398,7 +398,6 @@ class TestSetEmsMode:
         )
         _make_system().set_ems_mode(auto=False)
 
-        import json
         payload = json.loads(resp_lib.calls[0].request.body)
         assert payload["overrideAutoSettings"] is True
 
