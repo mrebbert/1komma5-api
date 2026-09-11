@@ -81,8 +81,10 @@ def _client() -> Client:
     return Client(username, password, token_cache=cache)
 
 
-def _system(client: Client):
-    systems = Systems(client).get_systems()
+def _get_system():
+    """Resolve the target System — first from ``ONEKOMMAFIVE_SYSTEM`` (id
+    match), else the first available."""
+    systems = Systems(_client()).get_systems()
     if not systems:
         sys.exit("Error: no systems found on this account")
     target_id = os.environ.get("ONEKOMMAFIVE_SYSTEM")
@@ -92,10 +94,6 @@ def _system(client: Client):
                 return s
         sys.exit(f"Error: system {target_id!r} not found")
     return systems[0]
-
-
-def _get_system():
-    return _system(_client())
 
 
 # ---------------------------------------------------------------------------

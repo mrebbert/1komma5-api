@@ -84,11 +84,10 @@ def _run(*argv: str) -> None:
 
 @pytest.fixture
 def mock_system():
-    """Patch _client and _system so no real HTTP is needed."""
+    """Patch _get_system so command handlers see a mock instead of a live call."""
     system = MagicMock()
     system.id.return_value = FAKE_SYSTEM_ID
-    with patch("onekommafive.cli._client"), \
-         patch("onekommafive.cli._system", return_value=system):
+    with patch("onekommafive.cli._get_system", return_value=system):
         yield system
 
 
