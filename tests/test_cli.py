@@ -51,6 +51,7 @@ from tests.fixtures import (
     make_energy_data,
     make_energy_savings_data,
     make_energy_trader_data,
+    make_ev_charger_mock,
     make_heartbeat_ai_summary_data,
     make_heartbeat_prices_data,
     make_impact_overview_data,
@@ -70,6 +71,7 @@ from tests.fixtures import (
     make_supported_versions_data,
     make_system_data,
     make_system_details_data,
+    make_two_ambiguous_evs,
     make_user_data,
     make_wallboxes_data,
     make_weather_data,
@@ -84,11 +86,10 @@ def _run(*argv: str) -> None:
 
 @pytest.fixture
 def mock_system():
-    """Patch _client and _system so no real HTTP is needed."""
+    """Patch _get_system so command handlers see a mock instead of a live call."""
     system = MagicMock()
     system.id.return_value = FAKE_SYSTEM_ID
-    with patch("onekommafive.cli._client"), \
-         patch("onekommafive.cli._system", return_value=system):
+    with patch("onekommafive.cli._get_system", return_value=system):
         yield system
 
 
@@ -343,28 +344,23 @@ class TestCmdEvModes:
 # ---------------------------------------------------------------------------
 
 class TestCmdSetEvMode:
-    def _ev(self, ev_id: str = FAKE_EV_ID) -> MagicMock:
-        ev = MagicMock()
-        ev.id.return_value = ev_id
-        return ev
-
     def test_sets_mode_on_first_charger_by_default(self, mock_system, capsys) -> None:
-        ev = self._ev()
+        ev = make_ev_charger_mock()
         mock_system.get_ev_chargers.return_value = [ev]
         _run("set-ev-mode", "SOLAR_CHARGE")
         ev.set_charging_mode.assert_called_once_with(ChargingMode.SOLAR_CHARGE)
         assert "SOLAR_CHARGE" in capsys.readouterr().out
 
     def test_selects_charger_by_id(self, mock_system, capsys) -> None:
-        ev1 = self._ev("ev-aaa")
-        ev2 = self._ev("ev-bbb")
+        ev1 = make_ev_charger_mock("ev-aaa")
+        ev2 = make_ev_charger_mock("ev-bbb")
         mock_system.get_ev_chargers.return_value = [ev1, ev2]
         _run("set-ev-mode", "QUICK_CHARGE", "--ev", "ev-bbb")
         ev1.set_charging_mode.assert_not_called()
         ev2.set_charging_mode.assert_called_once_with(ChargingMode.QUICK_CHARGE)
 
     def test_exits_when_charger_id_not_found(self, mock_system) -> None:
-        mock_system.get_ev_chargers.return_value = [self._ev("ev-aaa")]
+        mock_system.get_ev_chargers.return_value = [make_ev_charger_mock("ev-aaa")]
         with pytest.raises(SystemExit):
             _run("set-ev-mode", "SMART_CHARGE", "--ev", "ev-xxx")
 
@@ -379,14 +375,13 @@ class TestCmdSetEvMode:
 
     def test_multi_ev_without_flag_exits_with_listing(self, mock_system, capsys) -> None:
         """Fail-fast so a caller cannot silently steer the wrong vehicle."""
-        ev1 = self._ev("ev-aaa")
+        ev1, ev2 = make_two_ambiguous_evs()
+        # This test additionally checks that manufacturer/model labels
+        # surface in the listing, so populate them on top of the default.
         ev1.manufacturer.return_value = "Volkswagen"
         ev1.model.return_value = "Id.4"
-        ev1.name.return_value = None
-        ev2 = self._ev("ev-bbb")
         ev2.manufacturer.return_value = "Tesla"
         ev2.model.return_value = "Model 3"
-        ev2.name.return_value = None
         mock_system.get_ev_chargers.return_value = [ev1, ev2]
         with pytest.raises(SystemExit) as exc:
             _run("set-ev-mode", "SMART_CHARGE")
@@ -399,8 +394,8 @@ class TestCmdSetEvMode:
         ev2.set_charging_mode.assert_not_called()
 
     def test_all_evs_flag_applies_to_every_charger(self, mock_system, capsys) -> None:
-        ev1 = self._ev("ev-aaa")
-        ev2 = self._ev("ev-bbb")
+        ev1 = make_ev_charger_mock("ev-aaa")
+        ev2 = make_ev_charger_mock("ev-bbb")
         mock_system.get_ev_chargers.return_value = [ev1, ev2]
         _run("set-ev-mode", "SOLAR_CHARGE", "--all-evs")
         ev1.set_charging_mode.assert_called_once_with(ChargingMode.SOLAR_CHARGE)
@@ -415,33 +410,28 @@ class TestCmdSetEvMode:
 # ---------------------------------------------------------------------------
 
 class TestCmdSetEvTargetSoc:
-    def _ev(self, ev_id: str = FAKE_EV_ID) -> MagicMock:
-        ev = MagicMock()
-        ev.id.return_value = ev_id
-        return ev
-
     def test_sets_target_soc_on_first_charger(self, mock_system, capsys) -> None:
-        ev = self._ev()
+        ev = make_ev_charger_mock()
         mock_system.get_ev_chargers.return_value = [ev]
         _run("set-ev-target-soc", "90")
         ev.set_target_soc.assert_called_once_with(90.0)
         assert "90%" in capsys.readouterr().out
 
     def test_selects_charger_by_id(self, mock_system) -> None:
-        ev1 = self._ev("ev-aaa")
-        ev2 = self._ev("ev-bbb")
+        ev1 = make_ev_charger_mock("ev-aaa")
+        ev2 = make_ev_charger_mock("ev-bbb")
         mock_system.get_ev_chargers.return_value = [ev1, ev2]
         _run("set-ev-target-soc", "80", "--ev", "ev-bbb")
         ev1.set_target_soc.assert_not_called()
         ev2.set_target_soc.assert_called_once_with(80.0)
 
     def test_exits_on_invalid_soc_value(self, mock_system) -> None:
-        mock_system.get_ev_chargers.return_value = [self._ev()]
+        mock_system.get_ev_chargers.return_value = [make_ev_charger_mock()]
         with pytest.raises(SystemExit):
             _run("set-ev-target-soc", "not-a-number")
 
     def test_exits_on_out_of_range_soc(self, mock_system) -> None:
-        mock_system.get_ev_chargers.return_value = [self._ev()]
+        mock_system.get_ev_chargers.return_value = [make_ev_charger_mock()]
         with pytest.raises(SystemExit):
             _run("set-ev-target-soc", "110")
 
@@ -451,14 +441,7 @@ class TestCmdSetEvTargetSoc:
             _run("set-ev-target-soc", "80")
 
     def test_multi_ev_without_flag_exits(self, mock_system) -> None:
-        ev1 = self._ev("ev-aaa")
-        ev1.manufacturer.return_value = None
-        ev1.model.return_value = None
-        ev1.name.return_value = None
-        ev2 = self._ev("ev-bbb")
-        ev2.manufacturer.return_value = None
-        ev2.model.return_value = None
-        ev2.name.return_value = None
+        ev1, ev2 = make_two_ambiguous_evs()
         mock_system.get_ev_chargers.return_value = [ev1, ev2]
         with pytest.raises(SystemExit):
             _run("set-ev-target-soc", "80")
@@ -466,8 +449,8 @@ class TestCmdSetEvTargetSoc:
         ev2.set_target_soc.assert_not_called()
 
     def test_all_evs_flag_applies_to_every_charger(self, mock_system) -> None:
-        ev1 = self._ev("ev-aaa")
-        ev2 = self._ev("ev-bbb")
+        ev1 = make_ev_charger_mock("ev-aaa")
+        ev2 = make_ev_charger_mock("ev-bbb")
         mock_system.get_ev_chargers.return_value = [ev1, ev2]
         _run("set-ev-target-soc", "75", "--all-evs")
         ev1.set_target_soc.assert_called_once_with(75.0)
@@ -479,21 +462,16 @@ class TestCmdSetEvTargetSoc:
 # ---------------------------------------------------------------------------
 
 class TestCmdSetEvDeparture:
-    def _ev(self, ev_id: str = FAKE_EV_ID) -> MagicMock:
-        ev = MagicMock()
-        ev.id.return_value = ev_id
-        return ev
-
     def test_sets_departure_on_first_charger(self, mock_system, capsys) -> None:
-        ev = self._ev()
+        ev = make_ev_charger_mock()
         mock_system.get_ev_chargers.return_value = [ev]
         _run("set-ev-departure", "07:30")
         ev.set_primary_departure_time.assert_called_once_with("07:30")
         assert "07:30" in capsys.readouterr().out
 
     def test_selects_charger_by_id(self, mock_system) -> None:
-        ev1 = self._ev("ev-aaa")
-        ev2 = self._ev("ev-bbb")
+        ev1 = make_ev_charger_mock("ev-aaa")
+        ev2 = make_ev_charger_mock("ev-bbb")
         mock_system.get_ev_chargers.return_value = [ev1, ev2]
         _run("set-ev-departure", "06:00", "--ev", "ev-bbb")
         ev1.set_primary_departure_time.assert_not_called()
@@ -505,14 +483,7 @@ class TestCmdSetEvDeparture:
             _run("set-ev-departure", "07:30")
 
     def test_multi_ev_without_flag_exits(self, mock_system) -> None:
-        ev1 = self._ev("ev-aaa")
-        ev1.manufacturer.return_value = None
-        ev1.model.return_value = None
-        ev1.name.return_value = None
-        ev2 = self._ev("ev-bbb")
-        ev2.manufacturer.return_value = None
-        ev2.model.return_value = None
-        ev2.name.return_value = None
+        ev1, ev2 = make_two_ambiguous_evs()
         mock_system.get_ev_chargers.return_value = [ev1, ev2]
         with pytest.raises(SystemExit):
             _run("set-ev-departure", "07:30")
@@ -520,8 +491,8 @@ class TestCmdSetEvDeparture:
         ev2.set_primary_departure_time.assert_not_called()
 
     def test_all_evs_flag_applies_to_every_charger(self, mock_system) -> None:
-        ev1 = self._ev("ev-aaa")
-        ev2 = self._ev("ev-bbb")
+        ev1 = make_ev_charger_mock("ev-aaa")
+        ev2 = make_ev_charger_mock("ev-bbb")
         mock_system.get_ev_chargers.return_value = [ev1, ev2]
         _run("set-ev-departure", "06:00", "--all-evs")
         ev1.set_primary_departure_time.assert_called_once_with("06:00")

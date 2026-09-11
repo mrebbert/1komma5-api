@@ -4,6 +4,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+def _opt_bool(data: dict[str, Any], key: str) -> bool | None:
+    """Return ``bool(data[key])`` when the key is present and not ``None``,
+    otherwise ``None`` — the tri-state pattern used across our API flags."""
+    value = data.get(key)
+    return bool(value) if value is not None else None
+
+
 @dataclass
 class SystemInfo:
     """Static metadata for a 1KOMMA5° system (site).
@@ -80,14 +87,8 @@ class SystemInfo:
             address_longitude=data.get("addressLongitude"),
             customer_id=data.get("customerId"),
             dynamic_pulse_compatible=bool(data.get("dynamicPulseCompatible", False)),
-            energy_trader_active=(
-                bool(data["energyTraderActive"]) if "energyTraderActive" in data else None
-            ),
-            electricity_contract_active=(
-                bool(data["electricityContractActive"])
-                if "electricityContractActive" in data
-                else None
-            ),
+            energy_trader_active=_opt_bool(data, "energyTraderActive"),
+            electricity_contract_active=_opt_bool(data, "electricityContractActive"),
             created_at=data.get("createdAt"),
             updated_at=data.get("updatedAt"),
             raw=data,
@@ -273,19 +274,9 @@ class SystemDetails:
             customer_id=data.get("customerId"),
             customer=SystemCustomer.from_dict(customer_raw) if customer_raw else None,
             dynamic_pulse_compatible=bool(data.get("dynamicPulseCompatible", False)),
-            energy_trader_active=(
-                bool(data["energyTraderActive"]) if "energyTraderActive" in data else None
-            ),
-            electricity_contract_active=(
-                bool(data["electricityContractActive"])
-                if "electricityContractActive" in data
-                else None
-            ),
-            has_third_party_smart_meter=(
-                bool(data["hasThirdPartySmartMeter"])
-                if data.get("hasThirdPartySmartMeter") is not None
-                else None
-            ),
+            energy_trader_active=_opt_bool(data, "energyTraderActive"),
+            electricity_contract_active=_opt_bool(data, "electricityContractActive"),
+            has_third_party_smart_meter=_opt_bool(data, "hasThirdPartySmartMeter"),
             third_party_smart_meter_meter_id=data.get("thirdPartySmartMeterMeterId"),
             third_party_smart_meter_deleted_at=data.get("thirdPartySmartMeterDeletedAt"),
             third_party_smart_meter_market_location_id=data.get("thirdPartySmartMeterMarketLocationId"),

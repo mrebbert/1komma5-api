@@ -4,6 +4,24 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+def _val(node: dict | None) -> float | None:
+    """Extract the ``value`` from a ``{value, unit}`` node."""
+    return node.get("value") if node else None
+
+
+def _amount(node: dict | None) -> float | None:
+    """Extract the ``amount`` (as float) from a ``{amount, currency}`` node."""
+    if not node:
+        return None
+    a = node.get("amount")
+    return float(a) if a is not None else None
+
+
+def _rate(node: dict | None) -> float | None:
+    """Extract per-unit rate from ``{price: {amount, currency}, unit}``."""
+    return _amount((node or {}).get("price"))
+
+
 @dataclass
 class ImpactOverview:
     """Lifetime CO2-savings figures for a site.
@@ -26,8 +44,6 @@ class ImpactOverview:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ImpactOverview":
-        def _val(node: dict | None) -> float | None:
-            return node.get("value") if node else None
         return cls(
             co2_savings_kg=_val(data.get("co2Savings")),
             co2_collective_savings_kg=_val(data.get("co2CollectiveSavings")),
@@ -59,13 +75,6 @@ class EnergyTrader:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "EnergyTrader":
         et = data.get("energyTrader") or {}
-
-        def _amount(node: dict | None) -> float | None:
-            if not node:
-                return None
-            amt = node.get("amount")
-            return float(amt) if amt is not None else None
-
         return cls(
             status=et.get("status"),
             green_energy_savings_eur=_amount(et.get("greenEnergySavings")),
@@ -162,15 +171,6 @@ class HeartbeatAiSummary:
 
     @classmethod
     def from_dict(cls, resolution: str, data: dict[str, Any]) -> "HeartbeatAiSummary":
-        def _val(node: dict | None) -> float | None:
-            return node.get("value") if node else None
-
-        def _amount(node: dict | None) -> float | None:
-            if not node:
-                return None
-            amt = node.get("amount")
-            return float(amt) if amt is not None else None
-
         ss = data.get("selfSufficiency") or {}
         ee = data.get("energyEarned") or {}
         co2 = data.get("co2Saved") or {}
@@ -314,18 +314,6 @@ class HeartbeatPriceWindow:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "HeartbeatPriceWindow":
-        def _val(node: dict | None) -> float | None:
-            return node.get("value") if node else None
-
-        def _amount(node: dict | None) -> float | None:
-            if not node:
-                return None
-            a = node.get("amount")
-            return float(a) if a is not None else None
-
-        def _rate(node: dict | None) -> float | None:
-            """Extract per-unit rate from ``{price: {amount, currency}, unit}``."""
-            return _amount((node or {}).get("price"))
 
         pv = data.get("pvProduction") or {}
         fi = data.get("gridFeedIn") or {}

@@ -30,6 +30,37 @@ FAKE_CHARGER_ID = "cccccccc-0000-0000-0000-000000000001"
 FAKE_HEAT_PUMP_ID = "dddddddd-0000-0000-0000-000000000001"
 
 
+def make_ev_charger_mock(ev_id: str = FAKE_EV_ID) -> MagicMock:
+    """Return a minimal EVCharger mock — only ``.id()`` is stubbed.
+
+    Enough for setter tests that check "which EV was targeted" without
+    exercising any reader semantics. Callers that need manufacturer /
+    model / name should set ``.manufacturer.return_value`` etc. on the
+    returned mock.
+    """
+    ev = MagicMock()
+    ev.id.return_value = ev_id
+    return ev
+
+
+def make_two_ambiguous_evs() -> tuple[MagicMock, MagicMock]:
+    """Return two EVCharger mocks with cleared manufacturer/model/name.
+
+    Shape for the multi-EV fail-fast tests: both chargers have distinct
+    ids (``ev-aaa`` / ``ev-bbb``) and no vehicle-label attributes, so
+    the CLI's label-formatting code path sees a stable None-triple.
+    """
+    ev1 = make_ev_charger_mock("ev-aaa")
+    ev1.manufacturer.return_value = None
+    ev1.model.return_value = None
+    ev1.name.return_value = None
+    ev2 = make_ev_charger_mock("ev-bbb")
+    ev2.manufacturer.return_value = None
+    ev2.model.return_value = None
+    ev2.name.return_value = None
+    return ev1, ev2
+
+
 def make_client(token_set: dict | None = None) -> Client:
     """Return a :class:`Client` instance with a pre-loaded token set.
 

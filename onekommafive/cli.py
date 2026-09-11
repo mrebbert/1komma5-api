@@ -81,8 +81,10 @@ def _client() -> Client:
     return Client(username, password, token_cache=cache)
 
 
-def _system(client: Client):
-    systems = Systems(client).get_systems()
+def _get_system():
+    """Resolve the target System — first from ``ONEKOMMAFIVE_SYSTEM`` (id
+    match), else the first available."""
+    systems = Systems(_client()).get_systems()
     if not systems:
         sys.exit("Error: no systems found on this account")
     target_id = os.environ.get("ONEKOMMAFIVE_SYSTEM")
@@ -92,10 +94,6 @@ def _system(client: Client):
                 return s
         sys.exit(f"Error: system {target_id!r} not found")
     return systems[0]
-
-
-def _get_system():
-    return _system(_client())
 
 
 # ---------------------------------------------------------------------------
@@ -374,7 +372,9 @@ def cmd_monthly_trading(args: argparse.Namespace) -> None:
         print(f"Avg. monthly savings:      {s.average_past_variable_savings_eur:.2f} €")
 
 
-def cmd_ai_decisions(args: argparse.Namespace) -> None:
+def _print_ai_events(args: argparse.Namespace, fetch_fn_name: str) -> None:
+    """Shared body for `ai-decisions` and `optimizations`: same shape,
+    same table, different underlying System method."""
     today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     try:
         start = _parse_dt(args.from_date, end_of_day=False) if args.from_date else today
@@ -382,7 +382,7 @@ def cmd_ai_decisions(args: argparse.Namespace) -> None:
     except ValueError as e:
         sys.exit(f"Error: invalid date — {e}")
     system = _get_system()
-    result = system.get_self_sufficiency_events(start=start, end=end)
+    result = getattr(system, fetch_fn_name)(start=start, end=end)
     print(f"System:  {system.id()}")
     print(f"Period:  {start.date()} – {end.date()}")
     print(f"Events:  {len(result.events)}")
@@ -396,6 +396,10 @@ def cmd_ai_decisions(args: argparse.Namespace) -> None:
         price = f"{ev.market_price:.2f}" if ev.market_price is not None else "—"
         ts = ev.from_time[:19].replace("T", " ")
         print(f"{ts:<22}  {ev.asset:<8}  {ev.decision:<26}  {price:>9}  {soc:>4}")
+
+
+def cmd_ai_decisions(args: argparse.Namespace) -> None:
+    _print_ai_events(args, "get_self_sufficiency_events")
 
 
 def cmd_site_details(args: argparse.Namespace) -> None:
@@ -925,29 +929,7 @@ def _parse_dt(value: str, end_of_day: bool) -> datetime.datetime:
 
 
 def cmd_optimizations(args: argparse.Namespace) -> None:
-    today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    try:
-        start = _parse_dt(args.from_date, end_of_day=False) if args.from_date else today
-        end = _parse_dt(args.to_date, end_of_day=True) if args.to_date else today.replace(hour=23, minute=59, second=59)
-    except ValueError as e:
-        sys.exit(f"Error: invalid date — {e}")
-
-    system = _get_system()
-    result = system.get_optimizations(start=start, end=end)
-
-    print(f"System:  {system.id()}")
-    print(f"Period:  {start.date()} – {end.date()}")
-    print(f"Events:  {len(result.events)}")
-    if not result.events:
-        return
-    print()
-    print(f"{'Timestamp':<22}  {'Asset':<8}  {'Decision':<26}  {'Price':>9}  {'SoC':>4}")
-    print("-" * 80)
-    for ev in sorted(result.events, key=lambda e: e.timestamp):
-        soc = f"{ev.state_of_charge}%" if ev.state_of_charge is not None else "—"
-        price = f"{ev.market_price:.2f}" if ev.market_price is not None else "—"
-        ts = ev.from_time[:19].replace("T", " ")
-        print(f"{ts:<22}  {ev.asset:<8}  {ev.decision:<26}  {price:>9}  {soc:>4}")
+    _print_ai_events(args, "get_optimizations")
 
 
 def cmd_set_ems(args: argparse.Namespace) -> None:
@@ -981,6 +963,27 @@ def _pct(value: float | None) -> str:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
+def _add_customer_id_arg(parser: argparse.ArgumentParser) -> None:
+    """Attach the standard optional ``--customer-id`` flag to *parser*."""
+    parser.add_argument(
+        "--customer-id", dest="customer_id", metavar="UUID", default=None,
+        help="Customer UUID (default: looked up via system details)",
+    )
+
+
+def _add_ev_selector_args(parser: argparse.ArgumentParser) -> None:
+    """Attach the standard ``--ev`` / ``--all-evs`` selector pair to *parser*."""
+    parser.add_argument(
+        "--ev", metavar="EV_ID", default=None,
+        help="EV charger ID (required when several are registered)",
+    )
+    parser.add_argument(
+        "--all-evs", dest="all_evs", action="store_true",
+        help="Apply to every registered EV charger",
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="1KOMMA5° Heartbeat API CLI",
@@ -989,17 +992,15 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", metavar="command")
     sub.required = True
 
-    sub.add_parser("info", help="System metadata (address, status, features)")
-    sub.add_parser("details", help="Extended system metadata (customer, installer, gateways)")
-    sub.add_parser("assets", help="Site connection status + installed hardware assets")
+    sub.add_parser("info", help="System metadata (address, status, features)").set_defaults(func=cmd_info)
+    sub.add_parser("details", help="Extended system metadata (customer, installer, gateways)").set_defaults(func=cmd_details)
+    sub.add_parser("assets", help="Site connection status + installed hardware assets").set_defaults(func=cmd_assets)
 
     features_p = sub.add_parser("features", help="Active site feature flags (per customer + site)")
-    features_p.add_argument(
-        "--customer-id", dest="customer_id", metavar="UUID", default=None,
-        help="Customer UUID (default: looked up via system details)",
-    )
+    _add_customer_id_arg(features_p)
+    features_p.set_defaults(func=cmd_features)
 
-    sub.add_parser("live", help="Live power overview")
+    sub.add_parser("live", help="Live power overview").set_defaults(func=cmd_live)
 
     prices_p = sub.add_parser("prices", help="Market electricity prices (today) [--resolution 1h|15m]")
     prices_p.add_argument(
@@ -1009,16 +1010,18 @@ def main() -> None:
         choices=["1h", "15m"],
         help="Data resolution: '1h' (default) or '15m'",
     )
+    prices_p.set_defaults(func=cmd_prices)
 
     weather_p = sub.add_parser("weather", help="Weather forecast for the site location")
     weather_p.add_argument(
         "--forecasts", action="store_true",
         help="Show 3-hour forecast slots for the next 48 h",
     )
+    weather_p.set_defaults(func=cmd_weather)
 
-    sub.add_parser("ev", help="EV charger status")
+    sub.add_parser("ev", help="EV charger status").set_defaults(func=cmd_ev)
 
-    sub.add_parser("ev-modes", help="Available EV charging modes for this site")
+    sub.add_parser("ev-modes", help="Available EV charging modes for this site").set_defaults(func=cmd_ev_modes)
 
     set_ev_p = sub.add_parser("set-ev-mode", help="Set EV charging mode")
     set_ev_p.add_argument(
@@ -1027,53 +1030,29 @@ def main() -> None:
         choices=[m.value for m in ChargingMode],
         help=f"Charging mode: {', '.join(m.value for m in ChargingMode)}",
     )
-    set_ev_p.add_argument(
-        "--ev",
-        metavar="EV_ID",
-        default=None,
-        help="EV charger ID (required when several are registered)",
-    )
-    set_ev_p.add_argument(
-        "--all-evs",
-        dest="all_evs",
-        action="store_true",
-        help="Apply to every registered EV charger",
-    )
+    _add_ev_selector_args(set_ev_p)
+    set_ev_p.set_defaults(func=cmd_set_ev_mode)
 
     set_soc_p = sub.add_parser("set-ev-target-soc", help="Set EV target state-of-charge")
     set_soc_p.add_argument("soc", metavar="SOC", help="Target SoC in percent (0–100)")
-    set_soc_p.add_argument(
-        "--ev", metavar="EV_ID", default=None,
-        help="EV charger ID (required when several are registered)",
-    )
-    set_soc_p.add_argument(
-        "--all-evs", dest="all_evs", action="store_true",
-        help="Apply to every registered EV charger",
-    )
+    _add_ev_selector_args(set_soc_p)
+    set_soc_p.set_defaults(func=cmd_set_ev_target_soc)
 
     set_dep_p = sub.add_parser("set-ev-departure", help="Set EV departure time")
     set_dep_p.add_argument("time", metavar="HH:MM", help="Departure time, e.g. 07:30")
-    set_dep_p.add_argument(
-        "--ev", metavar="EV_ID", default=None,
-        help="EV charger ID (required when several are registered)",
-    )
-    set_dep_p.add_argument(
-        "--all-evs", dest="all_evs", action="store_true",
-        help="Apply to every registered EV charger",
-    )
+    _add_ev_selector_args(set_dep_p)
+    set_dep_p.set_defaults(func=cmd_set_ev_departure)
 
-    sub.add_parser("price-config", help="User-configured energy prices (grid, comparison, monthly base)")
-    sub.add_parser("comparison-price", help="Grid-supplier comparison price (EUR/kWh)")
+    sub.add_parser("price-config", help="User-configured energy prices (grid, comparison, monthly base)").set_defaults(func=cmd_price_config)
+    sub.add_parser("comparison-price", help="Grid-supplier comparison price (EUR/kWh)").set_defaults(func=cmd_comparison_price)
 
     pg_p = sub.add_parser("price-guarantee", help="Contractual electricity-price guarantee")
-    pg_p.add_argument(
-        "--customer-id", dest="customer_id", metavar="UUID", default=None,
-        help="Customer UUID (default: looked up via system details)",
-    )
+    _add_customer_id_arg(pg_p)
+    pg_p.set_defaults(func=cmd_price_guarantee)
 
-    sub.add_parser("wallboxes", help="Physical wallbox hardware assigned to this system")
-    sub.add_parser("smart-meter", help="Smart-meter registration details (EIC, DSO code, concession fee)")
-    sub.add_parser("monthly-trading", help="Average monthly Energy-Trader savings")
+    sub.add_parser("wallboxes", help="Physical wallbox hardware assigned to this system").set_defaults(func=cmd_wallboxes)
+    sub.add_parser("smart-meter", help="Smart-meter registration details (EIC, DSO code, concession fee)").set_defaults(func=cmd_smart_meter)
+    sub.add_parser("monthly-trading", help="Average monthly Energy-Trader savings").set_defaults(func=cmd_monthly_trading)
 
     ai_dec_p = sub.add_parser("ai-decisions", help="AI self-sufficiency events (companion to 'optimizations')")
     ai_dec_p.add_argument(
@@ -1084,36 +1063,34 @@ def main() -> None:
         "--to", dest="to_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
         help="End date/time (default: today 23:59)",
     )
+    ai_dec_p.set_defaults(func=cmd_ai_decisions)
 
-    sub.add_parser("site-details", help="Extended site metadata incl. EMS runtime state")
+    sub.add_parser("site-details", help="Extended site metadata incl. EMS runtime state").set_defaults(func=cmd_site_details)
 
     cust_p = sub.add_parser("customer", help="Full customer record (v3)")
-    cust_p.add_argument(
-        "--customer-id", dest="customer_id", metavar="UUID", default=None,
-        help="Customer UUID (default: looked up via system details)",
-    )
+    _add_customer_id_arg(cust_p)
+    cust_p.set_defaults(func=cmd_customer)
 
     subs_p = sub.add_parser("subscriptions", help="Customer contracts / subscriptions with monthly cost")
-    subs_p.add_argument(
-        "--customer-id", dest="customer_id", metavar="UUID", default=None,
-        help="Customer UUID (default: looked up via system details)",
-    )
+    _add_customer_id_arg(subs_p)
+    subs_p.set_defaults(func=cmd_subscriptions)
 
-    sub.add_parser("notifications", help="Recent push/in-app notifications")
-    sub.add_parser("notification-settings", help="Notification preferences per category")
-    sub.add_parser("versions", help="API compatibility (b2b/b2c target and minimum versions)")
-    sub.add_parser("me", help="Authenticated user profile + connected systems")
+    sub.add_parser("notifications", help="Recent push/in-app notifications").set_defaults(func=cmd_notifications)
+    sub.add_parser("notification-settings", help="Notification preferences per category").set_defaults(func=cmd_notification_settings)
+    sub.add_parser("versions", help="API compatibility (b2b/b2c target and minimum versions)").set_defaults(func=cmd_versions)
+    sub.add_parser("me", help="Authenticated user profile + connected systems").set_defaults(func=cmd_me)
 
-    sub.add_parser("impact", help="Lifetime CO2 savings (site + community)")
-    sub.add_parser("trader", help="Lifetime energy-trading savings (€)")
+    sub.add_parser("impact", help="Lifetime CO2 savings (site + community)").set_defaults(func=cmd_impact)
+    sub.add_parser("trader", help="Lifetime energy-trading savings (€)").set_defaults(func=cmd_trader)
 
-    sub.add_parser("heartbeat-prices", help="Financial breakdown per time window (PV, feed-in, grid, effective HB price)")
+    sub.add_parser("heartbeat-prices", help="Financial breakdown per time window (PV, feed-in, grid, effective HB price)").set_defaults(func=cmd_heartbeat_prices)
 
     ai_sum_p = sub.add_parser("ai-summary", help="Heartbeat-AI performance summary (self-sufficiency, earnings, CO2)")
     ai_sum_p.add_argument(
         "--resolution", metavar="RES", default="1M", choices=["1W", "1M", "1Y"],
         help="Window: '1W', '1M' (default), or '1Y'. Only '1M' returns all metrics.",
     )
+    ai_sum_p.set_defaults(func=cmd_ai_summary)
 
     savings_p = sub.add_parser("savings", help="Aggregated Heartbeat savings (€) for a date range")
     savings_p.add_argument(
@@ -1124,12 +1101,14 @@ def main() -> None:
         "--to", dest="to_date", metavar="YYYY-MM-DD", default=None,
         help="End date (default: API rolling window)",
     )
+    savings_p.set_defaults(func=cmd_savings)
 
     energy_today_p = sub.add_parser("energy-today", help="Energy production and consumption for today")
     energy_today_p.add_argument(
         "--resolution", metavar="RES", default="1h", choices=["1h", "15m"],
         help="Data resolution: '1h' (default) or '15m'",
     )
+    energy_today_p.set_defaults(func=cmd_energy_today)
 
     energy_hist_p = sub.add_parser("energy-historical", help="Historical energy data for a date range")
     energy_hist_p.add_argument("--from", dest="from_date", metavar="YYYY-MM-DD", required=True, help="Start date")
@@ -1138,6 +1117,7 @@ def main() -> None:
         "--resolution", metavar="RES", default="1h", choices=["1h", "15m"],
         help="Data resolution: '1h' (default) or '15m'",
     )
+    energy_hist_p.set_defaults(func=cmd_energy_historical)
 
     opt_p = sub.add_parser("optimizations", help="AI optimisation decisions for a date range")
     opt_p.add_argument(
@@ -1148,8 +1128,9 @@ def main() -> None:
         "--to", dest="to_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
         help="End date/time (default: today 23:59)",
     )
+    opt_p.set_defaults(func=cmd_optimizations)
 
-    sub.add_parser("ems", help="EMS mode status")
+    sub.add_parser("ems", help="EMS mode status").set_defaults(func=cmd_ems)
 
     set_ems_p = sub.add_parser("set-ems", help="Set EMS operating mode")
     set_ems_p.add_argument(
@@ -1157,46 +1138,10 @@ def main() -> None:
         choices=["auto", "manual"],
         help="'auto' for automatic optimisation, 'manual' for manual override",
     )
+    set_ems_p.set_defaults(func=cmd_set_ems)
 
     args = parser.parse_args()
-    {
-        "info": cmd_info,
-        "details": cmd_details,
-        "assets": cmd_assets,
-        "features": cmd_features,
-        "live": cmd_live,
-        "weather": cmd_weather,
-        "prices": cmd_prices,
-        "ev": cmd_ev,
-        "ev-modes": cmd_ev_modes,
-        "set-ev-mode": cmd_set_ev_mode,
-        "set-ev-target-soc": cmd_set_ev_target_soc,
-        "set-ev-departure": cmd_set_ev_departure,
-        "price-config": cmd_price_config,
-        "comparison-price": cmd_comparison_price,
-        "price-guarantee": cmd_price_guarantee,
-        "wallboxes": cmd_wallboxes,
-        "smart-meter": cmd_smart_meter,
-        "monthly-trading": cmd_monthly_trading,
-        "ai-decisions": cmd_ai_decisions,
-        "site-details": cmd_site_details,
-        "customer": cmd_customer,
-        "subscriptions": cmd_subscriptions,
-        "notifications": cmd_notifications,
-        "notification-settings": cmd_notification_settings,
-        "versions": cmd_versions,
-        "me": cmd_me,
-        "impact": cmd_impact,
-        "trader": cmd_trader,
-        "ai-summary": cmd_ai_summary,
-        "heartbeat-prices": cmd_heartbeat_prices,
-        "savings": cmd_savings,
-        "energy-today": cmd_energy_today,
-        "energy-historical": cmd_energy_historical,
-        "optimizations": cmd_optimizations,
-        "ems": cmd_ems,
-        "set-ems": cmd_set_ems,
-    }[args.command](args)
+    args.func(args)
 
 
 if __name__ == "__main__":
