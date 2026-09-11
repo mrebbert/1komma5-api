@@ -174,9 +174,7 @@ class System:
     def get_ev_chargers(self) -> list[EVCharger]:
         """Retrieve all EV (vehicle-side) charging profiles bound to this site.
 
-        Uses the site-scoped ``GET /api/v2/sites/{id}/assets/evs`` endpoint
-        (v0.2.0+). Universally supported across GridX-native and
-        non-GridX (e.g. Enphase-based) setups.
+        ``GET /api/v2/sites/{id}/assets/evs``.
         """
         from .ev_charger import EVCharger
 
@@ -354,13 +352,8 @@ class System:
     def get_wallboxes(self) -> list[Wallbox]:
         """Fetch physical wallbox hardware for this site.
 
-        Uses the site-scoped ``GET /api/v1/sites/{id}/assets/ev-chargers``
-        endpoint (v0.2.0+). Universally supported; non-GridX setups
-        (e.g. Enphase) no longer 422 the way the legacy
-        ``/systems/{id}/devices/ev-chargers`` route did.
-
-        Complements :meth:`get_ev_chargers` which returns the vehicle-side
-        charging profiles.
+        ``GET /api/v1/sites/{id}/assets/ev-chargers``. Complements
+        :meth:`get_ev_chargers` which returns the vehicle-side profiles.
         """
         data = self._client._request(
             "GET", self._sites_url("v1", "assets", "ev-chargers"),

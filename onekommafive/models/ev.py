@@ -23,7 +23,7 @@ class Wallbox:
     """Physical wallbox hardware assigned to a system.
 
     Returned by :meth:`~onekommafive.System.get_wallboxes`
-    (``GET /api/v1/sites/{id}/assets/ev-chargers``, site-scoped v0.2.0+).
+    (``GET /api/v1/sites/{id}/assets/ev-chargers``).
 
     Distinct from :class:`~onekommafive.EVCharger`, which represents the
     **vehicle-side** charging profile (charging mode, target SoC, departure
@@ -31,13 +31,11 @@ class Wallbox:
     """
 
     id: str | None
-    """Canonical wallbox identifier (site-scoped API). Prefer this over
-    :attr:`gridx_hardware_id`, which is always ``None`` in v0.2.0+."""
+    """Canonical wallbox identifier."""
 
     gridx_hardware_id: str | None
-    """Legacy GridX hardware UUID. Always ``None`` since the SDK migrated
-    to the site-scoped endpoint in v0.2.0 (the field is no longer surfaced
-    by the API). Retained for backwards-compatible presence-check callers."""
+    """Legacy GridX hardware UUID. Always ``None``; kept for
+    backwards-compatible presence-check callers."""
 
     name: str | None
     """Human-readable wallbox name, e.g. ``"Wallbox"``."""

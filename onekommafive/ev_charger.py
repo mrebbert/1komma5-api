@@ -72,8 +72,7 @@ class EVCharger:
     def safety_range_km(self) -> float | None:
         """Return the safety range buffer in km, or ``None``.
 
-        Not surfaced by the site-scoped v2 API; always returns ``None``
-        in v0.2.0+.
+        Not surfaced by the v2 API; always ``None``.
         """
         return None
 
@@ -88,8 +87,7 @@ class EVCharger:
     def updated_at(self) -> str | None:
         """Return the ISO-8601 timestamp of the last record update, or ``None``.
 
-        Not surfaced by the site-scoped v2 API; always returns ``None``
-        in v0.2.0+.
+        Not surfaced by the v2 API; always ``None``.
         """
         return None
 
@@ -100,8 +98,7 @@ class EVCharger:
     def charging_mode_updated_at(self) -> str | None:
         """Return the ISO-8601 timestamp when the charging mode was last changed, or ``None``.
 
-        Not surfaced by the site-scoped v2 API; always returns ``None``
-        in v0.2.0+.
+        Not surfaced by the v2 API; always ``None``.
         """
         return None
 
@@ -116,44 +113,34 @@ class EVCharger:
         return float(val * 100) if val is not None else None
 
     def primary_schedule_days(self) -> list[str]:
-        """Return the list of days (e.g. ``['MONDAY', 'FRIDAY']``) in the primary schedule.
+        """Return the list of days in the primary schedule.
 
-        Not surfaced by the site-scoped v2 API; always returns ``[]``
-        in v0.2.0+.
+        Not surfaced by the v2 API; always ``[]``.
         """
         return []
 
     def primary_schedule_departure_time(self) -> str | None:
-        """Return the scheduled departure time as ``'HH:MM'``, or ``None``.
-
-        The site-scoped v2 API has a single departure-time slot per
-        vehicle (the ``primary``/``secondary`` distinction is a v1
-        anachronism); this reader keeps its historical name.
-        """
+        """Return the scheduled departure time as ``'HH:MM'``, or ``None``."""
         return self._data.get("departureTime")
 
     def primary_schedule_departure_soc(self) -> float | None:
-        """Return the departure-time target SoC as a percentage (0–100), or ``None``.
+        """Return the departure-time target SoC as a percentage (0–100).
 
-        In the site-scoped v2 API this concept was consolidated with
-        ``targetSoc`` (the app uses a single SoC value for scheduled
-        departure). Returns the same value as :meth:`target_soc`.
+        Aliases :meth:`target_soc` — v2 API consolidated the two.
         """
         return self.target_soc()
 
     def secondary_schedule_departure_time(self) -> str | None:
         """Return the secondary departure time as ``'HH:MM'``, or ``None``.
 
-        Not surfaced by the site-scoped v2 API; always returns ``None``
-        in v0.2.0+.
+        Not surfaced by the v2 API; always ``None``.
         """
         return None
 
     def secondary_schedule_departure_soc(self) -> float | None:
         """Return the secondary schedule target departure SoC as a percentage (0–100), or ``None``.
 
-        Not surfaced by the site-scoped v2 API; always returns ``None``
-        in v0.2.0+.
+        Not surfaced by the v2 API; always ``None``.
         """
         return None
 
