@@ -374,7 +374,9 @@ def cmd_monthly_trading(args: argparse.Namespace) -> None:
         print(f"Avg. monthly savings:      {s.average_past_variable_savings_eur:.2f} €")
 
 
-def cmd_ai_decisions(args: argparse.Namespace) -> None:
+def _print_ai_events(args: argparse.Namespace, fetch_fn_name: str) -> None:
+    """Shared body for `ai-decisions` and `optimizations`: same shape,
+    same table, different underlying System method."""
     today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     try:
         start = _parse_dt(args.from_date, end_of_day=False) if args.from_date else today
@@ -382,7 +384,7 @@ def cmd_ai_decisions(args: argparse.Namespace) -> None:
     except ValueError as e:
         sys.exit(f"Error: invalid date — {e}")
     system = _get_system()
-    result = system.get_self_sufficiency_events(start=start, end=end)
+    result = getattr(system, fetch_fn_name)(start=start, end=end)
     print(f"System:  {system.id()}")
     print(f"Period:  {start.date()} – {end.date()}")
     print(f"Events:  {len(result.events)}")
@@ -396,6 +398,10 @@ def cmd_ai_decisions(args: argparse.Namespace) -> None:
         price = f"{ev.market_price:.2f}" if ev.market_price is not None else "—"
         ts = ev.from_time[:19].replace("T", " ")
         print(f"{ts:<22}  {ev.asset:<8}  {ev.decision:<26}  {price:>9}  {soc:>4}")
+
+
+def cmd_ai_decisions(args: argparse.Namespace) -> None:
+    _print_ai_events(args, "get_self_sufficiency_events")
 
 
 def cmd_site_details(args: argparse.Namespace) -> None:
@@ -925,29 +931,7 @@ def _parse_dt(value: str, end_of_day: bool) -> datetime.datetime:
 
 
 def cmd_optimizations(args: argparse.Namespace) -> None:
-    today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    try:
-        start = _parse_dt(args.from_date, end_of_day=False) if args.from_date else today
-        end = _parse_dt(args.to_date, end_of_day=True) if args.to_date else today.replace(hour=23, minute=59, second=59)
-    except ValueError as e:
-        sys.exit(f"Error: invalid date — {e}")
-
-    system = _get_system()
-    result = system.get_optimizations(start=start, end=end)
-
-    print(f"System:  {system.id()}")
-    print(f"Period:  {start.date()} – {end.date()}")
-    print(f"Events:  {len(result.events)}")
-    if not result.events:
-        return
-    print()
-    print(f"{'Timestamp':<22}  {'Asset':<8}  {'Decision':<26}  {'Price':>9}  {'SoC':>4}")
-    print("-" * 80)
-    for ev in sorted(result.events, key=lambda e: e.timestamp):
-        soc = f"{ev.state_of_charge}%" if ev.state_of_charge is not None else "—"
-        price = f"{ev.market_price:.2f}" if ev.market_price is not None else "—"
-        ts = ev.from_time[:19].replace("T", " ")
-        print(f"{ts:<22}  {ev.asset:<8}  {ev.decision:<26}  {price:>9}  {soc:>4}")
+    _print_ai_events(args, "get_optimizations")
 
 
 def cmd_set_ems(args: argparse.Namespace) -> None:
