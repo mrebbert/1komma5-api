@@ -965,6 +965,27 @@ def _pct(value: float | None) -> str:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
+def _add_customer_id_arg(parser: argparse.ArgumentParser) -> None:
+    """Attach the standard optional ``--customer-id`` flag to *parser*."""
+    parser.add_argument(
+        "--customer-id", dest="customer_id", metavar="UUID", default=None,
+        help="Customer UUID (default: looked up via system details)",
+    )
+
+
+def _add_ev_selector_args(parser: argparse.ArgumentParser) -> None:
+    """Attach the standard ``--ev`` / ``--all-evs`` selector pair to *parser*."""
+    parser.add_argument(
+        "--ev", metavar="EV_ID", default=None,
+        help="EV charger ID (required when several are registered)",
+    )
+    parser.add_argument(
+        "--all-evs", dest="all_evs", action="store_true",
+        help="Apply to every registered EV charger",
+    )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="1KOMMA5° Heartbeat API CLI",
@@ -978,10 +999,7 @@ def main() -> None:
     sub.add_parser("assets", help="Site connection status + installed hardware assets").set_defaults(func=cmd_assets)
 
     features_p = sub.add_parser("features", help="Active site feature flags (per customer + site)")
-    features_p.add_argument(
-        "--customer-id", dest="customer_id", metavar="UUID", default=None,
-        help="Customer UUID (default: looked up via system details)",
-    )
+    _add_customer_id_arg(features_p)
     features_p.set_defaults(func=cmd_features)
 
     sub.add_parser("live", help="Live power overview").set_defaults(func=cmd_live)
@@ -1014,52 +1032,24 @@ def main() -> None:
         choices=[m.value for m in ChargingMode],
         help=f"Charging mode: {', '.join(m.value for m in ChargingMode)}",
     )
-    set_ev_p.add_argument(
-        "--ev",
-        metavar="EV_ID",
-        default=None,
-        help="EV charger ID (required when several are registered)",
-    )
-    set_ev_p.add_argument(
-        "--all-evs",
-        dest="all_evs",
-        action="store_true",
-        help="Apply to every registered EV charger",
-    )
+    _add_ev_selector_args(set_ev_p)
     set_ev_p.set_defaults(func=cmd_set_ev_mode)
 
     set_soc_p = sub.add_parser("set-ev-target-soc", help="Set EV target state-of-charge")
     set_soc_p.add_argument("soc", metavar="SOC", help="Target SoC in percent (0–100)")
-    set_soc_p.add_argument(
-        "--ev", metavar="EV_ID", default=None,
-        help="EV charger ID (required when several are registered)",
-    )
-    set_soc_p.add_argument(
-        "--all-evs", dest="all_evs", action="store_true",
-        help="Apply to every registered EV charger",
-    )
+    _add_ev_selector_args(set_soc_p)
     set_soc_p.set_defaults(func=cmd_set_ev_target_soc)
 
     set_dep_p = sub.add_parser("set-ev-departure", help="Set EV departure time")
     set_dep_p.add_argument("time", metavar="HH:MM", help="Departure time, e.g. 07:30")
-    set_dep_p.add_argument(
-        "--ev", metavar="EV_ID", default=None,
-        help="EV charger ID (required when several are registered)",
-    )
-    set_dep_p.add_argument(
-        "--all-evs", dest="all_evs", action="store_true",
-        help="Apply to every registered EV charger",
-    )
+    _add_ev_selector_args(set_dep_p)
     set_dep_p.set_defaults(func=cmd_set_ev_departure)
 
     sub.add_parser("price-config", help="User-configured energy prices (grid, comparison, monthly base)").set_defaults(func=cmd_price_config)
     sub.add_parser("comparison-price", help="Grid-supplier comparison price (EUR/kWh)").set_defaults(func=cmd_comparison_price)
 
     pg_p = sub.add_parser("price-guarantee", help="Contractual electricity-price guarantee")
-    pg_p.add_argument(
-        "--customer-id", dest="customer_id", metavar="UUID", default=None,
-        help="Customer UUID (default: looked up via system details)",
-    )
+    _add_customer_id_arg(pg_p)
     pg_p.set_defaults(func=cmd_price_guarantee)
 
     sub.add_parser("wallboxes", help="Physical wallbox hardware assigned to this system").set_defaults(func=cmd_wallboxes)
@@ -1080,17 +1070,11 @@ def main() -> None:
     sub.add_parser("site-details", help="Extended site metadata incl. EMS runtime state").set_defaults(func=cmd_site_details)
 
     cust_p = sub.add_parser("customer", help="Full customer record (v3)")
-    cust_p.add_argument(
-        "--customer-id", dest="customer_id", metavar="UUID", default=None,
-        help="Customer UUID (default: looked up via system details)",
-    )
+    _add_customer_id_arg(cust_p)
     cust_p.set_defaults(func=cmd_customer)
 
     subs_p = sub.add_parser("subscriptions", help="Customer contracts / subscriptions with monthly cost")
-    subs_p.add_argument(
-        "--customer-id", dest="customer_id", metavar="UUID", default=None,
-        help="Customer UUID (default: looked up via system details)",
-    )
+    _add_customer_id_arg(subs_p)
     subs_p.set_defaults(func=cmd_subscriptions)
 
     sub.add_parser("notifications", help="Recent push/in-app notifications").set_defaults(func=cmd_notifications)
