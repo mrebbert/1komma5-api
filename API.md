@@ -605,7 +605,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ### Active feature flags
 
-`GET /api/v1/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features` — active feature codes for the given customer + site pair.
+`GET /api/v2/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features` — active feature codes for the given customer + site pair.
 
 `$CUSTOMER_ID` comes from the `customerId` field of `/api/v1/systems/{id}/details`.
 
@@ -613,7 +613,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  "https://customer-identity.1komma5grad.com/api/v1/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features" | jq .
+  "https://customer-identity.1komma5grad.com/api/v2/customers/$CUSTOMER_ID/sites/$ONEKOMMAFIVE_SYSTEM/active-features" | jq .
 ```
 
 **Response**

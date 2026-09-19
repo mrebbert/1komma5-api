@@ -137,7 +137,7 @@ class System:
         """
         data = self._client._request(
             "GET",
-            f"{self._client.IDENTITY_API}/api/v1/customers/{customer_id}/sites/{self.id()}/active-features",
+            f"{self._client.IDENTITY_API}/api/v2/customers/{customer_id}/sites/{self.id()}/active-features",
             error_label="Failed to get active features",
         )
         return list(data.get("features", []))

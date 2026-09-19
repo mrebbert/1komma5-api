@@ -204,7 +204,7 @@ def make_status_and_assets_data() -> dict:
 
 
 def make_active_features_data() -> dict:
-    """Return an /active-features v1 response."""
+    """Return an /active-features v2 response."""
     return {
         "features": [
             "DYNAMIC_TARIFF",

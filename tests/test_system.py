@@ -760,7 +760,7 @@ class TestGetActiveFeatures:
     _CUSTOMER_ID = "cust-0001"
 
     def _url(self) -> str:
-        return f"{_IDENTITY_BASE}/api/v1/customers/{self._CUSTOMER_ID}/sites/{FAKE_SYSTEM_ID}/active-features"
+        return f"{_IDENTITY_BASE}/api/v2/customers/{self._CUSTOMER_ID}/sites/{FAKE_SYSTEM_ID}/active-features"
 
     @resp_lib.activate
     def test_returns_list_of_feature_codes(self) -> None:
