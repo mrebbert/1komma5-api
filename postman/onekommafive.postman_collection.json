@@ -245,11 +245,26 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{identityUrl}}/api/v1/customers/{{customerId}}/sites/{{siteId}}/active-features",
+              "raw": "{{identityUrl}}/api/v2/customers/{{customerId}}/sites/{{siteId}}/active-features",
               "host": ["{{identityUrl}}"],
-              "path": ["api", "v1", "customers", "{{customerId}}", "sites", "{{siteId}}", "active-features"]
+              "path": ["api", "v2", "customers", "{{customerId}}", "sites", "{{siteId}}", "active-features"]
             },
             "description": "List of active feature flags (e.g. DYNAMIC_TARIFF, TIME_OF_USE_OPTIMIZATION, SMART_CHARGING). `customerId` comes from `/systems/{id}/details`."
+          },
+          "response": []
+        },
+        {
+          "name": "Get device gateways",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/device-gateways?systemId={{systemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "device-gateways"],
+              "query": [{"key": "systemId", "value": "{{systemId}}"}]
+            },
+            "description": "Paginated list of device gateways for the system. Richer than the `deviceGateways` block inside `/systems/{id}/details`: adds `type`, `claimedByUserId`, GridX backend ids, `provisioningJob.installerName`, `createdAt`/`updatedAt`."
           },
           "response": []
         },
