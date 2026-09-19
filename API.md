@@ -23,6 +23,7 @@ Requests unless noted send `Authorization: Bearer $BEARER_TOKEN`. All personal i
   - [Site details (v2, superset)](#site-details-v2-superset)
   - [Site status and assets](#site-status-and-assets)
   - [Active feature flags](#active-feature-flags)
+  - [Device gateways (standalone, v2)](#device-gateways-standalone-v2)
 - [Live data](#live-data)
   - [Live overview](#live-overview)
 - [Energy](#energy)
@@ -638,6 +639,60 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   | `DYNAMIC_TARIFF` | Dynamic electricity tariff is active |
   | `TIME_OF_USE_OPTIMIZATION` | Time-variable tariff optimisation by the EMS |
   | `SMART_CHARGING` | EV smart-charging available |
+
+---
+
+### Device gateways (standalone, v2)
+
+`GET /api/v2/device-gateways?systemId=$ONEKOMMAFIVE_SYSTEM` — paginated list of device gateways for the system, with GridX backend identifiers, installer details, and registration timestamps.
+
+Richer than the `deviceGateways` block inside `/api/v1/systems/{id}/details`, which only exposes id, `gridxStartCode`, `serialNumber`, and `installationDate`.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v2/device-gateways?systemId=$ONEKOMMAFIVE_SYSTEM" | jq .
+```
+
+**Response**
+
+```json
+{
+  "data": [
+    {
+      "id": "870aa545-3c8f-4e59-94db-3325bab31782",
+      "createdAt": "2025-01-24T09:59:38.587Z",
+      "updatedAt": "2025-01-24T10:14:22.044Z",
+      "type": "GRIDX",
+      "serialNumber": "I482-510-000-014-892-P-X",
+      "systemId": "…",
+      "claimedByUserId": "…",
+      "gridxStartCode": "C603BADF65D59E0E",
+      "gridxSystemId": "…",
+      "gridxGatewayId": "…",
+      "provisioningJob": {
+        "installerId": "…",
+        "installerName": "1KOMMA5° Rheinland",
+        "installationDate": "2025-01-24"
+      },
+      "system": {
+        "id": "…",
+        "technicalContactId": "…",
+        "technicalContactName": "1KOMMA5° Rheinland",
+        "addressCity": "Tönisvorst",
+        "addressCountry": "DE",
+        "addressLine1": "Sternstr. 125",
+        "addressZipCode": "47918"
+      }
+    }
+  ],
+  "pageIndex": 0,
+  "pageSize": 15,
+  "totalPages": 1,
+  "totalItems": 1
+}
+```
 
 ---
 

@@ -9,6 +9,7 @@ from .models import (
     ChargingMode,
     ComparisonPrice,
     Customer,
+    DeviceGateway,
     EmsSettings,
     EnergyData,
     EnergyTrader,
@@ -128,6 +129,21 @@ class System:
             error_label="Failed to get site status and assets",
         )
         return SiteStatus.from_dict(data)
+
+    def get_device_gateways(self) -> list[DeviceGateway]:
+        """Return all device gateways registered to this system.
+
+        ``GET /api/v2/device-gateways?systemId={id}``. Richer than the nested
+        gateway list on :class:`SystemDetails`: adds gateway ``type``, GridX
+        backend identifiers, installer name, and registration timestamps.
+        """
+        data = self._client._request(
+            "GET",
+            f"{self._client.HEARTBEAT_API}/api/v2/device-gateways",
+            params={"systemId": self.id()},
+            error_label="Failed to get device gateways",
+        )
+        return [DeviceGateway.from_dict(g) for g in data.get("data", [])]
 
     def get_active_features(self, customer_id: str) -> list[str]:
         """Return active feature flags for this site (e.g. ``"DYNAMIC_TARIFF"``).

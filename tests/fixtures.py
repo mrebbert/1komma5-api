@@ -203,6 +203,49 @@ def make_status_and_assets_data() -> dict:
     }
 
 
+def make_device_gateways_data() -> dict:
+    """Return a paginated /api/v2/device-gateways response with one gateway."""
+    return {
+        "data": [
+            {
+                "id": "gw-0000-0000-0000-000000000001",
+                "createdAt": "2025-01-24T09:59:38.587Z",
+                "updatedAt": "2025-01-24T10:14:22.044Z",
+                "type": "GRIDX",
+                "serialNumber": "I482-510-000-014-892-P-X",
+                "systemId": FAKE_SYSTEM_ID,
+                "claimedByUserId": "user-0000-0000-0000-000000000001",
+                "claimedByServiceAppUserId": None,
+                "gridxStartCode": "C603BADF65D59E0E",
+                "gridxSystemId": "gx-sys-0000-0000-0000-000000000001",
+                "gridxGatewayId": "gx-gw-0000-0000-0000-000000000001",
+                "gridxScanJobId": None,
+                "gridxScanJobStartedAt": None,
+                "system": {
+                    "id": FAKE_SYSTEM_ID,
+                    "technicalContactId": "installer-0000-0000-0000-000000000001",
+                    "technicalContactName": "1KOMMA5° Example",
+                    "addressName": None,
+                    "addressCity": "Berlin",
+                    "addressCountry": "DE",
+                    "addressLine1": "Hauptstr. 1",
+                    "addressLine2": None,
+                    "addressZipCode": "10115",
+                },
+                "provisioningJob": {
+                    "installerId": "installer-0000-0000-0000-000000000001",
+                    "installerName": "1KOMMA5° Example",
+                    "installationDate": "2025-01-24",
+                },
+            }
+        ],
+        "pageIndex": 0,
+        "pageSize": 15,
+        "totalPages": 1,
+        "totalItems": 1,
+    }
+
+
 def make_active_features_data() -> dict:
     """Return an /active-features v2 response."""
     return {

@@ -129,7 +129,10 @@ class SystemCustomer:
 class DeviceGateway:
     """A device gateway (e.g. GridX box) registered to a system.
 
-    Returned as part of :class:`SystemDetails`.
+    Two endpoints return this shape: the nested list on :class:`SystemDetails`
+    (four fields), and the standalone
+    ``GET /api/v2/device-gateways?systemId={id}`` (all fields). Fields that
+    aren't present in the nested form stay ``None``.
     """
 
     id: str
@@ -144,14 +147,51 @@ class DeviceGateway:
     installation_date: str | None
     """ISO-8601 date (``YYYY-MM-DD``) when the gateway was installed."""
 
+    type: str | None = None
+    """Gateway platform, e.g. ``"GRIDX"``. Only present on the standalone endpoint."""
+
+    system_id: str | None = None
+    """UUID of the system this gateway belongs to."""
+
+    claimed_by_user_id: str | None = None
+    """UUID of the customer who claimed the gateway (typically the owner)."""
+
+    gridx_system_id: str | None = None
+    """GridX-side system identifier used by the device management backend."""
+
+    gridx_gateway_id: str | None = None
+    """GridX-side gateway identifier used by the device management backend."""
+
+    installer_id: str | None = None
+    """UUID of the installing 1KOMMA5° partner."""
+
+    installer_name: str | None = None
+    """Display name of the installing partner, e.g. ``"1KOMMA5° Rheinland"``."""
+
+    created_at: str | None = None
+    """ISO-8601 timestamp of gateway registration."""
+
+    updated_at: str | None = None
+    """ISO-8601 timestamp of the most recent gateway record change."""
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "DeviceGateway":
         """Construct a :class:`DeviceGateway` from a raw API response dictionary."""
+        job = data.get("provisioningJob") or {}
         return cls(
             id=data["id"],
             gridx_start_code=data.get("gridxStartCode"),
             serial_number=data.get("serialNumber"),
-            installation_date=data.get("installationDate"),
+            installation_date=data.get("installationDate") or job.get("installationDate"),
+            type=data.get("type"),
+            system_id=data.get("systemId"),
+            claimed_by_user_id=data.get("claimedByUserId"),
+            gridx_system_id=data.get("gridxSystemId"),
+            gridx_gateway_id=data.get("gridxGatewayId"),
+            installer_id=job.get("installerId"),
+            installer_name=job.get("installerName"),
+            created_at=data.get("createdAt"),
+            updated_at=data.get("updatedAt"),
         )
 
 

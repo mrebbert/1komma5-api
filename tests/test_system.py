@@ -13,6 +13,7 @@ from onekommafive.ev_charger import EVCharger
 from onekommafive.models import (
     ComparisonPrice,
     Customer,
+    DeviceGateway,
     EmsSettings,
     EnergyData,
     EnergyTrader,
@@ -44,6 +45,7 @@ from tests.fixtures import (
     FAKE_SYSTEM_ID,
     FAKE_USER_ID,
     make_active_features_data,
+    make_device_gateways_data,
     make_client,
     make_comparison_price_data,
     make_customer_data,
@@ -748,6 +750,58 @@ class TestGetStatusAndAssets:
         )
         with pytest.raises(RequestError, match="Failed to get site status and assets"):
             _make_system().get_status_and_assets()
+
+
+# ---------------------------------------------------------------------------
+# Device gateways (v2 standalone endpoint)
+# ---------------------------------------------------------------------------
+
+class TestGetDeviceGateways:
+    """Tests for System.get_device_gateways."""
+
+    _URL = f"{_BASE}/api/v2/device-gateways"
+
+    @resp_lib.activate
+    def test_returns_gateway_instances(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_device_gateways_data(), status=200)
+        result = _make_system().get_device_gateways()
+        assert len(result) == 1
+        assert isinstance(result[0], DeviceGateway)
+
+    @resp_lib.activate
+    def test_extracts_all_fields(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_device_gateways_data(), status=200)
+        gw = _make_system().get_device_gateways()[0]
+        assert gw.id == "gw-0000-0000-0000-000000000001"
+        assert gw.type == "GRIDX"
+        assert gw.serial_number == "I482-510-000-014-892-P-X"
+        assert gw.system_id == FAKE_SYSTEM_ID
+        assert gw.gridx_start_code == "C603BADF65D59E0E"
+        assert gw.gridx_system_id == "gx-sys-0000-0000-0000-000000000001"
+        assert gw.gridx_gateway_id == "gx-gw-0000-0000-0000-000000000001"
+        assert gw.installer_id == "installer-0000-0000-0000-000000000001"
+        assert gw.installer_name == "1KOMMA5° Example"
+        assert gw.installation_date == "2025-01-24"
+        assert gw.claimed_by_user_id == "user-0000-0000-0000-000000000001"
+        assert gw.created_at == "2025-01-24T09:59:38.587Z"
+        assert gw.updated_at == "2025-01-24T10:14:22.044Z"
+
+    @resp_lib.activate
+    def test_sends_system_id_query_param(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json=make_device_gateways_data(), status=200)
+        _make_system().get_device_gateways()
+        assert resp_lib.calls[0].request.url == f"{self._URL}?systemId={FAKE_SYSTEM_ID}"
+
+    @resp_lib.activate
+    def test_empty_data(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={"data": []}, status=200)
+        assert _make_system().get_device_gateways() == []
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.GET, self._URL, json={"error": "boom"}, status=500)
+        with pytest.raises(RequestError, match="Failed to get device gateways"):
+            _make_system().get_device_gateways()
 
 
 # ---------------------------------------------------------------------------
