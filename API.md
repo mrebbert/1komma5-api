@@ -1355,7 +1355,8 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 - `marketPrice.value` is in **EUR/MWh** — but empirically closer to the feed-in / trader-side price than to the spot purchase price. See [Self-sufficiency events](#self-sufficiency-events) for the observed factor ~4-5 delta vs `charts/market-prices`.
 - `stateOfCharge` is a **percentage** (0–100).
-- `log` contains ISO timestamps of follow-up slots with the same decision.
+- `from`/`to` are always exactly 15 minutes apart — one slot per event.
+- `log` is the API's slot-aggregation trick: when consecutive 15-min slots within the same hour bucket (`:00`–`:59:59` UTC) carry the same `decision`, they're rolled into one event. `log[0]` equals `to`, entries step forward by 15 min, and the list never crosses an hour boundary — so `len(log)` is 0–3, and the covered time span is `1 + len(log)` slots. `marketPrice` and `stateOfCharge` still describe only the first slot. Ignoring `log` undercounts consecutive same-decision slots by up to 4×.
 
 ---
 

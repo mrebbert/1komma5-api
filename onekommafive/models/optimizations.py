@@ -1,7 +1,20 @@
 """AI optimisation event models (``/api/v1/heartbeat-ai/optimizations``)."""
 
+import datetime as _dt
 from dataclasses import dataclass, field
 from typing import Any
+
+_SLOT_MINUTES = 15
+
+
+def _parse_iso(ts: str) -> _dt.datetime:
+    return _dt.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+
+
+def _plus_slot(ts: str) -> str:
+    """Return ``ts`` shifted forward by one 15-min slot, as ISO-8601 UTC."""
+    dt = _parse_iso(ts) + _dt.timedelta(minutes=_SLOT_MINUTES)
+    return dt.astimezone(_dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 @dataclass
@@ -57,10 +70,39 @@ class OptimizationEvent:
     """State-of-charge at decision time as an integer percentage (0–100), or ``None``."""
 
     log: list[str]
-    """List of ISO-8601 timestamps logged for this event (may be empty)."""
+    """Start-timestamps of additional 15-min slots the API rolled into this
+    event because they carried the **same** ``decision`` within the same
+    hour bucket (``:00``–``:59:59`` UTC).
+
+    Empirically:
+
+    - ``log[0]`` equals ``to_time`` exactly; the list grows in 15-min
+      steps and never crosses an hour boundary, so ``len(log)`` is 0–3.
+    - ``from_time``/``to_time`` still describe **only the first slot**;
+      the numeric fields (``market_price``, ``state_of_charge``) are the
+      values at that first slot, not aggregates.
+
+    Use :attr:`slot_count` and :attr:`end_time` if you want to know how
+    much time this event actually covers. Ignoring ``log`` undercounts
+    consecutive same-decision slots by up to a factor of four.
+    """
 
     raw: dict[str, Any] = field(repr=False)
     """The complete raw event dictionary."""
+
+    @property
+    def slot_count(self) -> int:
+        """Number of 15-min slots this event covers (``1 + len(log)``)."""
+        return 1 + len(self.log)
+
+    @property
+    def end_time(self) -> str:
+        """ISO-8601 end of the last slot covered by this event.
+
+        Equals ``to_time`` when ``log`` is empty, otherwise
+        ``log[-1] + 15 min``.
+        """
+        return _plus_slot(self.log[-1]) if self.log else self.to_time
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "OptimizationEvent":
