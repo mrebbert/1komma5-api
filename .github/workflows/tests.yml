@@ -27,3 +27,23 @@ jobs:
 
       - name: Run tests
         run: pytest
+
+  test-uv:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Sync from lock (frozen)
+        run: uv sync --frozen --all-extras --python ${{ matrix.python-version }}
+
+      - name: Run tests
+        run: uv run pytest
