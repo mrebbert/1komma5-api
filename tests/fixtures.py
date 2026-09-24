@@ -1110,7 +1110,13 @@ def make_weather_data() -> dict:
 
 
 def make_optimizations_data() -> dict:
-    """Return a /heartbeat-ai/optimizations v1 response with two decision events."""
+    """Return a /heartbeat-ai/optimizations v1 response with two decision events.
+
+    Shape matches the live API: ``to - from`` is always exactly 15 min,
+    and ``log`` lists start-timestamps of additional slots (starting at
+    ``to``, in 15-min steps, never crossing the hour). The first event
+    below is a 4-slot aggregation, the second a single-slot event.
+    """
     return {
         "events": [
             {
@@ -1120,13 +1126,17 @@ def make_optimizations_data() -> dict:
                     "decision": "BATTERY_CHARGE_FROM_GRID",
                     "asset": "BATTERY",
                     "from": "2026-06-01T10:00:00Z",
-                    "to": "2026-06-01T11:00:00Z",
+                    "to": "2026-06-01T10:15:00Z",
                     "marketPrice": {"value": "0.075", "currency": "EUR"},
                     "energySold": 0.0,
                     "energyBought": 2.4,
                     "totalCost": 0.18,
                     "stateOfCharge": 42,
-                    "log": ["2026-06-01T10:00:00Z", "2026-06-01T10:15:00Z"],
+                    "log": [
+                        "2026-06-01T10:15:00Z",
+                        "2026-06-01T10:30:00Z",
+                        "2026-06-01T10:45:00Z",
+                    ],
                 },
             },
             {
@@ -1136,7 +1146,7 @@ def make_optimizations_data() -> dict:
                     "decision": "BATTERY_NO_DISCHARGE",
                     "asset": "BATTERY",
                     "from": "2026-06-01T11:00:00Z",
-                    "to": "2026-06-01T12:00:00Z",
+                    "to": "2026-06-01T11:15:00Z",
                     "marketPrice": {"value": None, "currency": "EUR"},
                     "energySold": None,
                     "energyBought": None,

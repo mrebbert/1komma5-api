@@ -1620,7 +1620,25 @@ class TestGetOptimizations:
         assert first.market_price == pytest.approx(0.075)
         assert first.market_price_currency == "EUR"
         assert first.state_of_charge == 42
-        assert first.log == ["2026-06-01T10:00:00Z", "2026-06-01T10:15:00Z"]
+        assert first.log == [
+            "2026-06-01T10:15:00Z",
+            "2026-06-01T10:30:00Z",
+            "2026-06-01T10:45:00Z",
+        ]
+
+    @resp_lib.activate
+    def test_slot_count_and_end_time(self) -> None:
+        resp_lib.add(resp_lib.GET, _OPTIMIZATIONS_URL, json=make_optimizations_data(), status=200)
+        result = _make_system().get_optimizations(
+            datetime.datetime(2026, 6, 1, 10),
+            datetime.datetime(2026, 6, 1, 12),
+        )
+        aggregated = result.events[0]
+        assert aggregated.slot_count == 4
+        assert aggregated.end_time == "2026-06-01T11:00:00Z"
+        single = result.events[1]
+        assert single.slot_count == 1
+        assert single.end_time == single.to_time == "2026-06-01T11:15:00Z"
 
     @resp_lib.activate
     def test_null_market_price_stays_none(self) -> None:
