@@ -244,9 +244,18 @@ Complete curl-level reference for every HTTP endpoint — URLs, query parameters
 
 ### Running tests
 
+Standard (pip):
+
 ```bash
 pip install "onekommafive[dev]"
 pytest
+```
+
+Alternative (uv, faster and backed by the checked-in `uv.lock`):
+
+```bash
+uv sync --all-extras
+uv run pytest
 ```
 
 Integration tests (require credentials, read-only, no mutations):
