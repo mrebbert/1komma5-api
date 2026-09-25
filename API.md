@@ -1119,6 +1119,16 @@ curl -s -X PATCH \
   "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/$EV_ID" | jq .
 ```
 
+**Assign a wallbox to this vehicle** — sets `chargerId` on the EV. The 1KOMMA5° model is 1:1 exclusive, so setting `chargerId` on EV B automatically releases whichever EV A was previously bound to the same wallbox. The app UI offers no separate "unassign"; only a switch.
+
+```bash
+curl -s -X PATCH \
+  -H "Authorization: Bearer $BEARER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"chargerId": "<wallbox-uuid>"}' \
+  "https://heartbeat.1komma5grad.com/api/v2/sites/$ONEKOMMAFIVE_SYSTEM/assets/evs/$EV_ID" | jq .
+```
+
 ---
 
 ### List wallboxes (hardware)

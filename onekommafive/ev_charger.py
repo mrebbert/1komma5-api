@@ -77,7 +77,10 @@ class EVCharger:
         return None
 
     def assigned_charger_id(self) -> str | None:
-        """Return the ID of the physical wallbox assigned to this vehicle, or ``None``."""
+        """Return the ID of the physical wallbox assigned to this vehicle, or ``None``.
+
+        Writable via :meth:`assign_charger`.
+        """
         return self._data.get("chargerId")
 
     def manual_soc_timestamp(self) -> str | None:
@@ -264,6 +267,36 @@ class EVCharger:
             error_label="Failed to set departure time",
         )
         self._data["departureTime"] = time
+
+    def assign_charger(self, charger_id: str) -> None:
+        """Bind this vehicle to the physical wallbox with ``charger_id``.
+
+        The 1KOMMA5° model is 1:1 exclusive: a wallbox is always assigned
+        to exactly one EV. Setting ``chargerId`` on this vehicle
+        automatically releases whichever EV was previously bound to the
+        same wallbox — no separate "unassign" call is needed, and the
+        app UI does not expose one either.
+
+        No-ops silently when *charger_id* matches the current assignment.
+
+        Args:
+            charger_id: UUID of the target wallbox, discoverable via
+                :meth:`~onekommafive.System.get_wallboxes` (each
+                :class:`~onekommafive.models.Wallbox` has an ``id``).
+
+        Raises:
+            RequestError: If the server returns a non-200 response.
+        """
+        if self.assigned_charger_id() == charger_id:
+            return
+
+        self._client._request(
+            "PATCH",
+            self._url(),
+            json={"chargerId": charger_id},
+            error_label="Failed to assign charger",
+        )
+        self._data["chargerId"] = charger_id
 
     def __repr__(self) -> str:
         return f"EVCharger(id={self.id()!r}, name={self.name()!r}, mode={self.charging_mode().value!r})"
