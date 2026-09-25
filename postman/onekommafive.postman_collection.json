@@ -783,6 +783,29 @@
             "description": "Format `HH:MM` (24h)."
           },
           "response": []
+        },
+        {
+          "name": "Assign charger to EV",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chargerId\": \"{{chargerId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v2", "sites", "{{systemId}}", "assets", "evs", "{{evId}}"]
+            },
+            "description": "Bind this EV to the physical wallbox with the given UUID. 1:1 exclusive: setting chargerId on EV B automatically releases whichever EV A was previously bound to the same wallbox. The app UI offers only a switch, no separate unassign."
+          },
+          "response": []
         }
       ]
     },

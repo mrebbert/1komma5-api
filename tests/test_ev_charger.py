@@ -333,3 +333,42 @@ class TestSetPrimaryDepartureTime:
         charger = _make_charger()
         with pytest.raises(RequestError, match="Failed to set departure time"):
             charger.set_primary_departure_time("07:30")
+
+
+class TestAssignCharger:
+    """Tests for EVCharger.assign_charger."""
+
+    _NEW_CHARGER_ID = "cccccccc-0000-0000-0000-000000000099"
+
+    @resp_lib.activate
+    def test_sends_patch_with_charger_id(self) -> None:
+        resp_lib.add(resp_lib.PATCH, _BASE_URL, json={}, status=200)
+
+        charger = _make_charger()
+        charger.assign_charger(self._NEW_CHARGER_ID)
+
+        body = json.loads(resp_lib.calls[0].request.body)
+        assert body == {"chargerId": self._NEW_CHARGER_ID}
+        assert resp_lib.calls[0].request.url == _BASE_URL
+
+    @resp_lib.activate
+    def test_updates_internal_state_after_success(self) -> None:
+        resp_lib.add(resp_lib.PATCH, _BASE_URL, json={}, status=200)
+
+        charger = _make_charger()
+        charger.assign_charger(self._NEW_CHARGER_ID)
+
+        assert charger.assigned_charger_id() == self._NEW_CHARGER_ID
+
+    def test_no_op_when_charger_id_unchanged(self) -> None:
+        # Fixture already has chargerId = FAKE_CHARGER_ID; no HTTP call expected.
+        charger = _make_charger()
+        charger.assign_charger(FAKE_CHARGER_ID)
+
+    @resp_lib.activate
+    def test_raises_on_server_error(self) -> None:
+        resp_lib.add(resp_lib.PATCH, _BASE_URL, json={"error": "bad request"}, status=400)
+
+        charger = _make_charger()
+        with pytest.raises(RequestError, match="Failed to assign charger"):
+            charger.assign_charger(self._NEW_CHARGER_ID)
