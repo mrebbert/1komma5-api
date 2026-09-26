@@ -112,7 +112,7 @@ class Client:
     # so scripts that forget to call ``close()`` still get a clean
     # aiohttp-session shutdown at interpreter exit via the atexit hook
     # registered below.
-    _live: "set[Client]" = set()
+    _live: set[Client] = set()
 
     def __init__(
         self,
