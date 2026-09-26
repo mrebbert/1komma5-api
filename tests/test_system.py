@@ -106,8 +106,7 @@ def _recorded_url(m: aioresponses, index: int = -1) -> str:
     """
     all_urls: list[str] = []
     for (_method, url), calls in m.requests.items():
-        for _call in calls:
-            all_urls.append(str(url))
+        all_urls.extend([str(url)] * len(calls))
     return all_urls[index] if all_urls else ""
 
 
