@@ -23,6 +23,7 @@ Example::
 from __future__ import annotations
 
 import asyncio
+import atexit
 import datetime
 import threading
 from collections.abc import Coroutine
@@ -107,6 +108,12 @@ class Client:
 
     HEARTBEAT_API: str = _client_module.HEARTBEAT_API
 
+    # Strong references to every live SyncClient — prevents premature GC
+    # so scripts that forget to call ``close()`` still get a clean
+    # aiohttp-session shutdown at interpreter exit via the atexit hook
+    # registered below.
+    _live: "set[Client]" = set()
+
     def __init__(
         self,
         username: str,
@@ -119,6 +126,8 @@ class Client:
         self._async = _client_module.Client(
             username, password, session=session, token_cache=token_cache,
         )
+        self._closed = False
+        Client._live.add(self)
 
     def __enter__(self) -> Self:
         return self
@@ -132,11 +141,18 @@ class Client:
         self.close()
 
     def close(self) -> None:
-        """Close the underlying aiohttp session and stop the internal loop."""
+        """Close the underlying aiohttp session and stop the internal loop.
+
+        Idempotent: safe to call more than once.
+        """
+        if self._closed:
+            return
+        self._closed = True
         try:
             self._runner.run(self._async.close())
         finally:
             self._runner.close()
+        Client._live.discard(self)
 
     # ------------------------------------------------------------------
     # Public interface (delegates to async client)
@@ -166,6 +182,20 @@ class Client:
     @property
     def _inner(self) -> _client_module.Client:
         return self._async
+
+
+@atexit.register
+def _close_leftover_clients() -> None:
+    """Interpreter-shutdown safety net for scripts that forget ``close()``.
+
+    Iterates over a snapshot of :attr:`Client._live` so ``close()`` can
+    mutate the set safely.
+    """
+    for client in list(Client._live):
+        try:
+            client.close()
+        except Exception:  # noqa: BLE001 — best-effort during shutdown
+            pass
 
 
 class Systems:
