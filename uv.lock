@@ -678,7 +678,7 @@ wheels = [
 
 [[package]]
 name = "onekommafive"
-version = "1.0.1"
+version = "1.0.2"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },
@@ -688,6 +688,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
+    { name = "aiohttp" },
     { name = "aioresponses" },
     { name = "mypy" },
     { name = "pre-commit" },
@@ -699,7 +700,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "aiohttp", specifier = ">=3.10,<3.13" },
+    { name = "aiohttp", specifier = ">=3.10" },
+    { name = "aiohttp", marker = "extra == 'dev'", specifier = "<3.13" },
     { name = "aioresponses", marker = "extra == 'dev'", specifier = ">=0.7" },
     { name = "cryptography", specifier = ">=41" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.11" },
