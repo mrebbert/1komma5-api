@@ -20,10 +20,12 @@ import os
 import re
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
+from typing import Any
 
 import jwt
-import requests
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -166,18 +168,17 @@ def get_credentials() -> tuple[str, str]:
         sys.exit(1)
 
     sys.path.insert(0, str(Path(__file__).parent.parent))
-    from onekommafive import Client  # noqa: PLC0415
-    from onekommafive.systems import Systems  # noqa: PLC0415
+    from onekommafive.sync import Client, Systems  # noqa: PLC0415
 
-    client = Client(username, password)
-    token = client.get_token()
-    system = os.environ.get("ONEKOMMAFIVE_SYSTEM")
-    if not system:
-        systems = Systems(client).get_systems()
-        if not systems:
-            print("Error: no systems available for this account", file=sys.stderr)
-            sys.exit(1)
-        system = systems[0].id()
+    with Client(username, password) as client:
+        token = client.get_token()
+        system = os.environ.get("ONEKOMMAFIVE_SYSTEM")
+        if not system:
+            systems = Systems(client).get_systems()
+            if not systems:
+                print("Error: no systems available for this account", file=sys.stderr)
+                sys.exit(1)
+            system = systems[0].id()
 
     _save_cached_token(token, system)
     return token, system
@@ -194,6 +195,16 @@ def _make_url(v: int, path_template: str, system_id: str) -> str:
     return f"{base}/api/v{v}/{path}"
 
 
+def _http_get(url: str, token: str) -> tuple[int, bytes]:
+    """Return (status, body) for an authenticated GET. Raises on network errors."""
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(req, timeout=6) as resp:  # noqa: S310
+            return resp.status, resp.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+
+
 def probe(
     token: str, system_id: str, path_template: str, current_ver: str
 ) -> list[tuple[int, int]]:
@@ -202,20 +213,17 @@ def probe(
     Returns list of (version, http_status) for responses that look valid
     (i.e. not 404 / 405 / 401 / 403).
     """
-    headers = {"Authorization": f"Bearer {token}"}
     current_n = int(current_ver[1:])
     hits = []
     for v in range(current_n + 1, MAX_VERSION + 1):
         try:
-            r = requests.get(
-                _make_url(v, path_template, system_id), headers=headers, timeout=6
-            )
-            if r.status_code not in (404, 405, 401, 403):
-                hits.append((v, r.status_code))
-        except requests.RequestException:
+            status, _ = _http_get(_make_url(v, path_template, system_id), token)
+        except (urllib.error.URLError, TimeoutError, OSError):
             # Network errors (timeout, refused, DNS) during probing are expected
             # when a version doesn't exist on a different host/route — skip silently.
             continue
+        if status not in (404, 405, 401, 403):
+            hits.append((v, status))
     return hits
 
 
@@ -241,19 +249,14 @@ def diff_summary(
     token: str, system_id: str, path_template: str, old_ver: str, new_ver: int
 ) -> str:
     """Fetch both versions and return a human-readable diff summary."""
-    headers = {"Authorization": f"Bearer {token}"}
     old_n = int(old_ver[1:])
 
     try:
-        r_old = requests.get(
-            _make_url(old_n, path_template, system_id), headers=headers, timeout=6
-        )
-        r_new = requests.get(
-            _make_url(new_ver, path_template, system_id), headers=headers, timeout=6
-        )
-        old_json = r_old.json()
-        new_json = r_new.json()
-    except Exception as e:
+        _, body_old = _http_get(_make_url(old_n, path_template, system_id), token)
+        _, body_new = _http_get(_make_url(new_ver, path_template, system_id), token)
+        old_json: Any = json.loads(body_old)
+        new_json: Any = json.loads(body_new)
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
         return f"(could not compare: {e})"
 
     old_keys = _flatten_keys(old_json)
