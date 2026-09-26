@@ -1391,7 +1391,11 @@ def main() -> None:
     set_ems_p.set_defaults(func=cmd_set_ems)
 
     args = parser.parse_args()
-    args.func(args)
+    try:
+        args.func(args)
+    finally:
+        for client in list(Client._live):
+            client.close()
 
 
 if __name__ == "__main__":
