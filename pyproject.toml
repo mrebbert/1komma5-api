@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "onekommafive"
-version = "1.0.1"
+version = "1.0.2"
 description = "Python API client for the 1KOMMA5° Heartbeat API"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -25,12 +25,18 @@ classifiers = [
 ]
 dependencies = [
     "PyJWT>=2.8",
-    "aiohttp>=3.10,<3.13",
+    "aiohttp>=3.10",
     "cryptography>=41",
 ]
 
 [project.optional-dependencies]
 dev = [
+    # aioresponses 0.7.9 breaks on aiohttp's stream_writer signature
+    # change in 3.13+. Constrain aiohttp only in the dev extra so
+    # downstream consumers (e.g. Home Assistant, which pins
+    # aiohttp==3.13.3) can install the runtime without conflict.
+    # Drop this pin when aioresponses ships a fix.
+    "aiohttp<3.13",
     "aioresponses>=0.7",
     "mypy>=1.11",
     "pre-commit>=3.5",
