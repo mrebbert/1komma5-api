@@ -5,12 +5,6 @@ updates:
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
-    ignore:
-      # aioresponses 0.7.9 breaks on aiohttp's stream_writer signature
-      # change in 3.13. Re-enable when aioresponses ships a fix.
-      # Tracking: https://github.com/pnuckowski/aioresponses/issues
-      - dependency-name: "aiohttp"
-        versions: [">=3.13"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
