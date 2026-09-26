@@ -89,7 +89,7 @@ class LiveOverview:
         else:
             grid_power = None
 
-        def _power(node: dict | None) -> float | None:
+        def _power(node: dict[str, Any] | None) -> float | None:
             return (node or {}).get("power", {}).get("value") if node else None
 
         return cls(

@@ -62,9 +62,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from onekommafive import Client, Systems
 from onekommafive.errors import RequestError
 from onekommafive.models import ChargingMode, MarketPrices
+from onekommafive.sync import Client, Systems
 
 # Token cache for the CLI: skips the OAuth2 login round-trip on subsequent
 # invocations while the JWT is still valid (~1h). Delete the file or set

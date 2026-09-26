@@ -20,7 +20,6 @@ import os
 
 import pytest
 
-from onekommafive import Client, Systems
 from onekommafive.errors import AuthenticationError
 from onekommafive.models import (
     ChargingMode,
@@ -30,6 +29,7 @@ from onekommafive.models import (
     MarketPrices,
     User,
 )
+from onekommafive.sync import Client, Systems
 
 # ---------------------------------------------------------------------------
 # Credential fixtures – tests are skipped when env vars are absent
@@ -54,13 +54,14 @@ def credentials() -> tuple[str, str]:
 
 
 @pytest.fixture(scope="module")
-def client(credentials: tuple[str, str]) -> Client:
+def client(credentials: tuple[str, str]):
     """Return an authenticated Client for the whole test module."""
     username, password = credentials
     c = Client(username, password)
     # Eagerly trigger login so authentication errors surface here
     c.get_token()
-    return c
+    yield c
+    c.close()
 
 
 @pytest.fixture(scope="module")

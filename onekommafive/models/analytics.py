@@ -4,12 +4,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-def _val(node: dict | None) -> float | None:
+def _val(node: dict[str, Any] | None) -> float | None:
     """Extract the ``value`` from a ``{value, unit}`` node."""
     return node.get("value") if node else None
 
 
-def _amount(node: dict | None) -> float | None:
+def _amount(node: dict[str, Any] | None) -> float | None:
     """Extract the ``amount`` (as float) from a ``{amount, currency}`` node."""
     if not node:
         return None
@@ -17,7 +17,7 @@ def _amount(node: dict | None) -> float | None:
     return float(a) if a is not None else None
 
 
-def _rate(node: dict | None) -> float | None:
+def _rate(node: dict[str, Any] | None) -> float | None:
     """Extract per-unit rate from ``{price: {amount, currency}, unit}``."""
     return _amount((node or {}).get("price"))
 

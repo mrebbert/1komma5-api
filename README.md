@@ -33,13 +33,13 @@ Read live power flows, control EV charging, monitor Dynamic Pulse market prices,
 
 ## Installation
 
-Requires **Python 3.11 or newer**.
+Requires **Python 3.13 or newer**. The SDK became async in 1.0.0 (see below); if you need Python 3.11/3.12 compatibility, pin `onekommafive<1.0`.
 
 ```bash
 pip install onekommafive
 ```
 
-With development extras (pytest, responses, ruff):
+With development extras (pytest, aioresponses, mypy, ruff):
 
 ```bash
 pip install "onekommafive[dev]"
@@ -87,40 +87,68 @@ Peak avoided: 22.50 €  (grid 60.18 € − battery 37.68 €)
 
 See [CLI commands](#cli-commands) for the full list and `1k5 --help` for every option.
 
-### Python library
+### Python library (async, default since 1.0.0)
 
 ```python
-from onekommafive import Client, Systems
-
-client = Client("user@example.com", "s3cr3t")
-system = Systems(client).get_systems()[0]
-
-# Live overview
-ov = system.get_live_overview()
-print(f"PV: {ov.pv_power} W  Battery: {ov.battery_power} W ({ov.battery_soc:.1f}%)")
-print(f"Grid: {ov.grid_power} W  Self-sufficiency: {ov.self_sufficiency:.0%}")
-
-# Market prices for today (EUR/kWh, hourly)
+import asyncio
 import datetime
-today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-mp = system.get_prices(today, today.replace(hour=23, minute=59, second=59))
-print(f"Avg spot: {mp.average_price:.4f}  all-in: {mp.average_price_all_in:.4f} EUR/kWh")
-
-# Switch the EV to solar-only charging
+from onekommafive import Client, Systems
 from onekommafive.models import ChargingMode
-ev = system.get_ev_chargers()[0]
-ev.set_charging_mode(ChargingMode.SOLAR_CHARGE)
-ev.set_target_soc(90.0)
-ev.set_primary_departure_time("07:30")
 
-# Aggregated AI performance (self-sufficiency, earnings, CO2, peak-price avoided)
-summary = system.get_heartbeat_ai_summary(resolution="1M")
-print(f"{summary.self_sufficiency_percent:.0%} autonomous, "
-      f"{summary.earned_amount_eur:.2f} € earned, "
-      f"{summary.co2_saved_kg:.0f} kg CO2 saved")
+async def main() -> None:
+    async with Client("user@example.com", "s3cr3t") as client:
+        system = (await Systems(client).get_systems())[0]
+
+        # Live overview
+        ov = await system.get_live_overview()
+        print(f"PV: {ov.pv_power} W  Battery: {ov.battery_power} W ({ov.battery_soc:.1f}%)")
+        print(f"Grid: {ov.grid_power} W  Self-sufficiency: {ov.self_sufficiency:.0%}")
+
+        # Market prices for today (EUR/kWh, hourly)
+        today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        mp = await system.get_prices(today, today.replace(hour=23, minute=59, second=59))
+        print(f"Avg spot: {mp.average_price:.4f}  all-in: {mp.average_price_all_in:.4f} EUR/kWh")
+
+        # Switch the EV to solar-only charging
+        ev = (await system.get_ev_chargers())[0]
+        await ev.set_charging_mode(ChargingMode.SOLAR_CHARGE)
+        await ev.set_target_soc(90.0)
+        await ev.set_primary_departure_time("07:30")
+
+        # Aggregated AI performance
+        summary = await system.get_heartbeat_ai_summary(resolution="1M")
+        print(f"{summary.self_sufficiency_percent:.0%} autonomous, "
+              f"{summary.earned_amount_eur:.2f} € earned, "
+              f"{summary.co2_saved_kg:.0f} kg CO2 saved")
+
+asyncio.run(main())
 ```
 
-Every response is a fully-typed [dataclass](#python-models) — the entire surface has type hints.
+Inside Home Assistant, pass the shared client session so lifecycle stays with the host:
+
+```python
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+client = Client(user, pw, session=async_get_clientsession(hass))
+```
+
+Every response is a fully-typed [dataclass](#python-models); the package ships `py.typed` (PEP 561) so `mypy --strict` sees the whole surface.
+
+### Python library (sync)
+
+For scripts, notebooks, and other callers who don't want to introduce `asyncio`, `onekommafive.sync` wraps the async API on a dedicated background event loop:
+
+```python
+from onekommafive.sync import Client, Systems
+from onekommafive.models import ChargingMode
+
+with Client("user@example.com", "s3cr3t") as client:
+    system = Systems(client).get_systems()[0]
+    ov = system.get_live_overview()
+    ev = system.get_ev_chargers()[0]
+    ev.set_charging_mode(ChargingMode.SOLAR_CHARGE)
+```
+
+Same method names, same return types, just without `await`. The CLI uses this wrapper internally.
 
 ## Features
 
