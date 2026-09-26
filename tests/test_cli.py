@@ -97,6 +97,7 @@ def mock_system():
 # info
 # ---------------------------------------------------------------------------
 
+
 class TestCmdInfo:
     def test_prints_system_id(self, mock_system, capsys) -> None:
         mock_system.info.return_value = SystemInfo.from_dict(make_system_data())
@@ -147,6 +148,7 @@ class TestCmdInfo:
 # live
 # ---------------------------------------------------------------------------
 
+
 class TestCmdLive:
     def test_prints_system_id(self, mock_system, capsys) -> None:
         mock_system.get_live_overview.return_value = LiveOverview.from_dict(
@@ -189,9 +191,9 @@ class TestCmdLive:
         )
         _run("live")
         out = capsys.readouterr().out
-        assert "100" in out   # EV chargers = 100 W
-        assert "800" in out   # heat pumps = 800 W
-        assert "200" in out   # ACs = 200 W
+        assert "100" in out  # EV chargers = 100 W
+        assert "800" in out  # heat pumps = 800 W
+        assert "200" in out  # ACs = 200 W
 
     def test_prints_self_sufficiency(self, mock_system, capsys) -> None:
         mock_system.get_live_overview.return_value = LiveOverview.from_dict(
@@ -213,6 +215,7 @@ class TestCmdLive:
 # ---------------------------------------------------------------------------
 # prices
 # ---------------------------------------------------------------------------
+
 
 class TestCmdPrices:
     def test_prints_eur_unit(self, mock_system, capsys) -> None:
@@ -264,6 +267,7 @@ class TestCmdPrices:
 # ev
 # ---------------------------------------------------------------------------
 
+
 class TestCmdEv:
     def test_prints_no_chargers_when_empty(self, mock_system, capsys) -> None:
         mock_system.get_ev_chargers.return_value = []
@@ -305,12 +309,18 @@ class TestCmdEv:
         _run("ev")
         assert "—" in capsys.readouterr().out
 
-    def test_charger_shows_wallbox_name_when_available(self, mock_system, capsys) -> None:
+    def test_charger_shows_wallbox_name_when_available(
+        self, mock_system, capsys
+    ) -> None:
         """Cross-endpoint lookup: charger_id resolves to wallbox name."""
         ev = self._ev_mock()
         ev.assigned_charger_id.return_value = "wb-0001"
         mock_system.get_ev_chargers.return_value = [ev]
-        wallbox_payload = {"id": "wb-0001", "name": "Garage Wallbox", "assignedEvId": FAKE_EV_ID}
+        wallbox_payload = {
+            "id": "wb-0001",
+            "name": "Garage Wallbox",
+            "assignedEvId": FAKE_EV_ID,
+        }
         mock_system.get_wallboxes.return_value = [Wallbox.from_dict(wallbox_payload)]
         _run("ev")
         out = capsys.readouterr().out
@@ -321,6 +331,7 @@ class TestCmdEv:
 # ---------------------------------------------------------------------------
 # ev-modes
 # ---------------------------------------------------------------------------
+
 
 class TestCmdEvModes:
     def test_prints_enabled_modes(self, mock_system, capsys) -> None:
@@ -342,6 +353,7 @@ class TestCmdEvModes:
 # ---------------------------------------------------------------------------
 # set-ev-mode
 # ---------------------------------------------------------------------------
+
 
 class TestCmdSetEvMode:
     def test_sets_mode_on_first_charger_by_default(self, mock_system, capsys) -> None:
@@ -373,7 +385,9 @@ class TestCmdSetEvMode:
         with pytest.raises(SystemExit):
             _run("set-ev-mode", "TURBO_CHARGE")
 
-    def test_multi_ev_without_flag_exits_with_listing(self, mock_system, capsys) -> None:
+    def test_multi_ev_without_flag_exits_with_listing(
+        self, mock_system, capsys
+    ) -> None:
         """Fail-fast so a caller cannot silently steer the wrong vehicle."""
         ev1, ev2 = make_two_ambiguous_evs()
         # This test additionally checks that manufacturer/model labels
@@ -408,6 +422,7 @@ class TestCmdSetEvMode:
 # ---------------------------------------------------------------------------
 # set-ev-target-soc
 # ---------------------------------------------------------------------------
+
 
 class TestCmdSetEvTargetSoc:
     def test_sets_target_soc_on_first_charger(self, mock_system, capsys) -> None:
@@ -461,6 +476,7 @@ class TestCmdSetEvTargetSoc:
 # set-ev-departure
 # ---------------------------------------------------------------------------
 
+
 class TestCmdSetEvDeparture:
     def test_sets_departure_on_first_charger(self, mock_system, capsys) -> None:
         ev = make_ev_charger_mock()
@@ -503,6 +519,7 @@ class TestCmdSetEvDeparture:
 # ems
 # ---------------------------------------------------------------------------
 
+
 class TestCmdEms:
     def test_prints_auto_mode(self, mock_system, capsys) -> None:
         mock_system.get_ems_settings.return_value = EmsSettings.from_dict(
@@ -523,6 +540,7 @@ class TestCmdEms:
 # set-ems
 # ---------------------------------------------------------------------------
 
+
 class TestCmdSetEms:
     def test_enables_auto(self, mock_system, capsys) -> None:
         _run("set-ems", "auto")
@@ -542,6 +560,7 @@ class TestCmdSetEms:
 # ---------------------------------------------------------------------------
 # savings
 # ---------------------------------------------------------------------------
+
 
 class TestCmdSavings:
     def test_prints_savings_value(self, mock_system, capsys) -> None:
@@ -579,10 +598,11 @@ class TestCmdSavings:
 # price-config
 # ---------------------------------------------------------------------------
 
+
 class TestCmdPriceConfig:
     def test_prints_all_prices(self, mock_system, capsys) -> None:
-        mock_system.get_price_customizations.return_value = PriceCustomizations.from_dict(
-            make_price_customizations_data()
+        mock_system.get_price_customizations.return_value = (
+            PriceCustomizations.from_dict(make_price_customizations_data())
         )
         _run("price-config")
         out = capsys.readouterr().out
@@ -594,6 +614,7 @@ class TestCmdPriceConfig:
 # ---------------------------------------------------------------------------
 # comparison-price
 # ---------------------------------------------------------------------------
+
 
 class TestCmdComparisonPrice:
     def test_prints_price(self, mock_system, capsys) -> None:
@@ -612,6 +633,7 @@ class TestCmdComparisonPrice:
 # ---------------------------------------------------------------------------
 # price-guarantee
 # ---------------------------------------------------------------------------
+
 
 class TestCmdPriceGuarantee:
     def test_uses_explicit_customer_id(self, mock_system, capsys) -> None:
@@ -647,9 +669,12 @@ class TestCmdPriceGuarantee:
 # wallboxes
 # ---------------------------------------------------------------------------
 
+
 class TestCmdWallboxes:
     def test_prints_wallbox_info(self, mock_system, capsys) -> None:
-        mock_system.get_wallboxes.return_value = [Wallbox.from_dict(w) for w in make_wallboxes_data()]
+        mock_system.get_wallboxes.return_value = [
+            Wallbox.from_dict(w) for w in make_wallboxes_data()
+        ]
         _run("wallboxes")
         out = capsys.readouterr().out
         assert "Wallbox" in out
@@ -661,10 +686,14 @@ class TestCmdWallboxes:
         _run("wallboxes")
         assert "No wallboxes" in capsys.readouterr().out
 
-    def test_enriches_from_status_and_assets_when_names_match(self, mock_system, capsys) -> None:
+    def test_enriches_from_status_and_assets_when_names_match(
+        self, mock_system, capsys
+    ) -> None:
         """Multi-wallbox parity with the HA integration: name-match against
         /status-and-assets brings in manufacturer/model/firmware/connection."""
-        mock_system.get_wallboxes.return_value = [Wallbox.from_dict(w) for w in make_wallboxes_data()]
+        mock_system.get_wallboxes.return_value = [
+            Wallbox.from_dict(w) for w in make_wallboxes_data()
+        ]
         status_payload = {
             "status": "CONNECTED",
             "assets": [
@@ -679,7 +708,9 @@ class TestCmdWallboxes:
                 },
             ],
         }
-        mock_system.get_status_and_assets.return_value = SiteStatus.from_dict(status_payload)
+        mock_system.get_status_and_assets.return_value = SiteStatus.from_dict(
+            status_payload
+        )
         _run("wallboxes")
         out = capsys.readouterr().out
         assert "go-e" in out
@@ -687,10 +718,14 @@ class TestCmdWallboxes:
         assert "057.5" in out
         assert "CONNECTED" in out
 
-    def test_survives_request_error_from_enrichment_call(self, mock_system, capsys) -> None:
+    def test_survives_request_error_from_enrichment_call(
+        self, mock_system, capsys
+    ) -> None:
         """The enrichment call is best-effort: a RequestError must not
         break the primary wallbox listing."""
-        mock_system.get_wallboxes.return_value = [Wallbox.from_dict(w) for w in make_wallboxes_data()]
+        mock_system.get_wallboxes.return_value = [
+            Wallbox.from_dict(w) for w in make_wallboxes_data()
+        ]
         mock_system.get_status_and_assets.side_effect = RequestError("boom")
         _run("wallboxes")
         out = capsys.readouterr().out
@@ -704,9 +739,12 @@ class TestCmdWallboxes:
 # smart-meter
 # ---------------------------------------------------------------------------
 
+
 class TestCmdSmartMeter:
     def test_prints_flattened_fields(self, mock_system, capsys) -> None:
-        mock_system.get_smart_meter.return_value = SmartMeter.from_dict(make_smart_meter_data())
+        mock_system.get_smart_meter.return_value = SmartMeter.from_dict(
+            make_smart_meter_data()
+        )
         _run("smart-meter")
         out = capsys.readouterr().out
         assert "10YDE-RWENET---I" in out
@@ -718,16 +756,19 @@ class TestCmdSmartMeter:
 # monthly-trading
 # ---------------------------------------------------------------------------
 
+
 class TestCmdMonthlyTrading:
     def test_prints_value(self, mock_system, capsys) -> None:
-        mock_system.get_monthly_trading_savings.return_value = MonthlyTradingSavings.from_dict(
-            make_monthly_trading_savings_data()
+        mock_system.get_monthly_trading_savings.return_value = (
+            MonthlyTradingSavings.from_dict(make_monthly_trading_savings_data())
         )
         _run("monthly-trading")
         assert "12.83" in capsys.readouterr().out
 
     def test_prints_dash_when_missing(self, mock_system, capsys) -> None:
-        mock_system.get_monthly_trading_savings.return_value = MonthlyTradingSavings.from_dict({})
+        mock_system.get_monthly_trading_savings.return_value = (
+            MonthlyTradingSavings.from_dict({})
+        )
         _run("monthly-trading")
         assert "—" in capsys.readouterr().out
 
@@ -735,6 +776,7 @@ class TestCmdMonthlyTrading:
 # ---------------------------------------------------------------------------
 # impact
 # ---------------------------------------------------------------------------
+
 
 class TestCmdImpact:
     def test_prints_co2_figures(self, mock_system, capsys) -> None:
@@ -752,6 +794,7 @@ class TestCmdImpact:
 # trader
 # ---------------------------------------------------------------------------
 
+
 class TestCmdTrader:
     def test_prints_savings_and_status(self, mock_system, capsys) -> None:
         mock_system.get_energy_trader.return_value = EnergyTrader.from_dict(
@@ -768,10 +811,11 @@ class TestCmdTrader:
 # ai-summary
 # ---------------------------------------------------------------------------
 
+
 class TestCmdAiSummary:
     def test_1m_prints_all_metrics(self, mock_system, capsys) -> None:
-        mock_system.get_heartbeat_ai_summary.return_value = HeartbeatAiSummary.from_dict(
-            "1M", make_heartbeat_ai_summary_data("1M")
+        mock_system.get_heartbeat_ai_summary.return_value = (
+            HeartbeatAiSummary.from_dict("1M", make_heartbeat_ai_summary_data("1M"))
         )
         _run("ai-summary")
         out = capsys.readouterr().out
@@ -784,15 +828,15 @@ class TestCmdAiSummary:
         assert "60.18" in out  # peak_grid_charging_cost_eur
 
     def test_defaults_to_1m_resolution(self, mock_system) -> None:
-        mock_system.get_heartbeat_ai_summary.return_value = HeartbeatAiSummary.from_dict(
-            "1M", make_heartbeat_ai_summary_data("1M")
+        mock_system.get_heartbeat_ai_summary.return_value = (
+            HeartbeatAiSummary.from_dict("1M", make_heartbeat_ai_summary_data("1M"))
         )
         _run("ai-summary")
         mock_system.get_heartbeat_ai_summary.assert_called_once_with(resolution="1M")
 
     def test_1w_skips_missing_metrics(self, mock_system, capsys) -> None:
-        mock_system.get_heartbeat_ai_summary.return_value = HeartbeatAiSummary.from_dict(
-            "1W", make_heartbeat_ai_summary_data("1W")
+        mock_system.get_heartbeat_ai_summary.return_value = (
+            HeartbeatAiSummary.from_dict("1W", make_heartbeat_ai_summary_data("1W"))
         )
         _run("ai-summary", "--resolution", "1W")
         out = capsys.readouterr().out
@@ -810,8 +854,11 @@ class TestCmdAiSummary:
 # heartbeat-prices
 # ---------------------------------------------------------------------------
 
+
 class TestCmdHeartbeatPrices:
-    def test_prints_all_five_window_columns_and_key_prices(self, mock_system, capsys) -> None:
+    def test_prints_all_five_window_columns_and_key_prices(
+        self, mock_system, capsys
+    ) -> None:
         mock_system.get_heartbeat_prices.return_value = HeartbeatPrices.from_dict(
             make_heartbeat_prices_data()
         )
@@ -830,7 +877,9 @@ class TestCmdHeartbeatPrices:
         assert "Heartbeat price" in out
         assert "Comparison tariff" in out
 
-    def test_prints_implausibility_warning_when_flagged(self, mock_system, capsys) -> None:
+    def test_prints_implausibility_warning_when_flagged(
+        self, mock_system, capsys
+    ) -> None:
         mock_system.get_heartbeat_prices.return_value = HeartbeatPrices.from_dict(
             make_heartbeat_prices_data()
         )
@@ -854,9 +903,12 @@ class TestCmdHeartbeatPrices:
 # details
 # ---------------------------------------------------------------------------
 
+
 class TestCmdDetails:
     def test_prints_key_fields(self, mock_system, capsys) -> None:
-        mock_system.get_details.return_value = SystemDetails.from_dict(make_system_details_data())
+        mock_system.get_details.return_value = SystemDetails.from_dict(
+            make_system_details_data()
+        )
         _run("details")
         out = capsys.readouterr().out
         assert FAKE_SYSTEM_ID in out
@@ -871,9 +923,12 @@ class TestCmdDetails:
 # assets
 # ---------------------------------------------------------------------------
 
+
 class TestCmdAssets:
     def test_lists_all_asset_types(self, mock_system, capsys) -> None:
-        mock_system.get_status_and_assets.return_value = SiteStatus.from_dict(make_status_and_assets_data())
+        mock_system.get_status_and_assets.return_value = SiteStatus.from_dict(
+            make_status_and_assets_data()
+        )
         _run("assets")
         out = capsys.readouterr().out
         for asset_type in ("HYBRID", "HEAT_PUMP", "METER", "EV_CHARGER"):
@@ -882,7 +937,9 @@ class TestCmdAssets:
         assert "192.0.2." in out  # network address
 
     def test_prints_no_assets_when_empty(self, mock_system, capsys) -> None:
-        mock_system.get_status_and_assets.return_value = SiteStatus.from_dict({"status": "CONNECTED", "assets": []})
+        mock_system.get_status_and_assets.return_value = SiteStatus.from_dict(
+            {"status": "CONNECTED", "assets": []}
+        )
         _run("assets")
         assert "No assets" in capsys.readouterr().out
 
@@ -891,9 +948,13 @@ class TestCmdAssets:
 # features
 # ---------------------------------------------------------------------------
 
+
 class TestCmdFeatures:
     def test_uses_explicit_customer_id(self, mock_system, capsys) -> None:
-        mock_system.get_active_features.return_value = ["DYNAMIC_TARIFF", "SMART_CHARGING"]
+        mock_system.get_active_features.return_value = [
+            "DYNAMIC_TARIFF",
+            "SMART_CHARGING",
+        ]
         _run("features", "--customer-id", "cust-explicit")
         mock_system.get_active_features.assert_called_once_with("cust-explicit")
         out = capsys.readouterr().out
@@ -904,7 +965,9 @@ class TestCmdFeatures:
         details = MagicMock()
         details.customer_id = "cust-from-details"
         mock_system.get_details.return_value = details
-        mock_system.get_active_features.return_value = make_active_features_data()["features"]
+        mock_system.get_active_features.return_value = make_active_features_data()[
+            "features"
+        ]
         _run("features")
         mock_system.get_active_features.assert_called_once_with("cust-from-details")
 
@@ -925,9 +988,12 @@ class TestCmdFeatures:
 # weather
 # ---------------------------------------------------------------------------
 
+
 class TestCmdWeather:
     def test_prints_today_and_tomorrow(self, mock_system, capsys) -> None:
-        mock_system.get_weather.return_value = WeatherData.from_dict(make_weather_data())
+        mock_system.get_weather.return_value = WeatherData.from_dict(
+            make_weather_data()
+        )
         _run("weather")
         out = capsys.readouterr().out
         assert "Heute" in out
@@ -935,7 +1001,9 @@ class TestCmdWeather:
         assert "Heiter" in out  # symbol 2
 
     def test_forecasts_flag_prints_slots(self, mock_system, capsys) -> None:
-        mock_system.get_weather.return_value = WeatherData.from_dict(make_weather_data())
+        mock_system.get_weather.return_value = WeatherData.from_dict(
+            make_weather_data()
+        )
         _run("weather", "--forecasts")
         out = capsys.readouterr().out
         assert "Zeit" in out
@@ -946,18 +1014,23 @@ class TestCmdWeather:
 # energy-today
 # ---------------------------------------------------------------------------
 
+
 class TestCmdEnergyToday:
     def test_prints_totals_and_timeseries(self, mock_system, capsys) -> None:
-        mock_system.get_energy_today.return_value = EnergyData.from_dict(make_energy_data())
+        mock_system.get_energy_today.return_value = EnergyData.from_dict(
+            make_energy_data()
+        )
         _run("energy-today")
         out = capsys.readouterr().out
         assert "30.76" in out  # PV produced kWh
-        assert "6.48" in out   # savings EUR
+        assert "6.48" in out  # savings EUR
         assert "2026-03-08T12:00Z" in out
         mock_system.get_energy_today.assert_called_once_with(resolution="1h")
 
     def test_passes_resolution_flag(self, mock_system) -> None:
-        mock_system.get_energy_today.return_value = EnergyData.from_dict(make_energy_data())
+        mock_system.get_energy_today.return_value = EnergyData.from_dict(
+            make_energy_data()
+        )
         _run("energy-today", "--resolution", "15m")
         mock_system.get_energy_today.assert_called_once_with(resolution="15m")
 
@@ -966,9 +1039,12 @@ class TestCmdEnergyToday:
 # energy-historical
 # ---------------------------------------------------------------------------
 
+
 class TestCmdEnergyHistorical:
     def test_passes_parsed_dates(self, mock_system) -> None:
-        mock_system.get_energy_historical.return_value = EnergyData.from_dict(make_energy_data())
+        mock_system.get_energy_historical.return_value = EnergyData.from_dict(
+            make_energy_data()
+        )
         _run("energy-historical", "--from", "2026-03-08", "--to", "2026-03-08")
         mock_system.get_energy_historical.assert_called_once_with(
             from_date=datetime.date(2026, 3, 8),
@@ -985,9 +1061,12 @@ class TestCmdEnergyHistorical:
 # optimizations
 # ---------------------------------------------------------------------------
 
+
 class TestCmdOptimizations:
     def test_default_range_is_today(self, mock_system, capsys) -> None:
-        mock_system.get_optimizations.return_value = OptimizationEvents.from_dict(make_optimizations_data())
+        mock_system.get_optimizations.return_value = OptimizationEvents.from_dict(
+            make_optimizations_data()
+        )
         _run("optimizations")
         assert mock_system.get_optimizations.call_count == 1
         start, end = mock_system.get_optimizations.call_args.kwargs.values()
@@ -997,7 +1076,9 @@ class TestCmdOptimizations:
         assert "Events:" in capsys.readouterr().out
 
     def test_prints_event_rows(self, mock_system, capsys) -> None:
-        mock_system.get_optimizations.return_value = OptimizationEvents.from_dict(make_optimizations_data())
+        mock_system.get_optimizations.return_value = OptimizationEvents.from_dict(
+            make_optimizations_data()
+        )
         _run("optimizations", "--from", "2026-06-01", "--to", "2026-06-01")
         out = capsys.readouterr().out
         assert "BATTERY_CHARGE_FROM_GRID" in out
@@ -1012,10 +1093,11 @@ class TestCmdOptimizations:
 # ai-decisions
 # ---------------------------------------------------------------------------
 
+
 class TestCmdAiDecisions:
     def test_prints_events(self, mock_system, capsys) -> None:
-        mock_system.get_self_sufficiency_events.return_value = SelfSufficiencyEvents.from_dict(
-            make_self_sufficiency_events_data()
+        mock_system.get_self_sufficiency_events.return_value = (
+            SelfSufficiencyEvents.from_dict(make_self_sufficiency_events_data())
         )
         _run("ai-decisions")
         out = capsys.readouterr().out
@@ -1031,9 +1113,12 @@ class TestCmdAiDecisions:
 # site-details
 # ---------------------------------------------------------------------------
 
+
 class TestCmdSiteDetails:
     def test_prints_ems_and_bidding_zone(self, mock_system, capsys) -> None:
-        mock_system.get_site_details.return_value = SiteDetails.from_dict(make_site_details_data())
+        mock_system.get_site_details.return_value = SiteDetails.from_dict(
+            make_site_details_data()
+        )
         _run("site-details")
         out = capsys.readouterr().out
         assert "DE_LU" in out
@@ -1046,7 +1131,9 @@ class TestCmdSiteDetails:
         energy_trader_active, electricity_contract_active, impacted_by_enwg,
         emp_reference_id) and v0.1.42 (grid_connection_point_phases,
         max_current_per_phase_ampere) must all appear in the CLI output."""
-        mock_system.get_site_details.return_value = SiteDetails.from_dict(make_site_details_data())
+        mock_system.get_site_details.return_value = SiteDetails.from_dict(
+            make_site_details_data()
+        )
         _run("site-details")
         out = capsys.readouterr().out
         # v0.1.41 fields
@@ -1066,8 +1153,11 @@ class TestCmdSiteDetails:
 # customer
 # ---------------------------------------------------------------------------
 
+
 class TestCmdCustomer:
-    def test_uses_explicit_customer_id_and_prints_fields(self, mock_system, capsys) -> None:
+    def test_uses_explicit_customer_id_and_prints_fields(
+        self, mock_system, capsys
+    ) -> None:
         mock_system.get_customer.return_value = Customer.from_dict(make_customer_data())
         _run("customer", "--customer-id", "cust-0001")
         mock_system.get_customer.assert_called_once_with("cust-0001")
@@ -1088,6 +1178,7 @@ class TestCmdCustomer:
 # ---------------------------------------------------------------------------
 # subscriptions
 # ---------------------------------------------------------------------------
+
 
 class TestCmdSubscriptions:
     def test_prints_all_types_and_total_monthly(self, mock_system, capsys) -> None:
@@ -1125,11 +1216,15 @@ class TestCmdSubscriptions:
         _run("subscriptions", "--customer-id", "cust-0001")
         out = capsys.readouterr().out
         # SMART_METER row has null price — must render as em-dash, not 0.00 €
-        smart_meter_line = next(line for line in out.splitlines() if "SMART_METER" in line)
+        smart_meter_line = next(
+            line for line in out.splitlines() if "SMART_METER" in line
+        )
         assert "—" in smart_meter_line
         assert "0.00" not in smart_meter_line
 
-    def test_prints_price_guarantee_line_for_dynamic_pulse(self, mock_system, capsys) -> None:
+    def test_prints_price_guarantee_line_for_dynamic_pulse(
+        self, mock_system, capsys
+    ) -> None:
         mock_system.get_subscriptions.return_value = SubscriptionsList.from_dict(
             make_subscriptions_data()
         )
@@ -1143,6 +1238,7 @@ class TestCmdSubscriptions:
 # notifications
 # ---------------------------------------------------------------------------
 
+
 class TestCmdNotifications:
     def test_prints_title_and_body(self, mock_system, capsys) -> None:
         mock_system.get_notifications.return_value = NotificationsList.from_dict(
@@ -1154,7 +1250,9 @@ class TestCmdNotifications:
         assert "Energiepreise steigen" in out
 
     def test_prints_count_when_empty(self, mock_system, capsys) -> None:
-        mock_system.get_notifications.return_value = NotificationsList.from_dict({"data": []})
+        mock_system.get_notifications.return_value = NotificationsList.from_dict(
+            {"data": []}
+        )
         _run("notifications")
         assert "Count:   0" in capsys.readouterr().out
 
@@ -1163,10 +1261,11 @@ class TestCmdNotifications:
 # notification-settings
 # ---------------------------------------------------------------------------
 
+
 class TestCmdNotificationSettings:
     def test_prints_categories_and_channels(self, mock_system, capsys) -> None:
-        mock_system.get_notification_settings.return_value = NotificationSettings.from_dict(
-            make_notification_settings_data()
+        mock_system.get_notification_settings.return_value = (
+            NotificationSettings.from_dict(make_notification_settings_data())
         )
         _run("notification-settings")
         out = capsys.readouterr().out
@@ -1179,6 +1278,7 @@ class TestCmdNotificationSettings:
 # ---------------------------------------------------------------------------
 # versions
 # ---------------------------------------------------------------------------
+
 
 class TestCmdVersions:
     def test_prints_both_channels(self, capsys) -> None:
@@ -1198,6 +1298,7 @@ class TestCmdVersions:
 # ---------------------------------------------------------------------------
 # me
 # ---------------------------------------------------------------------------
+
 
 class TestCmdMe:
     def test_prints_profile_and_connected_systems(self, capsys) -> None:
@@ -1230,6 +1331,7 @@ class TestCmdMe:
 # ---------------------------------------------------------------------------
 # Missing credentials
 # ---------------------------------------------------------------------------
+
 
 class TestMissingCredentials:
     def test_exits_when_env_vars_absent(self, monkeypatch) -> None:

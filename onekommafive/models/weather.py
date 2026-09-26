@@ -150,6 +150,8 @@ class WeatherData:
         return cls(
             today=WeatherDay.from_dict(data.get("today", {})),
             tomorrow=WeatherDay.from_dict(data.get("tomorrow", {})),
-            forecasts=[WeatherSlot.from_dict(s) for s in data.get("fineGrainedForecasts", [])],
+            forecasts=[
+                WeatherSlot.from_dict(s) for s in data.get("fineGrainedForecasts", [])
+            ],
             raw=data,
         )

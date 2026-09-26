@@ -182,7 +182,8 @@ class DeviceGateway:
             id=data["id"],
             gridx_start_code=data.get("gridxStartCode"),
             serial_number=data.get("serialNumber"),
-            installation_date=data.get("installationDate") or job.get("installationDate"),
+            installation_date=data.get("installationDate")
+            or job.get("installationDate"),
             type=data.get("type"),
             system_id=data.get("systemId"),
             claimed_by_user_id=data.get("claimedByUserId"),
@@ -318,8 +319,12 @@ class SystemDetails:
             electricity_contract_active=_opt_bool(data, "electricityContractActive"),
             has_third_party_smart_meter=_opt_bool(data, "hasThirdPartySmartMeter"),
             third_party_smart_meter_meter_id=data.get("thirdPartySmartMeterMeterId"),
-            third_party_smart_meter_deleted_at=data.get("thirdPartySmartMeterDeletedAt"),
-            third_party_smart_meter_market_location_id=data.get("thirdPartySmartMeterMarketLocationId"),
+            third_party_smart_meter_deleted_at=data.get(
+                "thirdPartySmartMeterDeletedAt"
+            ),
+            third_party_smart_meter_market_location_id=data.get(
+                "thirdPartySmartMeterMarketLocationId"
+            ),
             earliest_measurement=data.get("earliestMeasurement"),
             created_at=data.get("createdAt"),
             updated_at=data.get("updatedAt"),

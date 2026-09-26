@@ -64,7 +64,9 @@ def _align_price_range(
 
     def _floor(ts: datetime.datetime) -> datetime.datetime:
         delta = int((ts - epoch).total_seconds())
-        return ts - datetime.timedelta(seconds=delta % step, microseconds=ts.microsecond)
+        return ts - datetime.timedelta(
+            seconds=delta % step, microseconds=ts.microsecond
+        )
 
     def _ceil(ts: datetime.datetime) -> datetime.datetime:
         floored = _floor(ts)
@@ -105,7 +107,9 @@ class System:
     async def info(self) -> SystemInfo:
         """Return static metadata for this system (``GET /api/v4/systems/{id}``)."""
         data = await self._client._request(
-            "GET", self._systems_url("v4"), error_label="Failed to get system info",
+            "GET",
+            self._systems_url("v4"),
+            error_label="Failed to get system info",
         )
         return SystemInfo.from_dict(data)
 
@@ -117,7 +121,9 @@ class System:
         date, and installed device gateways.
         """
         data = await self._client._request(
-            "GET", self._systems_url("v1", "details"), error_label="Failed to get system details",
+            "GET",
+            self._systems_url("v1", "details"),
+            error_label="Failed to get system details",
         )
         return SystemDetails.from_dict(data)
 
@@ -165,7 +171,8 @@ class System:
     async def get_live_overview(self) -> LiveOverview:
         """Fetch the current real-time energy overview for this system."""
         data = await self._client._request(
-            "GET", self._systems_url("v3", "live-overview"),
+            "GET",
+            self._systems_url("v3", "live-overview"),
             error_label="Failed to get live overview",
         )
         return LiveOverview.from_dict(data)
@@ -195,7 +202,8 @@ class System:
         from .ev_charger import EVCharger
 
         data = await self._client._request(
-            "GET", self._sites_url("v2", "assets", "evs"),
+            "GET",
+            self._sites_url("v2", "assets", "evs"),
             error_label="Failed to get EV chargers",
         )
         return [EVCharger(self._client, self, ev) for ev in data]
@@ -207,7 +215,8 @@ class System:
     async def get_energy_today(self, resolution: str = "1h") -> EnergyData:
         """Fetch today's energy production and consumption (``resolution``: ``"1h"`` or ``"15m"``)."""
         data = await self._client._request(
-            "GET", self._systems_url("v2", "energy-today"),
+            "GET",
+            self._systems_url("v2", "energy-today"),
             params={"resolution": resolution},
             error_label="Failed to get energy today",
         )
@@ -230,7 +239,8 @@ class System:
         if to_date is not None:
             params["to"] = to_date.isoformat()
         data = await self._client._request(
-            "GET", self._systems_url("v1", "energy-savings"),
+            "GET",
+            self._systems_url("v1", "energy-savings"),
             params=params or None,
             error_label="Failed to get energy savings",
         )
@@ -248,7 +258,8 @@ class System:
         ``to_date`` may be at most one day after ``from_date``.
         """
         data = await self._client._request(
-            "GET", self._systems_url("v3", "energy-historical"),
+            "GET",
+            self._systems_url("v3", "energy-historical"),
             params={
                 "from": from_date.isoformat(),
                 "to": to_date.isoformat(),
@@ -265,7 +276,8 @@ class System:
     async def get_ems_settings(self) -> EmsSettings:
         """Fetch the current energy-management system settings."""
         data = await self._client._request(
-            "GET", self._systems_url("v1", "ems", "actions", "get-settings"),
+            "GET",
+            self._systems_url("v1", "ems", "actions", "get-settings"),
             error_label="Failed to get EMS settings",
         )
         return EmsSettings.from_dict(data)
@@ -301,7 +313,8 @@ class System:
         """
         start, end = _align_price_range(start, end, resolution)
         data = await self._client._request(
-            "GET", self._systems_url("v4", "charts", "market-prices"),
+            "GET",
+            self._systems_url("v4", "charts", "market-prices"),
             params={
                 "from": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "to": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -318,7 +331,8 @@ class System:
     async def get_weather(self) -> WeatherData:
         """Fetch the weather forecast: today + tomorrow summaries, plus 48 h of 3 h slots."""
         data = await self._client._request(
-            "GET", self._systems_url("v1", "weather"),
+            "GET",
+            self._systems_url("v1", "weather"),
             error_label="Failed to get weather",
         )
         return WeatherData.from_dict(data)
@@ -330,7 +344,8 @@ class System:
     async def get_price_customizations(self) -> PriceCustomizations:
         """Fetch user-configured energy prices (grid, comparison, monthly base)."""
         data = await self._client._request(
-            "GET", self._systems_url("v2", "price-customizations"),
+            "GET",
+            self._systems_url("v2", "price-customizations"),
             error_label="Failed to get price customizations",
         )
         return PriceCustomizations.from_dict(data)
@@ -372,7 +387,8 @@ class System:
         :meth:`get_ev_chargers` which returns the vehicle-side profiles.
         """
         data = await self._client._request(
-            "GET", self._sites_url("v1", "assets", "ev-chargers"),
+            "GET",
+            self._sites_url("v1", "assets", "ev-chargers"),
             error_label="Failed to get wallboxes",
         )
         return [Wallbox.from_dict(w) for w in data or []]
@@ -380,7 +396,8 @@ class System:
     async def get_smart_meter(self) -> SmartMeter:
         """Fetch smart-meter registration details for this site (EIC, DSO code, concession fee)."""
         data = await self._client._request(
-            "GET", self._sites_url("v1", "smart-meter"),
+            "GET",
+            self._sites_url("v1", "smart-meter"),
             error_label="Failed to get smart meter",
         )
         return SmartMeter.from_dict(data)
@@ -395,7 +412,8 @@ class System:
         Ignores any query params; the response is always lifetime totals.
         """
         data = await self._client._request(
-            "GET", self._systems_url("v2", "impact-overview"),
+            "GET",
+            self._systems_url("v2", "impact-overview"),
             error_label="Failed to get impact overview",
         )
         return ImpactOverview.from_dict(data)
@@ -449,7 +467,9 @@ class System:
         )
         return MonthlyTradingSavings.from_dict(data)
 
-    async def get_heartbeat_ai_summary(self, resolution: str = "1M") -> HeartbeatAiSummary:
+    async def get_heartbeat_ai_summary(
+        self, resolution: str = "1M"
+    ) -> HeartbeatAiSummary:
         """Fetch aggregated Heartbeat-AI metrics for a resolution window.
 
         ``resolution`` must be one of ``"1W"``, ``"1M"``, or ``"1Y"``.
@@ -521,7 +541,8 @@ class System:
         state (``ems_mode``, ``ems_state``, ``ems_state_reasons``).
         """
         data = await self._client._request(
-            "GET", self._sites_url("v3", "details"),
+            "GET",
+            self._sites_url("v3", "details"),
             error_label="Failed to get site details",
         )
         return SiteDetails.from_dict(data)
@@ -534,7 +555,8 @@ class System:
         via :meth:`get_details`.
         """
         data = await self._client._request(
-            "GET", f"{self._client.IDENTITY_API}/api/v3/customers/{customer_id}",
+            "GET",
+            f"{self._client.IDENTITY_API}/api/v3/customers/{customer_id}",
             error_label="Failed to get customer",
         )
         return Customer.from_dict(data)

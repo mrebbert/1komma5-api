@@ -1,0 +1,9 @@
+# Revisions this file lists are skipped by `git blame` when the local
+# repo is configured with:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub honours the file automatically (no local config needed).
+
+# Reformat: ruff line-length 120 -> 88 (v1.1.0, 2026-09-26)
+41257a60b2944545fbb88cc2eb41fcd00da7786b

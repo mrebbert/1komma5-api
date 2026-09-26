@@ -257,7 +257,9 @@ class SiteDetails:
             technical_contact_name=data.get("technicalContactName"),
             earliest_measurement=data.get("earliestMeasurement"),
             energy_trader_active=(
-                bool(data["energyTraderActive"]) if "energyTraderActive" in data else None
+                bool(data["energyTraderActive"])
+                if "energyTraderActive" in data
+                else None
             ),
             electricity_contract_active=(
                 bool(data["electricityContractActive"])

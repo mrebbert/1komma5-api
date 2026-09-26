@@ -96,7 +96,9 @@ class EmsSettings:
         manual_raw = data.get("manualSettings") or {}
         devices = [
             EmsManualDevice.from_dict(manual_raw[k])
-            for k in sorted(manual_raw.keys(), key=lambda x: int(x) if x.isdigit() else x)
+            for k in sorted(
+                manual_raw.keys(), key=lambda x: int(x) if x.isdigit() else x
+            )
         ]
         return cls(
             auto_mode=not data.get("overrideAutoSettings", False),

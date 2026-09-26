@@ -45,7 +45,11 @@ def test_client_context_manager_lifecycle() -> None:
 
 def test_systems_get_systems_delegates_to_async_layer() -> None:
     with aioresponses() as m:
-        m.get(_SYSTEMS_URL, payload={"data": [make_system_data(FAKE_SYSTEM_ID)]}, status=200)
+        m.get(
+            _SYSTEMS_URL,
+            payload={"data": [make_system_data(FAKE_SYSTEM_ID)]},
+            status=200,
+        )
         with _make_sync_client() as client:
             systems = Systems(client).get_systems()
             assert len(systems) == 1
@@ -55,7 +59,11 @@ def test_systems_get_systems_delegates_to_async_layer() -> None:
 
 def test_system_get_wallboxes_returns_sync_wrappers() -> None:
     with aioresponses() as m:
-        m.get(_SYSTEMS_URL, payload={"data": [make_system_data(FAKE_SYSTEM_ID)]}, status=200)
+        m.get(
+            _SYSTEMS_URL,
+            payload={"data": [make_system_data(FAKE_SYSTEM_ID)]},
+            status=200,
+        )
         m.get(
             f"https://heartbeat.1komma5grad.com/api/v1/sites/{FAKE_SYSTEM_ID}/assets/ev-chargers",
             payload=make_wallboxes_data(),
@@ -74,7 +82,11 @@ def test_sync_ev_charger_setter_smoke() -> None:
 
     ev_url = f"https://heartbeat.1komma5grad.com/api/v2/sites/{FAKE_SYSTEM_ID}/assets/evs/ev-1"
     with aioresponses() as m:
-        m.get(_SYSTEMS_URL, payload={"data": [make_system_data(FAKE_SYSTEM_ID)]}, status=200)
+        m.get(
+            _SYSTEMS_URL,
+            payload={"data": [make_system_data(FAKE_SYSTEM_ID)]},
+            status=200,
+        )
         m.get(
             f"https://heartbeat.1komma5grad.com/api/v2/sites/{FAKE_SYSTEM_ID}/assets/evs",
             payload=[make_ev_data(ev_id="ev-1", charging_mode="SMART_CHARGE")],
@@ -95,7 +107,11 @@ def test_ev_charger_read_only_accessors_pass_through() -> None:
     from tests.fixtures import make_ev_data
 
     with aioresponses() as m:
-        m.get(_SYSTEMS_URL, payload={"data": [make_system_data(FAKE_SYSTEM_ID)]}, status=200)
+        m.get(
+            _SYSTEMS_URL,
+            payload={"data": [make_system_data(FAKE_SYSTEM_ID)]},
+            status=200,
+        )
         m.get(
             f"https://heartbeat.1komma5grad.com/api/v2/sites/{FAKE_SYSTEM_ID}/assets/evs",
             payload=[make_ev_data(ev_id="ev-1")],
@@ -106,5 +122,9 @@ def test_ev_charger_read_only_accessors_pass_through() -> None:
             ev = evs[0]
             # These never hit the network; they read from cached _data.
             assert ev.id() == "ev-1"
-            assert isinstance(ev.name(), (str, type(None)))
-            assert ev.charging_mode().value in {"SMART_CHARGE", "SOLAR_CHARGE", "QUICK_CHARGE"}
+            assert isinstance(ev.name(), str | None)
+            assert ev.charging_mode().value in {
+                "SMART_CHARGE",
+                "SOLAR_CHARGE",
+                "QUICK_CHARGE",
+            }

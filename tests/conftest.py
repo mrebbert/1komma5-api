@@ -26,7 +26,9 @@ import aiohttp
 _response_init = aiohttp.ClientResponse.__init__
 if "stream_writer" in inspect.signature(_response_init).parameters:
 
-    def _patched_response_init(self: aiohttp.ClientResponse, *args: Any, **kwargs: Any) -> None:
+    def _patched_response_init(
+        self: aiohttp.ClientResponse, *args: Any, **kwargs: Any
+    ) -> None:
         kwargs.setdefault("stream_writer", Mock(output_size=0))
         _response_init(self, *args, **kwargs)
 

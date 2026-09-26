@@ -19,6 +19,7 @@ import base64
 import datetime
 import hashlib
 import json
+import logging
 import re
 import secrets
 from pathlib import Path
@@ -30,6 +31,8 @@ from jwt import PyJWKSet
 
 from .errors import AuthenticationError, RequestError
 from .models import SupportedVersions, User
+
+_LOGGER = logging.getLogger(__name__)
 
 # Aliased so the ``json`` keyword argument on :meth:`Client._request`
 # does not shadow the module inside the method body.
@@ -71,6 +74,7 @@ _DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=30)
 # PKCE helpers
 # ---------------------------------------------------------------------------
 
+
 def _base64url_encode(data: bytes) -> str:
     """Return a Base64url-encoded string without padding characters."""
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
@@ -90,6 +94,7 @@ def _generate_code_challenge(verifier: str) -> str:
 # ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
+
 
 class Client:
     """Authenticated async HTTP client for the 1KOMMA5° API.
@@ -177,6 +182,9 @@ class Client:
             try:
                 return await self._refresh_token()
             except AuthenticationError:
+                _LOGGER.debug(
+                    "Refresh failed for %s, falling back to full login", self._username
+                )
                 return await self._login()
 
         return cast(str, self._token_set["access_token"])
@@ -358,11 +366,14 @@ class Client:
         Uses a dedicated aiohttp session for the redirect chain so cookies
         stay isolated from the shared session used for API traffic.
         """
+        _LOGGER.debug("Starting OAuth2 PKCE login for %s", self._username)
         verifier = _generate_code_verifier()
         challenge = _generate_code_challenge(verifier)
 
         jar = aiohttp.CookieJar(unsafe=True)
-        async with aiohttp.ClientSession(cookie_jar=jar, timeout=_DEFAULT_TIMEOUT) as auth_session:
+        async with aiohttp.ClientSession(
+            cookie_jar=jar, timeout=_DEFAULT_TIMEOUT
+        ) as auth_session:
             # Step 1 – authorise
             async with auth_session.get(
                 f"{_AUTH_BASE}/authorize",
@@ -408,7 +419,9 @@ class Client:
 
             # Step 3 – follow Auth0 resume redirect
             resume_url = _AUTH_BASE + resume_location
-            async with auth_session.get(resume_url, allow_redirects=False) as resume_response:
+            async with auth_session.get(
+                resume_url, allow_redirects=False
+            ) as resume_response:
                 if resume_response.status != 302:
                     body = await resume_response.text()
                     raise AuthenticationError(f"Login resume failed: {body}")
@@ -434,6 +447,7 @@ class Client:
                     raise AuthenticationError(f"Token exchange failed: {body}")
                 self._token_set = await token_response.json()
 
+        _LOGGER.debug("OAuth2 PKCE login succeeded for %s", self._username)
         self._save_token_cache()
         assert self._token_set is not None
         return cast(str, self._token_set["access_token"])
@@ -445,6 +459,7 @@ class Client:
         if "refresh_token" not in self._token_set:
             raise AuthenticationError("No refresh token found in token set")
 
+        _LOGGER.debug("Refreshing access token for %s", self._username)
         session = await self._ensure_session()
         async with session.post(
             _TOKEN_URL,

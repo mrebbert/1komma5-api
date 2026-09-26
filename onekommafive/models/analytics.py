@@ -336,9 +336,15 @@ class HeartbeatPriceWindow:
             energy_tax_reduction_eur=_amount(data.get("energyTaxReduction")),
             fixed_costs_and_savings_eur=_amount(data.get("fixedCostsAndSavings")),
             vat=float(data.get("vat", 0)),
-            should_report_implausible_pv_and_feed_in=bool(data.get("shouldReportImplausiblePvAndFeedIn")),
-            should_report_overridden_pv_cost=bool(data.get("shouldReportOverriddenPvCost")),
-            uses_feed_in_earnings_as_hb_price=bool(data.get("usesFeedInEarningsAsHbPrice")),
+            should_report_implausible_pv_and_feed_in=bool(
+                data.get("shouldReportImplausiblePvAndFeedIn")
+            ),
+            should_report_overridden_pv_cost=bool(
+                data.get("shouldReportOverriddenPvCost")
+            ),
+            uses_feed_in_earnings_as_hb_price=bool(
+                data.get("usesFeedInEarningsAsHbPrice")
+            ),
             feed_in_discrepancy=data.get("feedInDiscrepancy"),
             peak_shaving_savings_raw=data.get("peakShavingSavings"),
             swedish_costs_and_savings_raw=data.get("swedishCostsAndSavings"),
