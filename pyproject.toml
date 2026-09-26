@@ -93,10 +93,3 @@ select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM"]
 python_version = "3.13"
 strict = true
 files = ["onekommafive"]
-
-[[tool.mypy.overrides]]
-# The CLI is not part of the strict-typed public surface (it's a
-# convenience script, not a library). Full annotation of its ~1100 lines
-# of interactive argparse plumbing offers little value to consumers.
-module = "onekommafive.cli"
-ignore_errors = true

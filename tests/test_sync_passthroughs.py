@@ -53,7 +53,6 @@ def test_systems_get_system_delegates() -> None:
     with _make_sync_client() as client:
         stub = MagicMock()
         stub.id.return_value = "sys-1"
-        client._async.__class__  # ensure attribute access
         systems = Systems(client)
         systems._async.get_system = AsyncMock(return_value=stub)
         result = systems.get_system("sys-1")

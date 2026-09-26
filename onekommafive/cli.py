@@ -64,7 +64,7 @@ from typing import Any
 
 from onekommafive.errors import RequestError
 from onekommafive.models import ChargingMode, MarketPrices
-from onekommafive.sync import Client, Systems
+from onekommafive.sync import Client, EVCharger, System, Systems
 
 # Token cache for the CLI: skips the OAuth2 login round-trip on subsequent
 # invocations while the JWT is still valid (~1h). Delete the file or set
@@ -81,7 +81,7 @@ def _client() -> Client:
     return Client(username, password, token_cache=cache)
 
 
-def _get_system():
+def _get_system() -> System:
     """Resolve the target System — first from ``ONEKOMMAFIVE_SYSTEM`` (id
     match), else the first available."""
     systems = Systems(_client()).get_systems()
@@ -100,20 +100,20 @@ def _get_system():
 # Subcommands
 # ---------------------------------------------------------------------------
 
-def _resolve_customer_id(args: argparse.Namespace, system) -> str:
+def _resolve_customer_id(args: argparse.Namespace, system: System) -> str:
     """Return ``args.customer_id`` if set, else look it up via system details.
 
     Exits with a descriptive error if neither source yields an ID.
     """
     if args.customer_id:
-        return args.customer_id
+        return str(args.customer_id)
     customer_id = system.get_details().customer_id
     if not customer_id:
         sys.exit("Error: system details do not expose a customer_id; pass --customer-id explicitly")
-    return customer_id
+    return str(customer_id)
 
 
-def _format_address(o) -> str:
+def _format_address(o: Any) -> str:
     parts = filter(None, [
         o.address_line1,
         o.address_line2,
@@ -344,12 +344,12 @@ def cmd_wallboxes(args: argparse.Namespace) -> None:
         print(f"  {w.name or '—'}")
         print(f"    ID:           {w.id or '—'}")
         print(f"    Assigned EV:  {w.assigned_ev_id or '—'}")
-        asset = assets_by_name.get(w.name) if w.name else None
-        if asset:
-            print(f"    Manufacturer: {asset.manufacturer or '—'}")
-            print(f"    Model:        {asset.model or '—'}")
-            print(f"    Firmware:     {asset.firmware or '—'}")
-            print(f"    Connection:   {asset.connection_status or '—'}")
+        matched = assets_by_name.get(w.name) if w.name else None
+        if matched:
+            print(f"    Manufacturer: {matched.manufacturer or '—'}")
+            print(f"    Model:        {matched.model or '—'}")
+            print(f"    Firmware:     {matched.firmware or '—'}")
+            print(f"    Connection:   {matched.connection_status or '—'}")
 
 
 def cmd_smart_meter(args: argparse.Namespace) -> None:
@@ -620,7 +620,7 @@ def cmd_heartbeat_prices(args: argparse.Namespace) -> None:
         ("year",     hb.year),
     ]
 
-    def _fmt(val, spec):
+    def _fmt(val: Any, spec: str) -> str:
         return format(val, spec) if val is not None else "—"
 
     rows = [
@@ -687,7 +687,7 @@ def cmd_energy_historical(args: argparse.Namespace) -> None:
     _print_energy(system.id(), ed, args.resolution)
 
 
-def _print_energy(system_id: str, ed, resolution: str) -> None:
+def _print_energy(system_id: str, ed: Any, resolution: str) -> None:
     suf = f"  (self-suff. {ed.self_sufficiency * 100:.0f}%)" if ed.self_sufficiency is not None else ""
     print(f"System:        {system_id}")
     if ed.updated_at:
@@ -751,7 +751,8 @@ def cmd_ev(args: argparse.Namespace) -> None:
         soc = f"{ev.current_soc():.0f}%" if ev.current_soc() is not None else "—"
         vehicle_parts = filter(None, [ev.manufacturer(), ev.model()])
         vehicle = " ".join(vehicle_parts) or "—"
-        capacity = f"{ev.capacity_wh() / 1000:.0f} kWh" if ev.capacity_wh() is not None else "—"
+        capacity_wh = ev.capacity_wh()
+        capacity = f"{capacity_wh / 1000:.0f} kWh" if capacity_wh is not None else "—"
         target = _pct(ev.target_soc())
         default = _pct(ev.default_soc())
         charger_id = ev.assigned_charger_id()
@@ -796,7 +797,7 @@ def cmd_set_ev_mode(args: argparse.Namespace) -> None:
         print(f"EV {ev.id()}: charging mode set to {mode.value}")
 
 
-def _resolve_ev(args):
+def _resolve_ev(args: argparse.Namespace) -> EVCharger:
     """Return the targeted EVCharger from args.
 
     ``--ev <id>`` picks a specific one. Without it, the CLI defaults to
@@ -822,7 +823,7 @@ def _resolve_ev(args):
     return chargers[0]
 
 
-def _resolve_evs(args):
+def _resolve_evs(args: argparse.Namespace) -> list[EVCharger]:
     """Return the list of EVCharger objects a setter should act on.
 
     ``--all-evs`` targets every registered charger. ``--ev <id>`` picks
@@ -886,7 +887,7 @@ def cmd_weather(args: argparse.Namespace) -> None:
     system = _get_system()
     w = system.get_weather()
 
-    def _day_label(d) -> str:
+    def _day_label(d: Any) -> str:
         symbol = d.weather_description
         sun_h = f"{d.sunshine_minutes / 60:.1f} h" if d.sunshine_minutes is not None else "—"
         rain = f"{d.precipitation_mm:.1f} mm" if d.precipitation_mm is not None else "—"

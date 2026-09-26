@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re as _re
 import stat
 import time
 from pathlib import Path
@@ -430,8 +431,6 @@ class TestAsyncContextManager:
             assert ctx is client
         assert client._session is None or client._session.closed
 
-
-import re as _re
 
 _AUTHORIZE_URL_RE = _re.compile(rf"{_re.escape(_AUTH_BASE)}/authorize.*")
 _RESUME_URL_RE = _re.compile(rf"{_re.escape(_AUTH_BASE)}/resume.*")
