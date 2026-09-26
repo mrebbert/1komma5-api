@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import contextlib
 import datetime
 import threading
 from collections.abc import Coroutine
@@ -192,10 +193,10 @@ def _close_leftover_clients() -> None:
     mutate the set safely.
     """
     for client in list(Client._live):
-        try:
+        # Best-effort during shutdown; a raising close() on one client
+        # must not skip the others.
+        with contextlib.suppress(Exception):
             client.close()
-        except Exception:  # noqa: BLE001 — best-effort during shutdown
-            pass
 
 
 class Systems:

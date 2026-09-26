@@ -68,7 +68,7 @@ asyncio_mode = "auto"
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP"]
+select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM"]
 
 [tool.ruff.lint.per-file-ignores]
 "onekommafive/__init__.py" = ["E501"]
