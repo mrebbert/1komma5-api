@@ -100,6 +100,7 @@ def _get_system() -> System:
 # Subcommands
 # ---------------------------------------------------------------------------
 
+
 def _resolve_customer_id(args: argparse.Namespace, system: System) -> str:
     """Return ``args.customer_id`` if set, else look it up via system details.
 
@@ -109,17 +110,22 @@ def _resolve_customer_id(args: argparse.Namespace, system: System) -> str:
         return str(args.customer_id)
     customer_id = system.get_details().customer_id
     if not customer_id:
-        sys.exit("Error: system details do not expose a customer_id; pass --customer-id explicitly")
+        sys.exit(
+            "Error: system details do not expose a customer_id; pass --customer-id explicitly"
+        )
     return str(customer_id)
 
 
 def _format_address(o: Any) -> str:
-    parts = filter(None, [
-        o.address_line1,
-        o.address_line2,
-        f"{o.address_zip_code} {o.address_city}".strip() or None,
-        o.address_country,
-    ])
+    parts = filter(
+        None,
+        [
+            o.address_line1,
+            o.address_line2,
+            f"{o.address_zip_code} {o.address_city}".strip() or None,
+            o.address_country,
+        ],
+    )
     return ", ".join(parts) or "—"
 
 
@@ -137,7 +143,9 @@ def cmd_info(args: argparse.Namespace) -> None:
     if si.energy_trader_active is not None:
         print(f"Energy trading:       {'yes' if si.energy_trader_active else 'no'}")
     if si.electricity_contract_active is not None:
-        print(f"Electricity contract: {'yes' if si.electricity_contract_active else 'no'}")
+        print(
+            f"Electricity contract: {'yes' if si.electricity_contract_active else 'no'}"
+        )
     print(f"Created:      {si.created_at or '—'}")
     print(f"Updated:      {si.updated_at or '—'}")
 
@@ -153,7 +161,9 @@ def cmd_details(args: argparse.Namespace) -> None:
     if d.address_latitude is not None and d.address_longitude is not None:
         print(f"Coordinates:  {d.address_latitude:.4f}, {d.address_longitude:.4f}")
     if d.customer is not None:
-        name = " ".join(filter(None, [d.customer.first_name, d.customer.last_name])) or "—"
+        name = (
+            " ".join(filter(None, [d.customer.first_name, d.customer.last_name])) or "—"
+        )
         print(f"Customer:     {name}  <{d.customer.email or '—'}>  ({d.customer.id})")
     elif d.customer_id:
         print(f"Customer ID:  {d.customer_id}")
@@ -164,10 +174,16 @@ def cmd_details(args: argparse.Namespace) -> None:
     if d.energy_trader_active is not None:
         print(f"Energy trading:       {'yes' if d.energy_trader_active else 'no'}")
     if d.electricity_contract_active is not None:
-        print(f"Electricity contract: {'yes' if d.electricity_contract_active else 'no'}")
+        print(
+            f"Electricity contract: {'yes' if d.electricity_contract_active else 'no'}"
+        )
     if d.has_third_party_smart_meter is not None:
         sm = "yes" if d.has_third_party_smart_meter else "no"
-        extra = f"  (meter {d.third_party_smart_meter_meter_id})" if d.third_party_smart_meter_meter_id else ""
+        extra = (
+            f"  (meter {d.third_party_smart_meter_meter_id})"
+            if d.third_party_smart_meter_meter_id
+            else ""
+        )
         print(f"3rd-party smart meter: {sm}{extra}")
     if d.earliest_measurement:
         print(f"Earliest measurement: {d.earliest_measurement}")
@@ -232,7 +248,9 @@ def cmd_live(args: argparse.Namespace) -> None:
     print(f"Status:       {ov.status or '—'}")
     print(f"PV power:     {_w(ov.pv_power)}")
     print(f"Battery:      {_w(ov.battery_power)}  SoC {_pct(ov.battery_soc)}")
-    print(f"Grid:         {_w(ov.grid_power)}  (import {_w(ov.grid_consumption_power)}  export {_w(ov.grid_feed_in_power)})")
+    print(
+        f"Grid:         {_w(ov.grid_power)}  (import {_w(ov.grid_consumption_power)}  export {_w(ov.grid_feed_in_power)})"
+    )
     print(f"Consumption:  {_w(ov.consumption_power)}")
     print(f"Household:    {_w(ov.household_power)}")
     if ov.ev_chargers_power is not None:
@@ -260,9 +278,15 @@ def cmd_prices(args: argparse.Namespace) -> None:
     print(f"Period:        {start.date()}")
     print()
     print(f"{'':25}  {'avg':>9}  {'high':>9}  {'low':>9}  EUR/kWh")
-    print(f"{'Spot':25}  {mp.average_price:>9.4f}  {mp.highest_price:>9.4f}  {mp.lowest_price:>9.4f}")
-    print(f"{'+ Grid':25}  {mp.average_price_with_grid_costs:>9.4f}  {mp.highest_price_with_grid_costs:>9.4f}  {mp.lowest_price_with_grid_costs:>9.4f}")
-    print(f"{'All-in (incl. VAT)':25}  {mp.average_price_all_in:>9.4f}  {mp.highest_price_all_in:>9.4f}  {mp.lowest_price_all_in:>9.4f}")
+    print(
+        f"{'Spot':25}  {mp.average_price:>9.4f}  {mp.highest_price:>9.4f}  {mp.lowest_price:>9.4f}"
+    )
+    print(
+        f"{'+ Grid':25}  {mp.average_price_with_grid_costs:>9.4f}  {mp.highest_price_with_grid_costs:>9.4f}  {mp.lowest_price_with_grid_costs:>9.4f}"
+    )
+    print(
+        f"{'All-in (incl. VAT)':25}  {mp.average_price_all_in:>9.4f}  {mp.highest_price_all_in:>9.4f}  {mp.lowest_price_all_in:>9.4f}"
+    )
     print()
     gc_parts = []
     if mp.grid_cost_energy_tax is not None:
@@ -274,7 +298,9 @@ def cmd_prices(args: argparse.Namespace) -> None:
     if mp.grid_cost_dynamic_markup is not None and mp.grid_cost_dynamic_markup != 0:
         gc_parts.append(f"dynamic {mp.grid_cost_dynamic_markup:.4f}")
     gc_detail = f"  ({', '.join(gc_parts)})" if gc_parts else ""
-    print(f"Grid costs:    {mp.grid_costs_total:.4f} EUR/kWh  (VAT {vat_pct}){gc_detail}")
+    print(
+        f"Grid costs:    {mp.grid_costs_total:.4f} EUR/kWh  (VAT {vat_pct}){gc_detail}"
+    )
     print()
     print(f"{'Timestamp':<25}  {'Spot':>9}  {'+ Grid':>9}  {'All-in':>9}")
     print("-" * 59)
@@ -378,7 +404,11 @@ def _print_ai_events(args: argparse.Namespace, fetch_fn_name: str) -> None:
     today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     try:
         start = _parse_dt(args.from_date, end_of_day=False) if args.from_date else today
-        end = _parse_dt(args.to_date, end_of_day=True) if args.to_date else today.replace(hour=23, minute=59, second=59)
+        end = (
+            _parse_dt(args.to_date, end_of_day=True)
+            if args.to_date
+            else today.replace(hour=23, minute=59, second=59)
+        )
     except ValueError as e:
         sys.exit(f"Error: invalid date — {e}")
     system = _get_system()
@@ -389,7 +419,9 @@ def _print_ai_events(args: argparse.Namespace, fetch_fn_name: str) -> None:
     if not result.events:
         return
     print()
-    print(f"{'Timestamp':<22}  {'Asset':<8}  {'Decision':<26}  {'Price':>9}  {'SoC':>4}")
+    print(
+        f"{'Timestamp':<22}  {'Asset':<8}  {'Decision':<26}  {'Price':>9}  {'SoC':>4}"
+    )
     print("-" * 80)
     for ev in sorted(result.events, key=lambda e: e.timestamp):
         soc = f"{ev.state_of_charge}%" if ev.state_of_charge is not None else "—"
@@ -419,7 +451,9 @@ def cmd_site_details(args: argparse.Namespace) -> None:
         print(f"Coordinates:       {d.address_latitude:.4f}, {d.address_longitude:.4f}")
     print(f"Customer ID:       {d.customer_id or '—'}")
     if d.customer is not None:
-        name = " ".join(filter(None, [d.customer.first_name, d.customer.last_name])) or "—"
+        name = (
+            " ".join(filter(None, [d.customer.first_name, d.customer.last_name])) or "—"
+        )
         print(f"Customer:          {name}  <{d.customer.email or '—'}>")
     if d.technical_contact_name:
         print(f"Installer:         {d.technical_contact_name}")
@@ -480,18 +514,33 @@ def cmd_subscriptions(args: argparse.Namespace) -> None:
             monthly_total += s.price_eur
         notice = (
             f"{s.notice_period_number} mo"
-            if s.notice_period_number is not None and (s.notice_period_interval or "").upper() == "MONTHS"
-            else (str(s.notice_period_number) if s.notice_period_number is not None else "—")
+            if s.notice_period_number is not None
+            and (s.notice_period_interval or "").upper() == "MONTHS"
+            else (
+                str(s.notice_period_number)
+                if s.notice_period_number is not None
+                else "—"
+            )
         )
-        since = s.signed_date[:10] if s.signed_date else (s.start_date[:10] if s.start_date else "—")
-        print(f"  {s.type:<18} {s.status:<8} {price_str:>12}  {notice:>8}   {s.renewal or '—':<10} {since}")
+        since = (
+            s.signed_date[:10]
+            if s.signed_date
+            else (s.start_date[:10] if s.start_date else "—")
+        )
+        print(
+            f"  {s.type:<18} {s.status:<8} {price_str:>12}  {notice:>8}   {s.renewal or '—':<10} {since}"
+        )
 
     # DYNAMIC_PULSE price guarantee detail line
     for s in result.subscriptions:
         if s.type == "DYNAMIC_PULSE" and s.price_guarantee_value is not None:
-            version = f" ({s.price_guarantee_version})" if s.price_guarantee_version else ""
+            version = (
+                f" ({s.price_guarantee_version})" if s.price_guarantee_version else ""
+            )
             print()
-            print(f"  DYNAMIC_PULSE price guarantee: {s.price_guarantee_value:g} {s.price_guarantee_unit or ''}{version}")
+            print(
+                f"  DYNAMIC_PULSE price guarantee: {s.price_guarantee_value:g} {s.price_guarantee_unit or ''}{version}"
+            )
             break
 
     print()
@@ -527,7 +576,11 @@ def cmd_notification_settings(args: argparse.Namespace) -> None:
             print(f"  {category:<40}  (not subscribed)")
             continue
         for e in entries:
-            active = [name for name, on in [("app", e.app), ("push", e.push), ("email", e.email)] if on]
+            active = [
+                name
+                for name, on in [("app", e.app), ("push", e.push), ("email", e.email)]
+                if on
+            ]
             ch = ", ".join(active) if active else "(no channels)"
             print(f"  {category:<40}  {ch}")
 
@@ -536,8 +589,12 @@ def cmd_versions(args: argparse.Namespace) -> None:
     v = _client().get_supported_versions()
     print(f"{'':<10}  {'target':<10}  minimum")
     print("-" * 34)
-    print(f"{'b2b':<10}  {v.b2b.target_version or '—':<10}  {v.b2b.minimum_supported_version or '—'}")
-    print(f"{'b2c':<10}  {v.b2c.target_version or '—':<10}  {v.b2c.minimum_supported_version or '—'}")
+    print(
+        f"{'b2b':<10}  {v.b2b.target_version or '—':<10}  {v.b2b.minimum_supported_version or '—'}"
+    )
+    print(
+        f"{'b2c':<10}  {v.b2c.target_version or '—':<10}  {v.b2c.minimum_supported_version or '—'}"
+    )
 
 
 def cmd_me(args: argparse.Namespace) -> None:
@@ -565,7 +622,11 @@ def cmd_impact(args: argparse.Namespace) -> None:
     system = _get_system()
     i = system.get_impact_overview()
     print(f"System:            {system.id()}")
-    print(f"CO2 saved (site):  {i.co2_savings_kg:,.1f} kg" if i.co2_savings_kg is not None else "CO2 saved (site):  —")
+    print(
+        f"CO2 saved (site):  {i.co2_savings_kg:,.1f} kg"
+        if i.co2_savings_kg is not None
+        else "CO2 saved (site):  —"
+    )
     if i.co2_collective_savings_kg is not None:
         print(f"CO2 (community):   {i.co2_collective_savings_kg / 1000:,.0f} t")
     if i.co2_global_savings_estimate_tons is not None:
@@ -589,22 +650,39 @@ def cmd_ai_summary(args: argparse.Namespace) -> None:
     print(f"System:      {system.id()}")
     print(f"Resolution:  {s.resolution}")
     if s.self_sufficiency_percent is not None:
-        print(f"Self-suff.:  {s.self_sufficiency_percent * 100:.1f}%   "
-              f"(solar {s.self_sufficiency_by_solar_kwh:.1f} kWh, "
-              f"battery {s.self_sufficiency_by_battery_kwh:.1f} kWh)")
+        print(
+            f"Self-suff.:  {s.self_sufficiency_percent * 100:.1f}%   "
+            f"(solar {s.self_sufficiency_by_solar_kwh:.1f} kWh, "
+            f"battery {s.self_sufficiency_by_battery_kwh:.1f} kWh)"
+        )
     if s.earned_amount_eur is not None:
-        feed_in = f" @ {s.feed_in_price_eur_per_kwh:.4f} €/kWh" if s.feed_in_price_eur_per_kwh is not None else ""
-        print(f"Earned:      {s.earned_amount_eur:.2f} €   "
-              f"({s.sold_energy_kwh:.1f} kWh sold{feed_in})")
+        feed_in = (
+            f" @ {s.feed_in_price_eur_per_kwh:.4f} €/kWh"
+            if s.feed_in_price_eur_per_kwh is not None
+            else ""
+        )
+        print(
+            f"Earned:      {s.earned_amount_eur:.2f} €   "
+            f"({s.sold_energy_kwh:.1f} kWh sold{feed_in})"
+        )
     if s.co2_saved_kg is not None:
-        car = f", ≈ {s.car_travel_emission_km:.0f} car km" if s.car_travel_emission_km is not None else ""
-        prod = f" (PV {s.production_kwh:.1f} kWh)" if s.production_kwh is not None else ""
+        car = (
+            f", ≈ {s.car_travel_emission_km:.0f} car km"
+            if s.car_travel_emission_km is not None
+            else ""
+        )
+        prod = (
+            f" (PV {s.production_kwh:.1f} kWh)" if s.production_kwh is not None else ""
+        )
         print(f"CO2 saved:   {s.co2_saved_kg:.1f} kg{car}{prod}")
     if s.heartbeat_price_eur_per_kwh is not None:
         print(f"HB price:    {s.heartbeat_price_eur_per_kwh:.4f} €/kWh")
     if s.peak_price_avoided_eur is not None:
         detail = ""
-        if s.peak_grid_charging_cost_eur is not None and s.peak_battery_charging_cost_eur is not None:
+        if (
+            s.peak_grid_charging_cost_eur is not None
+            and s.peak_battery_charging_cost_eur is not None
+        ):
             detail = f"  (grid {s.peak_grid_charging_cost_eur:.2f} € − battery {s.peak_battery_charging_cost_eur:.2f} €)"
         print(f"Peak avoided:{s.peak_price_avoided_eur:>7.2f} €{detail}")
 
@@ -613,28 +691,28 @@ def cmd_heartbeat_prices(args: argparse.Namespace) -> None:
     system = _get_system()
     hb = system.get_heartbeat_prices()
     windows = [
-        ("day",      hb.day),
-        ("week",     hb.week),
-        ("month",    hb.month),
-        ("half-y",   hb.half_year),
-        ("year",     hb.year),
+        ("day", hb.day),
+        ("week", hb.week),
+        ("month", hb.month),
+        ("half-y", hb.half_year),
+        ("year", hb.year),
     ]
 
     def _fmt(val: Any, spec: str) -> str:
         return format(val, spec) if val is not None else "—"
 
     rows = [
-        ("PV produced (kWh)",         "pv_produced_kwh",                     ",.1f"),
-        ("Grid feed-in (kWh)",        "grid_feed_in_kwh",                    ",.1f"),
-        ("Grid feed-in comp. (€)",    "grid_feed_in_compensation_eur",       ",.2f"),
-        ("Grid consumed (kWh)",       "grid_consumed_kwh",                   ",.1f"),
-        ("Grid consumption cost (€)", "grid_consumption_cost_eur",           ",.2f"),
-        ("Total consumption (kWh)",   "total_consumption_kwh",               ",.1f"),
-        ("Total energy cost (€)",     "total_energy_cost_eur",               ",.2f"),
-        ("Heartbeat price (€/kWh)",   "heartbeat_price_eur_per_kwh",         ".4f"),
-        ("Comparison tariff (€/kWh)", "comparison_tariff_eur_per_kwh",       ".4f"),
-        ("Feed-in tariff (€/kWh)",    "grid_feed_in_tariff_eur_per_kwh",     ".4f"),
-        ("Grid buy price (€/kWh)",    "grid_consumption_price_eur_per_kwh",  ".4f"),
+        ("PV produced (kWh)", "pv_produced_kwh", ",.1f"),
+        ("Grid feed-in (kWh)", "grid_feed_in_kwh", ",.1f"),
+        ("Grid feed-in comp. (€)", "grid_feed_in_compensation_eur", ",.2f"),
+        ("Grid consumed (kWh)", "grid_consumed_kwh", ",.1f"),
+        ("Grid consumption cost (€)", "grid_consumption_cost_eur", ",.2f"),
+        ("Total consumption (kWh)", "total_consumption_kwh", ",.1f"),
+        ("Total energy cost (€)", "total_energy_cost_eur", ",.2f"),
+        ("Heartbeat price (€/kWh)", "heartbeat_price_eur_per_kwh", ".4f"),
+        ("Comparison tariff (€/kWh)", "comparison_tariff_eur_per_kwh", ".4f"),
+        ("Feed-in tariff (€/kWh)", "grid_feed_in_tariff_eur_per_kwh", ".4f"),
+        ("Grid buy price (€/kWh)", "grid_consumption_price_eur_per_kwh", ".4f"),
     ]
 
     print(f"System:  {system.id()}")
@@ -647,7 +725,9 @@ def cmd_heartbeat_prices(args: argparse.Namespace) -> None:
         print(f"{label:<28}{cells}")
 
     # Implausibility flags
-    flagged = [name for name, w in windows if w.should_report_implausible_pv_and_feed_in]
+    flagged = [
+        name for name, w in windows if w.should_report_implausible_pv_and_feed_in
+    ]
     if flagged:
         print()
         print(f"⚠ Implausible PV/feed-in values reported for: {', '.join(flagged)}")
@@ -683,12 +763,18 @@ def cmd_energy_historical(args: argparse.Namespace) -> None:
     except ValueError as e:
         sys.exit(f"Error: invalid date — {e}")
     system = _get_system()
-    ed = system.get_energy_historical(from_date=from_date, to_date=to_date, resolution=args.resolution)
+    ed = system.get_energy_historical(
+        from_date=from_date, to_date=to_date, resolution=args.resolution
+    )
     _print_energy(system.id(), ed, args.resolution)
 
 
 def _print_energy(system_id: str, ed: Any, resolution: str) -> None:
-    suf = f"  (self-suff. {ed.self_sufficiency * 100:.0f}%)" if ed.self_sufficiency is not None else ""
+    suf = (
+        f"  (self-suff. {ed.self_sufficiency * 100:.0f}%)"
+        if ed.self_sufficiency is not None
+        else ""
+    )
     print(f"System:        {system_id}")
     if ed.updated_at:
         print(f"Updated:       {ed.updated_at}")
@@ -712,14 +798,20 @@ def _print_energy(system_id: str, ed: Any, resolution: str) -> None:
         print(f"{'Savings:':28} {ed.savings_eur:.2f} €")
     if ed.timeseries:
         print()
-        print(f"{'Timestamp':<25}  {'PV':>6}  {'Grid+':>6}  {'Grid-':>6}  {'Bat%':>5}  {'Bat kW':>7}  kW")
+        print(
+            f"{'Timestamp':<25}  {'PV':>6}  {'Grid+':>6}  {'Grid-':>6}  {'Bat%':>5}  {'Bat kW':>7}  kW"
+        )
         print("-" * 68)
         for ts in sorted(ed.timeseries):
             slot = ed.timeseries[ts]
             pv = f"{slot.production:.3f}" if slot.production is not None else "—"
             gs = f"{slot.grid_supply:.3f}" if slot.grid_supply is not None else "—"
             gf = f"{slot.grid_feed_in:.3f}" if slot.grid_feed_in is not None else "—"
-            soc = f"{slot.battery_soc * 100:.1f}%" if slot.battery_soc is not None else "—"
+            soc = (
+                f"{slot.battery_soc * 100:.1f}%"
+                if slot.battery_soc is not None
+                else "—"
+            )
             bat_kw: float | None = None
             if slot.battery_charge is not None and slot.battery_charge > 0:
                 bat_kw = slot.battery_charge
@@ -815,9 +907,13 @@ def _resolve_ev(args: argparse.Namespace) -> EVCharger:
             sys.exit(f"Error: EV charger {args.ev!r} not found")
         return ev
     if len(chargers) > 1:
-        lines = ["Error: multiple EV chargers registered, --ev is required. Registered:"]
+        lines = [
+            "Error: multiple EV chargers registered, --ev is required. Registered:"
+        ]
         for c in chargers:
-            label = " ".join(filter(None, [c.manufacturer(), c.model()])) or c.name() or "—"
+            label = (
+                " ".join(filter(None, [c.manufacturer(), c.model()])) or c.name() or "—"
+            )
             lines.append(f"  {c.id()}  {label}")
         sys.exit("\n".join(lines))
     return chargers[0]
@@ -843,7 +939,9 @@ def cmd_set_ev_target_soc(args: argparse.Namespace) -> None:
     try:
         soc = float(args.soc)
     except ValueError:
-        sys.exit(f"Error: invalid SoC value {args.soc!r} — must be a number between 0 and 100")
+        sys.exit(
+            f"Error: invalid SoC value {args.soc!r} — must be a number between 0 and 100"
+        )
     if not 0.0 <= soc <= 100.0:
         sys.exit(f"Error: SoC must be between 0 and 100, got {soc}")
     for ev in _resolve_evs(args):
@@ -872,12 +970,19 @@ def cmd_ems(args: argparse.Namespace) -> None:
             if dev.type == "EV_CHARGER":
                 mode = dev.active_charging_mode or "—"
                 ev = dev.assigned_ev_name or dev.assigned_ev_id or "—"
-                print(f"  EV_CHARGER  {dev.charger_name or dev.id or '—'}  ->  {mode}  ({ev})")
+                print(
+                    f"  EV_CHARGER  {dev.charger_name or dev.id or '—'}  ->  {mode}  ({ev})"
+                )
             elif dev.type == "BATTERY":
                 fc = "enabled" if dev.enable_forecast_charging else "disabled"
                 print(f"  BATTERY     Forecast charging: {fc}")
             elif dev.type == "HEAT_PUMP":
-                surplus = f"yes  (max {dev.max_solar_surplus_usage_kw:.1f} kW)" if dev.use_solar_surplus and dev.max_solar_surplus_usage_kw is not None else ("yes" if dev.use_solar_surplus else "no")
+                surplus = (
+                    f"yes  (max {dev.max_solar_surplus_usage_kw:.1f} kW)"
+                    if dev.use_solar_surplus
+                    and dev.max_solar_surplus_usage_kw is not None
+                    else ("yes" if dev.use_solar_surplus else "no")
+                )
                 print(f"  HEAT_PUMP   {dev.id or '—'}  Solar surplus: {surplus}")
             else:
                 print(f"  {dev.type}")
@@ -889,10 +994,22 @@ def cmd_weather(args: argparse.Namespace) -> None:
 
     def _day_label(d: Any) -> str:
         symbol = d.weather_description
-        sun_h = f"{d.sunshine_minutes / 60:.1f} h" if d.sunshine_minutes is not None else "—"
+        sun_h = (
+            f"{d.sunshine_minutes / 60:.1f} h"
+            if d.sunshine_minutes is not None
+            else "—"
+        )
         rain = f"{d.precipitation_mm:.1f} mm" if d.precipitation_mm is not None else "—"
-        prob = f"{d.precipitation_probability:.0f}%" if d.precipitation_probability is not None else "—"
-        temp = f"{d.temperature_celsius:.1f} °C" if d.temperature_celsius is not None else "—"
+        prob = (
+            f"{d.precipitation_probability:.0f}%"
+            if d.precipitation_probability is not None
+            else "—"
+        )
+        temp = (
+            f"{d.temperature_celsius:.1f} °C"
+            if d.temperature_celsius is not None
+            else "—"
+        )
         rise = d.sunrise[:16].replace("T", " ") if d.sunrise else "—"
         sset = d.sunset[:16].replace("T", " ") if d.sunset else "—"
         return f"{symbol:<28}  {temp}  Sun {sun_h}  Rain {rain} ({prob})  Rise {rise}  Set {sset}"
@@ -903,22 +1020,48 @@ def cmd_weather(args: argparse.Namespace) -> None:
 
     if args.forecasts and w.forecasts:
         print()
-        print(f"{'Zeit (UTC)':<18}  {'Wetter':<28}  {'Temp':>6}  {'Wind':>6}  {'Regen':>8}  {'Prob':>5}  {'Sonne':>6}")
+        print(
+            f"{'Zeit (UTC)':<18}  {'Wetter':<28}  {'Temp':>6}  {'Wind':>6}  {'Regen':>8}  {'Prob':>5}  {'Sonne':>6}"
+        )
         print("-" * 92)
         for slot in w.forecasts:
             ts = slot.period_start[:16].replace("T", " ")
             desc = slot.weather_description
-            temp = f"{slot.temperature_celsius:.1f}°C" if slot.temperature_celsius is not None else "—"
+            temp = (
+                f"{slot.temperature_celsius:.1f}°C"
+                if slot.temperature_celsius is not None
+                else "—"
+            )
             wind = f"{slot.wind_speed:.1f} m/s" if slot.wind_speed is not None else "—"
-            rain = f"{slot.precipitation_mm:.1f} mm" if slot.precipitation_mm is not None else "—"
-            prob = f"{slot.precipitation_probability:.0f}%" if slot.precipitation_probability is not None else "—"
-            sun = f"{slot.sunshine_minutes:.0f} min" if slot.sunshine_minutes is not None else "—"
-            print(f"{ts:<18}  {desc:<28}  {temp:>6}  {wind:>6}  {rain:>8}  {prob:>5}  {sun:>6}")
+            rain = (
+                f"{slot.precipitation_mm:.1f} mm"
+                if slot.precipitation_mm is not None
+                else "—"
+            )
+            prob = (
+                f"{slot.precipitation_probability:.0f}%"
+                if slot.precipitation_probability is not None
+                else "—"
+            )
+            sun = (
+                f"{slot.sunshine_minutes:.0f} min"
+                if slot.sunshine_minutes is not None
+                else "—"
+            )
+            print(
+                f"{ts:<18}  {desc:<28}  {temp:>6}  {wind:>6}  {rain:>8}  {prob:>5}  {sun:>6}"
+            )
 
 
 def _parse_dt(value: str, end_of_day: bool) -> datetime.datetime:
     """Parse a date or datetime string; fill missing time with start/end of day."""
-    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+    for fmt in (
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
+    ):
         try:
             parsed = datetime.datetime.strptime(value, fmt)
             if fmt == "%Y-%m-%d" and end_of_day:
@@ -926,7 +1069,9 @@ def _parse_dt(value: str, end_of_day: bool) -> datetime.datetime:
             return parsed
         except ValueError:
             continue
-    raise ValueError(f"unrecognised date/time format: {value!r}  (expected YYYY-MM-DD or YYYY-MM-DD HH:MM)")
+    raise ValueError(
+        f"unrecognised date/time format: {value!r}  (expected YYYY-MM-DD or YYYY-MM-DD HH:MM)"
+    )
 
 
 def cmd_optimizations(args: argparse.Namespace) -> None:
@@ -944,6 +1089,7 @@ def cmd_set_ems(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _kwh(value: float | None) -> str:
     return f"{value:.2f} kWh" if value is not None else "—"
@@ -968,7 +1114,10 @@ def _pct(value: float | None) -> str:
 def _add_customer_id_arg(parser: argparse.ArgumentParser) -> None:
     """Attach the standard optional ``--customer-id`` flag to *parser*."""
     parser.add_argument(
-        "--customer-id", dest="customer_id", metavar="UUID", default=None,
+        "--customer-id",
+        dest="customer_id",
+        metavar="UUID",
+        default=None,
         help="Customer UUID (default: looked up via system details)",
     )
 
@@ -976,11 +1125,15 @@ def _add_customer_id_arg(parser: argparse.ArgumentParser) -> None:
 def _add_ev_selector_args(parser: argparse.ArgumentParser) -> None:
     """Attach the standard ``--ev`` / ``--all-evs`` selector pair to *parser*."""
     parser.add_argument(
-        "--ev", metavar="EV_ID", default=None,
+        "--ev",
+        metavar="EV_ID",
+        default=None,
         help="EV charger ID (required when several are registered)",
     )
     parser.add_argument(
-        "--all-evs", dest="all_evs", action="store_true",
+        "--all-evs",
+        dest="all_evs",
+        action="store_true",
         help="Apply to every registered EV charger",
     )
 
@@ -993,17 +1146,27 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", metavar="command")
     sub.required = True
 
-    sub.add_parser("info", help="System metadata (address, status, features)").set_defaults(func=cmd_info)
-    sub.add_parser("details", help="Extended system metadata (customer, installer, gateways)").set_defaults(func=cmd_details)
-    sub.add_parser("assets", help="Site connection status + installed hardware assets").set_defaults(func=cmd_assets)
+    sub.add_parser(
+        "info", help="System metadata (address, status, features)"
+    ).set_defaults(func=cmd_info)
+    sub.add_parser(
+        "details", help="Extended system metadata (customer, installer, gateways)"
+    ).set_defaults(func=cmd_details)
+    sub.add_parser(
+        "assets", help="Site connection status + installed hardware assets"
+    ).set_defaults(func=cmd_assets)
 
-    features_p = sub.add_parser("features", help="Active site feature flags (per customer + site)")
+    features_p = sub.add_parser(
+        "features", help="Active site feature flags (per customer + site)"
+    )
     _add_customer_id_arg(features_p)
     features_p.set_defaults(func=cmd_features)
 
     sub.add_parser("live", help="Live power overview").set_defaults(func=cmd_live)
 
-    prices_p = sub.add_parser("prices", help="Market electricity prices (today) [--resolution 1h|15m]")
+    prices_p = sub.add_parser(
+        "prices", help="Market electricity prices (today) [--resolution 1h|15m]"
+    )
     prices_p.add_argument(
         "--resolution",
         metavar="RES",
@@ -1015,14 +1178,17 @@ def main() -> None:
 
     weather_p = sub.add_parser("weather", help="Weather forecast for the site location")
     weather_p.add_argument(
-        "--forecasts", action="store_true",
+        "--forecasts",
+        action="store_true",
         help="Show 3-hour forecast slots for the next 48 h",
     )
     weather_p.set_defaults(func=cmd_weather)
 
     sub.add_parser("ev", help="EV charger status").set_defaults(func=cmd_ev)
 
-    sub.add_parser("ev-modes", help="Available EV charging modes for this site").set_defaults(func=cmd_ev_modes)
+    sub.add_parser(
+        "ev-modes", help="Available EV charging modes for this site"
+    ).set_defaults(func=cmd_ev_modes)
 
     set_ev_p = sub.add_parser("set-ev-mode", help="Set EV charging mode")
     set_ev_p.add_argument(
@@ -1034,7 +1200,9 @@ def main() -> None:
     _add_ev_selector_args(set_ev_p)
     set_ev_p.set_defaults(func=cmd_set_ev_mode)
 
-    set_soc_p = sub.add_parser("set-ev-target-soc", help="Set EV target state-of-charge")
+    set_soc_p = sub.add_parser(
+        "set-ev-target-soc", help="Set EV target state-of-charge"
+    )
     set_soc_p.add_argument("soc", metavar="SOC", help="Target SoC in percent (0–100)")
     _add_ev_selector_args(set_soc_p)
     set_soc_p.set_defaults(func=cmd_set_ev_target_soc)
@@ -1044,89 +1212,170 @@ def main() -> None:
     _add_ev_selector_args(set_dep_p)
     set_dep_p.set_defaults(func=cmd_set_ev_departure)
 
-    sub.add_parser("price-config", help="User-configured energy prices (grid, comparison, monthly base)").set_defaults(func=cmd_price_config)
-    sub.add_parser("comparison-price", help="Grid-supplier comparison price (EUR/kWh)").set_defaults(func=cmd_comparison_price)
+    sub.add_parser(
+        "price-config",
+        help="User-configured energy prices (grid, comparison, monthly base)",
+    ).set_defaults(func=cmd_price_config)
+    sub.add_parser(
+        "comparison-price", help="Grid-supplier comparison price (EUR/kWh)"
+    ).set_defaults(func=cmd_comparison_price)
 
-    pg_p = sub.add_parser("price-guarantee", help="Contractual electricity-price guarantee")
+    pg_p = sub.add_parser(
+        "price-guarantee", help="Contractual electricity-price guarantee"
+    )
     _add_customer_id_arg(pg_p)
     pg_p.set_defaults(func=cmd_price_guarantee)
 
-    sub.add_parser("wallboxes", help="Physical wallbox hardware assigned to this system").set_defaults(func=cmd_wallboxes)
-    sub.add_parser("smart-meter", help="Smart-meter registration details (EIC, DSO code, concession fee)").set_defaults(func=cmd_smart_meter)
-    sub.add_parser("monthly-trading", help="Average monthly Energy-Trader savings").set_defaults(func=cmd_monthly_trading)
+    sub.add_parser(
+        "wallboxes", help="Physical wallbox hardware assigned to this system"
+    ).set_defaults(func=cmd_wallboxes)
+    sub.add_parser(
+        "smart-meter",
+        help="Smart-meter registration details (EIC, DSO code, concession fee)",
+    ).set_defaults(func=cmd_smart_meter)
+    sub.add_parser(
+        "monthly-trading", help="Average monthly Energy-Trader savings"
+    ).set_defaults(func=cmd_monthly_trading)
 
-    ai_dec_p = sub.add_parser("ai-decisions", help="AI self-sufficiency events (companion to 'optimizations')")
+    ai_dec_p = sub.add_parser(
+        "ai-decisions", help="AI self-sufficiency events (companion to 'optimizations')"
+    )
     ai_dec_p.add_argument(
-        "--from", dest="from_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
+        "--from",
+        dest="from_date",
+        metavar="YYYY-MM-DD[THH:MM]",
+        default=None,
         help="Start date/time (default: today 00:00)",
     )
     ai_dec_p.add_argument(
-        "--to", dest="to_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
+        "--to",
+        dest="to_date",
+        metavar="YYYY-MM-DD[THH:MM]",
+        default=None,
         help="End date/time (default: today 23:59)",
     )
     ai_dec_p.set_defaults(func=cmd_ai_decisions)
 
-    sub.add_parser("site-details", help="Extended site metadata incl. EMS runtime state").set_defaults(func=cmd_site_details)
+    sub.add_parser(
+        "site-details", help="Extended site metadata incl. EMS runtime state"
+    ).set_defaults(func=cmd_site_details)
 
     cust_p = sub.add_parser("customer", help="Full customer record (v3)")
     _add_customer_id_arg(cust_p)
     cust_p.set_defaults(func=cmd_customer)
 
-    subs_p = sub.add_parser("subscriptions", help="Customer contracts / subscriptions with monthly cost")
+    subs_p = sub.add_parser(
+        "subscriptions", help="Customer contracts / subscriptions with monthly cost"
+    )
     _add_customer_id_arg(subs_p)
     subs_p.set_defaults(func=cmd_subscriptions)
 
-    sub.add_parser("notifications", help="Recent push/in-app notifications").set_defaults(func=cmd_notifications)
-    sub.add_parser("notification-settings", help="Notification preferences per category").set_defaults(func=cmd_notification_settings)
-    sub.add_parser("versions", help="API compatibility (b2b/b2c target and minimum versions)").set_defaults(func=cmd_versions)
-    sub.add_parser("me", help="Authenticated user profile + connected systems").set_defaults(func=cmd_me)
+    sub.add_parser(
+        "notifications", help="Recent push/in-app notifications"
+    ).set_defaults(func=cmd_notifications)
+    sub.add_parser(
+        "notification-settings", help="Notification preferences per category"
+    ).set_defaults(func=cmd_notification_settings)
+    sub.add_parser(
+        "versions", help="API compatibility (b2b/b2c target and minimum versions)"
+    ).set_defaults(func=cmd_versions)
+    sub.add_parser(
+        "me", help="Authenticated user profile + connected systems"
+    ).set_defaults(func=cmd_me)
 
-    sub.add_parser("impact", help="Lifetime CO2 savings (site + community)").set_defaults(func=cmd_impact)
-    sub.add_parser("trader", help="Lifetime energy-trading savings (€)").set_defaults(func=cmd_trader)
+    sub.add_parser(
+        "impact", help="Lifetime CO2 savings (site + community)"
+    ).set_defaults(func=cmd_impact)
+    sub.add_parser("trader", help="Lifetime energy-trading savings (€)").set_defaults(
+        func=cmd_trader
+    )
 
-    sub.add_parser("heartbeat-prices", help="Financial breakdown per time window (PV, feed-in, grid, effective HB price)").set_defaults(func=cmd_heartbeat_prices)
+    sub.add_parser(
+        "heartbeat-prices",
+        help="Financial breakdown per time window (PV, feed-in, grid, effective HB price)",
+    ).set_defaults(func=cmd_heartbeat_prices)
 
-    ai_sum_p = sub.add_parser("ai-summary", help="Heartbeat-AI performance summary (self-sufficiency, earnings, CO2)")
+    ai_sum_p = sub.add_parser(
+        "ai-summary",
+        help="Heartbeat-AI performance summary (self-sufficiency, earnings, CO2)",
+    )
     ai_sum_p.add_argument(
-        "--resolution", metavar="RES", default="1M", choices=["1W", "1M", "1Y"],
+        "--resolution",
+        metavar="RES",
+        default="1M",
+        choices=["1W", "1M", "1Y"],
         help="Window: '1W', '1M' (default), or '1Y'. Only '1M' returns all metrics.",
     )
     ai_sum_p.set_defaults(func=cmd_ai_summary)
 
-    savings_p = sub.add_parser("savings", help="Aggregated Heartbeat savings (€) for a date range")
+    savings_p = sub.add_parser(
+        "savings", help="Aggregated Heartbeat savings (€) for a date range"
+    )
     savings_p.add_argument(
-        "--from", dest="from_date", metavar="YYYY-MM-DD", default=None,
+        "--from",
+        dest="from_date",
+        metavar="YYYY-MM-DD",
+        default=None,
         help="Start date (default: API rolling window)",
     )
     savings_p.add_argument(
-        "--to", dest="to_date", metavar="YYYY-MM-DD", default=None,
+        "--to",
+        dest="to_date",
+        metavar="YYYY-MM-DD",
+        default=None,
         help="End date (default: API rolling window)",
     )
     savings_p.set_defaults(func=cmd_savings)
 
-    energy_today_p = sub.add_parser("energy-today", help="Energy production and consumption for today")
+    energy_today_p = sub.add_parser(
+        "energy-today", help="Energy production and consumption for today"
+    )
     energy_today_p.add_argument(
-        "--resolution", metavar="RES", default="1h", choices=["1h", "15m"],
+        "--resolution",
+        metavar="RES",
+        default="1h",
+        choices=["1h", "15m"],
         help="Data resolution: '1h' (default) or '15m'",
     )
     energy_today_p.set_defaults(func=cmd_energy_today)
 
-    energy_hist_p = sub.add_parser("energy-historical", help="Historical energy data for a date range")
-    energy_hist_p.add_argument("--from", dest="from_date", metavar="YYYY-MM-DD", required=True, help="Start date")
-    energy_hist_p.add_argument("--to", dest="to_date", metavar="YYYY-MM-DD", required=True, help="End date")
+    energy_hist_p = sub.add_parser(
+        "energy-historical", help="Historical energy data for a date range"
+    )
     energy_hist_p.add_argument(
-        "--resolution", metavar="RES", default="1h", choices=["1h", "15m"],
+        "--from",
+        dest="from_date",
+        metavar="YYYY-MM-DD",
+        required=True,
+        help="Start date",
+    )
+    energy_hist_p.add_argument(
+        "--to", dest="to_date", metavar="YYYY-MM-DD", required=True, help="End date"
+    )
+    energy_hist_p.add_argument(
+        "--resolution",
+        metavar="RES",
+        default="1h",
+        choices=["1h", "15m"],
         help="Data resolution: '1h' (default) or '15m'",
     )
     energy_hist_p.set_defaults(func=cmd_energy_historical)
 
-    opt_p = sub.add_parser("optimizations", help="AI optimisation decisions for a date range")
+    opt_p = sub.add_parser(
+        "optimizations", help="AI optimisation decisions for a date range"
+    )
     opt_p.add_argument(
-        "--from", dest="from_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
+        "--from",
+        dest="from_date",
+        metavar="YYYY-MM-DD[THH:MM]",
+        default=None,
         help="Start date/time (default: today 00:00)",
     )
     opt_p.add_argument(
-        "--to", dest="to_date", metavar="YYYY-MM-DD[THH:MM]", default=None,
+        "--to",
+        dest="to_date",
+        metavar="YYYY-MM-DD[THH:MM]",
+        default=None,
         help="End date/time (default: today 23:59)",
     )
     opt_p.set_defaults(func=cmd_optimizations)

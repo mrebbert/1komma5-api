@@ -74,6 +74,7 @@ def systems(client: Client):
 # Authentication
 # ---------------------------------------------------------------------------
 
+
 class TestAuthentication:
     """Verify that login and token management work against the real Auth0 tenant."""
 
@@ -90,7 +91,9 @@ class TestAuthentication:
         token_b = client.get_token()
         assert token_a == token_b
 
-    def test_wrong_password_raises_authentication_error(self, credentials: tuple[str, str]) -> None:
+    def test_wrong_password_raises_authentication_error(
+        self, credentials: tuple[str, str]
+    ) -> None:
         username, _ = credentials
         c = Client(username, password="definitely-wrong-password")
         with pytest.raises(AuthenticationError):
@@ -101,6 +104,7 @@ class TestAuthentication:
 # User profile
 # ---------------------------------------------------------------------------
 
+
 class TestGetUser:
     """Verify the /users/me endpoint returns a valid user object."""
 
@@ -110,7 +114,9 @@ class TestGetUser:
         assert len(user.id) > 0
         assert "@" in user.email
 
-    def test_email_matches_login_username(self, client: Client, credentials: tuple[str, str]) -> None:
+    def test_email_matches_login_username(
+        self, client: Client, credentials: tuple[str, str]
+    ) -> None:
         username, _ = credentials
         user = client.get_user()
         assert user.email.lower() == username.lower()
@@ -119,6 +125,7 @@ class TestGetUser:
 # ---------------------------------------------------------------------------
 # Systems
 # ---------------------------------------------------------------------------
+
 
 class TestGetSystems:
     """Verify the systems listing endpoint."""
@@ -145,6 +152,7 @@ class TestGetSystems:
 # ---------------------------------------------------------------------------
 # Live overview
 # ---------------------------------------------------------------------------
+
 
 class TestLiveOverview:
     """Verify the live-overview endpoint for each system."""
@@ -173,6 +181,7 @@ class TestLiveOverview:
 # EMS settings
 # ---------------------------------------------------------------------------
 
+
 class TestEmsSettings:
     """Verify the EMS settings endpoint."""
 
@@ -188,6 +197,7 @@ class TestEmsSettings:
 # ---------------------------------------------------------------------------
 # Electricity prices
 # ---------------------------------------------------------------------------
+
 
 class TestMarketPrices:
     """Verify the market-prices chart endpoint.
@@ -234,6 +244,7 @@ class TestMarketPrices:
 # EV chargers  (skipped per system if none are registered)
 # ---------------------------------------------------------------------------
 
+
 class TestEvChargers:
     """Verify EV charger read operations."""
 
@@ -266,6 +277,7 @@ class TestEvChargers:
 # ---------------------------------------------------------------------------
 # Energy today
 # ---------------------------------------------------------------------------
+
 
 class TestEnergyToday:
     def test_returns_energy_data_instance(self, systems) -> None:
@@ -316,38 +328,51 @@ class TestEnergyToday:
 # Energy historical
 # ---------------------------------------------------------------------------
 
+
 class TestEnergyHistorical:
     def test_returns_energy_data_instance(self, systems) -> None:
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
-        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        result = systems[0].get_energy_historical(
+            from_date=yesterday, to_date=yesterday
+        )
         assert isinstance(result, EnergyData)
 
     def test_energy_produced_is_non_negative(self, systems) -> None:
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
-        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        result = systems[0].get_energy_historical(
+            from_date=yesterday, to_date=yesterday
+        )
         if result.energy_produced_kwh is not None:
             assert result.energy_produced_kwh >= 0.0
 
     def test_timeseries_is_populated(self, systems) -> None:
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
-        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        result = systems[0].get_energy_historical(
+            from_date=yesterday, to_date=yesterday
+        )
         assert isinstance(result.timeseries, dict)
         assert len(result.timeseries) > 0
 
     def test_resolution_15m_same_day(self, systems) -> None:
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
-        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday, resolution="15m")
+        result = systems[0].get_energy_historical(
+            from_date=yesterday, to_date=yesterday, resolution="15m"
+        )
         assert isinstance(result, EnergyData)
         assert len(result.timeseries) > 0
 
     def test_slot_battery_soc_in_valid_range(self, systems) -> None:
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
-        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        result = systems[0].get_energy_historical(
+            from_date=yesterday, to_date=yesterday
+        )
         for slot in result.timeseries.values():
             if slot.battery_soc is not None:
                 assert 0.0 <= slot.battery_soc <= 1.0
 
     def test_raw_payload_is_populated(self, systems) -> None:
         yesterday = datetime.date.today() - datetime.timedelta(days=1)
-        result = systems[0].get_energy_historical(from_date=yesterday, to_date=yesterday)
+        result = systems[0].get_energy_historical(
+            from_date=yesterday, to_date=yesterday
+        )
         assert isinstance(result.raw, dict) and len(result.raw) > 0

@@ -313,13 +313,19 @@ def make_live_overview_data() -> dict:
             "grid": {"value": 0.0, "unit": "W"},
             "totalStateOfCharge": 0.725,
             "evChargersAggregated": {"power": {"value": 100.0, "unit": "W"}},
-            "heatPumpsAggregated": {"power": {"value": 800.0, "unit": "W"}, "powerExternal": None},
+            "heatPumpsAggregated": {
+                "power": {"value": 800.0, "unit": "W"},
+                "powerExternal": None,
+            },
             "acsAggregated": {"power": {"value": 200.0, "unit": "W"}},
         },
         "summaryCards": {
             "grid": {"power": {"value": 0.0, "unit": "W"}},
             "battery": {
-                "power": {"value": 500.0, "unit": "W"},  # positive = discharging in API convention
+                "power": {
+                    "value": 500.0,
+                    "unit": "W",
+                },  # positive = discharging in API convention
                 "stateOfCharge": 0.725,
             },
             "photovoltaic": {"production": {"value": 2500.0, "unit": "W"}},
@@ -335,19 +341,46 @@ def make_price_data() -> dict:
     """Return a market-prices API response (v4, two hourly slots) matching the full API shape."""
     return {
         "energyMarket": {
-            "averagePrice": {"price": {"amount": "0.085", "currency": "EUR"}, "unit": "kWh"},
-            "highestPrice": {"price": {"amount": "0.13", "currency": "EUR"}, "unit": "kWh"},
-            "lowestPrice": {"price": {"amount": "0.015", "currency": "EUR"}, "unit": "kWh"},
+            "averagePrice": {
+                "price": {"amount": "0.085", "currency": "EUR"},
+                "unit": "kWh",
+            },
+            "highestPrice": {
+                "price": {"amount": "0.13", "currency": "EUR"},
+                "unit": "kWh",
+            },
+            "lowestPrice": {
+                "price": {"amount": "0.015", "currency": "EUR"},
+                "unit": "kWh",
+            },
         },
         "energyMarketWithGridCosts": {
-            "averagePrice": {"price": {"amount": "0.249", "currency": "EUR"}, "unit": "kWh"},
-            "highestPrice": {"price": {"amount": "0.294", "currency": "EUR"}, "unit": "kWh"},
-            "lowestPrice": {"price": {"amount": "0.178", "currency": "EUR"}, "unit": "kWh"},
+            "averagePrice": {
+                "price": {"amount": "0.249", "currency": "EUR"},
+                "unit": "kWh",
+            },
+            "highestPrice": {
+                "price": {"amount": "0.294", "currency": "EUR"},
+                "unit": "kWh",
+            },
+            "lowestPrice": {
+                "price": {"amount": "0.178", "currency": "EUR"},
+                "unit": "kWh",
+            },
         },
         "energyMarketWithGridCostsAndVat": {
-            "averagePrice": {"price": {"amount": "0.29631", "currency": "EUR"}, "unit": "kWh"},
-            "highestPrice": {"price": {"amount": "0.34986", "currency": "EUR"}, "unit": "kWh"},
-            "lowestPrice": {"price": {"amount": "0.21182", "currency": "EUR"}, "unit": "kWh"},
+            "averagePrice": {
+                "price": {"amount": "0.29631", "currency": "EUR"},
+                "unit": "kWh",
+            },
+            "highestPrice": {
+                "price": {"amount": "0.34986", "currency": "EUR"},
+                "unit": "kWh",
+            },
+            "lowestPrice": {
+                "price": {"amount": "0.21182", "currency": "EUR"},
+                "unit": "kWh",
+            },
         },
         "timeseries": {
             "2024-06-01T00:00Z": {
@@ -376,14 +409,29 @@ def make_price_data() -> dict:
         },
         "usesFallbackGridCosts": False,
         "gridCostsComponents": {
-            "purchasingCost": {"price": {"amount": "0", "currency": "EUR"}, "unit": "kWh"},
-            "energyTax": {"price": {"amount": "0.12776", "currency": "EUR"}, "unit": "kWh"},
+            "purchasingCost": {
+                "price": {"amount": "0", "currency": "EUR"},
+                "unit": "kWh",
+            },
+            "energyTax": {
+                "price": {"amount": "0.12776", "currency": "EUR"},
+                "unit": "kWh",
+            },
             "fixedTariff": {"price": {"amount": "0", "currency": "EUR"}, "unit": "kWh"},
-            "dynamicMarkup": {"price": {"amount": "0", "currency": "EUR"}, "unit": "kWh"},
-            "feedInRemunerationAdjustment": {"price": {"amount": "0", "currency": "EUR"}, "unit": "kWh"},
+            "dynamicMarkup": {
+                "price": {"amount": "0", "currency": "EUR"},
+                "unit": "kWh",
+            },
+            "feedInRemunerationAdjustment": {
+                "price": {"amount": "0", "currency": "EUR"},
+                "unit": "kWh",
+            },
         },
         "vat": 0.19,
-        "gridCostsTotal": {"price": {"amount": "0.1637", "currency": "EUR"}, "unit": "kWh"},
+        "gridCostsTotal": {
+            "price": {"amount": "0.1637", "currency": "EUR"},
+            "unit": "kWh",
+        },
     }
 
 
@@ -489,21 +537,36 @@ def make_displayed_ev_charging_modes_data() -> dict:
 def make_price_customizations_data() -> dict:
     """Return a /price-customizations v2 response payload."""
     return {
-        "gridEnergyPrice":       {"price": {"amount": "0.3039", "currency": "EUR"}, "unit": "kWh"},
-        "comparisonEnergyPrice": {"price": {"amount": "0.274",  "currency": "EUR"}, "unit": "kWh"},
-        "monthlyBasePrice":      {"amount": "13.9", "currency": "EUR"},
+        "gridEnergyPrice": {
+            "price": {"amount": "0.3039", "currency": "EUR"},
+            "unit": "kWh",
+        },
+        "comparisonEnergyPrice": {
+            "price": {"amount": "0.274", "currency": "EUR"},
+            "unit": "kWh",
+        },
+        "monthlyBasePrice": {"amount": "13.9", "currency": "EUR"},
     }
 
 
 def make_comparison_price_data(amount: str = "0.274") -> dict:
     """Return a /comparison-price v2 response payload."""
-    return {"comparisonPrice": {"price": {"amount": amount, "currency": "EUR"}, "unit": "kWh"}}
+    return {
+        "comparisonPrice": {
+            "price": {"amount": amount, "currency": "EUR"},
+            "unit": "kWh",
+        }
+    }
 
 
 def make_price_guarantee_data(value: int | None = 12) -> dict:
     """Return a /customers/{cid}/price-guarantee v1 response payload."""
     if value is None:
-        return {"priceGuaranteeUnit": None, "priceGuaranteeValue": None, "priceGuaranteeVersion": None}
+        return {
+            "priceGuaranteeUnit": None,
+            "priceGuaranteeValue": None,
+            "priceGuaranteeVersion": None,
+        }
     return {
         "priceGuaranteeUnit": "ct/kWh",
         "priceGuaranteeValue": value,
@@ -537,7 +600,10 @@ def make_smart_meter_data() -> dict:
                 "validFromDate": "2020-01-01",
                 "validUntilDate": "2027-12-31",
                 "reference": "9900000000009",
-                "__metadata": {"qualityDescription": "Imported", "updatedAt": "2026-01-01T00:00:00.000Z"},
+                "__metadata": {
+                    "qualityDescription": "Imported",
+                    "updatedAt": "2026-01-01T00:00:00.000Z",
+                },
             }
         ],
         "concessionFeeEURperkWh": [
@@ -545,7 +611,10 @@ def make_smart_meter_data() -> dict:
                 "validFromDate": "2020-01-01",
                 "validUntilDate": "2027-12-31",
                 "value": 0.0159,
-                "__metadata": {"qualityDescription": "Imported", "updatedAt": "2026-01-01T00:00:00.000Z"},
+                "__metadata": {
+                    "qualityDescription": "Imported",
+                    "updatedAt": "2026-01-01T00:00:00.000Z",
+                },
             }
         ],
     }
@@ -710,7 +779,10 @@ def make_notifications_data() -> dict:
                 "read": True,
                 "notificationDetails": {
                     "settings": {},
-                    "meta": {"price": {"value": 20.41, "unit": "ct/kWh"}, "dateTime_utc": "2026-07-31T20:00Z"},
+                    "meta": {
+                        "price": {"value": 20.41, "unit": "ct/kWh"},
+                        "dateTime_utc": "2026-07-31T20:00Z",
+                    },
                 },
                 "dismissed": False,
                 "body": "Energiepreise steigen heute um 22:00 auf 20.41 ct/kWh.",
@@ -757,7 +829,7 @@ def make_supported_versions_data() -> dict:
 def make_impact_overview_data() -> dict:
     """Return an /impact-overview v2 response payload."""
     return {
-        "co2Savings":         {"value": 1234.5, "unit": "kg"},
+        "co2Savings": {"value": 1234.5, "unit": "kg"},
         "co2CollectiveSavings": {"value": 50_000_000.0, "unit": "kg"},
         "co2GlobalSavingsEstimate": {"value": 2_000_000.0, "unit": "tons"},
     }
@@ -768,7 +840,7 @@ def make_energy_trader_data() -> dict:
     return {
         "energyTrader": {
             "status": "ACTIVE",
-            "greenEnergySavings":  {"amount": "1500.75", "currency": "EUR"},
+            "greenEnergySavings": {"amount": "1500.75", "currency": "EUR"},
             "energyTraderSavings": {"amount": "125.40", "currency": "EUR"},
         }
     }
@@ -805,18 +877,30 @@ def _make_hb_price_window(
         },
         "gridFeedIn": {
             "compensation": {"amount": feed_in_comp, "currency": "EUR"},
-            "price": {"price": {"amount": feed_in_price, "currency": "EUR"}, "unit": "kWh"},
+            "price": {
+                "price": {"amount": feed_in_price, "currency": "EUR"},
+                "unit": "kWh",
+            },
             "energyFedIn": {"value": feed_in_kwh, "unit": "kWh"},
         },
         "gridConsumption": {
             "energyConsumed": {"value": grid_kwh, "unit": "kWh"},
             "cost": {"amount": grid_cost, "currency": "EUR"},
-            "price": {"price": {"amount": grid_price, "currency": "EUR"}, "unit": "kWh"},
+            "price": {
+                "price": {"amount": grid_price, "currency": "EUR"},
+                "unit": "kWh",
+            },
         },
         "totalConsumption": {"value": total_kwh, "unit": "kWh"},
         "totalEnergyCost": {"amount": total_cost, "currency": "EUR"},
-        "heartbeatPrice": {"price": {"amount": hb_price, "currency": "EUR"}, "unit": "kWh"},
-        "comparisonTariff": {"price": {"amount": comp_tariff, "currency": "EUR"}, "unit": "kWh"},
+        "heartbeatPrice": {
+            "price": {"amount": hb_price, "currency": "EUR"},
+            "unit": "kWh",
+        },
+        "comparisonTariff": {
+            "price": {"amount": comp_tariff, "currency": "EUR"},
+            "unit": "kWh",
+        },
         "gridElectricityCost": {"amount": "10.0", "currency": "EUR"},
         "energyTaxReduction": {"amount": "0", "currency": "EUR"},
         "fixedCostsAndSavings": {"amount": "10.0", "currency": "EUR"},
@@ -870,7 +954,11 @@ def make_subscriptions_data() -> dict:
                 },
                 "crmDealId": None,
                 "statusHistory": [
-                    {"from": "BOOKED", "to": "ACTIVE", "createdAt": "2025-09-24T20:32:52.495Z"},
+                    {
+                        "from": "BOOKED",
+                        "to": "ACTIVE",
+                        "createdAt": "2025-09-24T20:32:52.495Z",
+                    },
                 ],
                 "paymentIban": "DE00000000000000000000",
                 "paymentMethod": "DIRECT_DEBIT",
@@ -884,7 +972,9 @@ def make_subscriptions_data() -> dict:
                 "priceGuaranteeUnit": "ct/kWh",
                 "priceGuaranteeValue": 12,
                 "priceGuaranteeVersion": "DE_PRICE_GUARANTEE_V2",
-                "termsAndConditionsLinks": [{"name": "GENERAL", "link": "https://1k5.link/tos-dynamic-pulse"}],
+                "termsAndConditionsLinks": [
+                    {"name": "GENERAL", "link": "https://1k5.link/tos-dynamic-pulse"}
+                ],
                 "termsAndConditionsLink": "https://1k5.link/tos-dynamic-pulse",
                 "siteId": FAKE_SYSTEM_ID,
                 "type": "DYNAMIC_PULSE",
@@ -986,35 +1076,75 @@ def make_heartbeat_prices_data() -> dict:
     """
     return {
         "day": _make_hb_price_window(
-            pv_kwh=35.0, pv_cost="1.75", pv_price="0.05",
-            feed_in_kwh=18.2, feed_in_comp="1.46", feed_in_price="0.0801",
-            grid_kwh=0.263, grid_cost="0.08", grid_price="0.3066",
-            total_kwh=17.0, total_cost="0.36", hb_price="0.0214",
+            pv_kwh=35.0,
+            pv_cost="1.75",
+            pv_price="0.05",
+            feed_in_kwh=18.2,
+            feed_in_comp="1.46",
+            feed_in_price="0.0801",
+            grid_kwh=0.263,
+            grid_cost="0.08",
+            grid_price="0.3066",
+            total_kwh=17.0,
+            total_cost="0.36",
+            hb_price="0.0214",
         ),
         "week": _make_hb_price_window(
-            pv_kwh=241.9, pv_cost="12.09", pv_price="0.05",
-            feed_in_kwh=89.4, feed_in_comp="7.18", feed_in_price="0.0803",
-            grid_kwh=42.8, grid_cost="9.20", grid_price="0.2150",
-            total_kwh=195.3, total_cost="14.12", hb_price="0.0723",
+            pv_kwh=241.9,
+            pv_cost="12.09",
+            pv_price="0.05",
+            feed_in_kwh=89.4,
+            feed_in_comp="7.18",
+            feed_in_price="0.0803",
+            grid_kwh=42.8,
+            grid_cost="9.20",
+            grid_price="0.2150",
+            total_kwh=195.3,
+            total_cost="14.12",
+            hb_price="0.0723",
         ),
         "month": _make_hb_price_window(
-            pv_kwh=990.3, pv_cost="49.51", pv_price="0.05",
-            feed_in_kwh=379.2, feed_in_comp="30.45", feed_in_price="0.0803",
-            grid_kwh=216.6, grid_cost="59.64", grid_price="0.2754",
-            total_kwh=827.6, total_cost="78.70", hb_price="0.0951",
+            pv_kwh=990.3,
+            pv_cost="49.51",
+            pv_price="0.05",
+            feed_in_kwh=379.2,
+            feed_in_comp="30.45",
+            feed_in_price="0.0803",
+            grid_kwh=216.6,
+            grid_cost="59.64",
+            grid_price="0.2754",
+            total_kwh=827.6,
+            total_cost="78.70",
+            hb_price="0.0951",
         ),
         "halfYear": _make_hb_price_window(
-            pv_kwh=4805.2, pv_cost="240.26", pv_price="0.05",
-            feed_in_kwh=1391.1, feed_in_comp="111.71", feed_in_price="0.0803",
-            grid_kwh=3284.4, grid_cost="787.18", grid_price="0.2397",
-            total_kwh=6698.5, total_cost="915.74", hb_price="0.1367",
+            pv_kwh=4805.2,
+            pv_cost="240.26",
+            pv_price="0.05",
+            feed_in_kwh=1391.1,
+            feed_in_comp="111.71",
+            feed_in_price="0.0803",
+            grid_kwh=3284.4,
+            grid_cost="787.18",
+            grid_price="0.2397",
+            total_kwh=6698.5,
+            total_cost="915.74",
+            hb_price="0.1367",
             implausible=True,
         ),
         "year": _make_hb_price_window(
-            pv_kwh=7212.1, pv_cost="360.61", pv_price="0.05",
-            feed_in_kwh=1819.3, feed_in_comp="146.09", feed_in_price="0.0803",
-            grid_kwh=8807.7, grid_cost="2377.00", grid_price="0.2699",
-            total_kwh=14200.6, total_cost="2591.52", hb_price="0.1825",
+            pv_kwh=7212.1,
+            pv_cost="360.61",
+            pv_price="0.05",
+            feed_in_kwh=1819.3,
+            feed_in_comp="146.09",
+            feed_in_price="0.0803",
+            grid_kwh=8807.7,
+            grid_cost="2377.00",
+            grid_price="0.2699",
+            total_kwh=14200.6,
+            total_cost="2591.52",
+            hb_price="0.1825",
             implausible=True,
         ),
     }
@@ -1029,29 +1159,35 @@ def make_heartbeat_ai_summary_data(resolution: str = "1M") -> dict:
     body: dict = {
         "co2Saved": {
             "co2Saved": 210.5,
-            "production":        {"value": 580.0, "unit": "kWh"},
+            "production": {"value": 580.0, "unit": "kWh"},
             "carTravelEmission": {"value": 825.0, "unit": "km"},
             "socialStanding": None,
         },
-        "heartbeatPrice": {"price": {"amount": "0.0745", "currency": "EUR"}, "unit": "kWh"},
+        "heartbeatPrice": {
+            "price": {"amount": "0.0745", "currency": "EUR"},
+            "unit": "kWh",
+        },
         "heartbeatPriceSocialStanding": None,
         "peakPriceAvoided": {
-            "priceAvoided":        {"amount": "22.50", "currency": "EUR"},
+            "priceAvoided": {"amount": "22.50", "currency": "EUR"},
             "batteryChargingCost": {"amount": "37.68", "currency": "EUR"},
-            "gridChargingCost":    {"amount": "60.18", "currency": "EUR"},
+            "gridChargingCost": {"amount": "60.18", "currency": "EUR"},
         },
     }
     if resolution == "1M":
         body["selfSufficiency"] = {
             "percentage": 0.73,
-            "bySolar":   {"value": 331.25, "unit": "kWh"},
+            "bySolar": {"value": 331.25, "unit": "kWh"},
             "byBattery": {"value": 301.30, "unit": "kWh"},
             "socialStanding": None,
         }
         body["energyEarned"] = {
             "earnedAmount": {"amount": "30.41", "currency": "EUR"},
-            "soldEnergy":   {"value": 378.75, "unit": "kWh"},
-            "feedInPrice":  {"price": {"amount": "0.0803", "currency": "EUR"}, "unit": "kWh"},
+            "soldEnergy": {"value": 378.75, "unit": "kWh"},
+            "feedInPrice": {
+                "price": {"amount": "0.0803", "currency": "EUR"},
+                "unit": "kWh",
+            },
             "socialStanding": None,
         }
     else:

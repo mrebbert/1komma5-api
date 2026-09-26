@@ -79,7 +79,9 @@ class TestMarketPrices:
 
     def test_from_dict_builds_all_in_prices_dict(self) -> None:
         mp = MarketPrices.from_dict(make_price_data())
-        assert mp.prices_with_grid_costs_and_vat["2024-06-01T00:00Z"] == pytest.approx(0.29036)
+        assert mp.prices_with_grid_costs_and_vat["2024-06-01T00:00Z"] == pytest.approx(
+            0.29036
+        )
 
     def test_from_dict_builds_grid_consumption_and_feed_in(self) -> None:
         mp = MarketPrices.from_dict(make_price_data())
@@ -151,11 +153,13 @@ class TestLiveOverview:
         assert overview.household_power is None
 
     def test_from_dict_reads_timestamp_and_status(self) -> None:
-        overview = LiveOverview.from_dict({
-            "timestamp": "2026-02-28T11:17:03Z",
-            "status": "ONLINE",
-            "liveHeroView": {},
-        })
+        overview = LiveOverview.from_dict(
+            {
+                "timestamp": "2026-02-28T11:17:03Z",
+                "status": "ONLINE",
+                "liveHeroView": {},
+            }
+        )
         assert overview.timestamp == "2026-02-28T11:17:03Z"
         assert overview.status == "ONLINE"
 
@@ -164,7 +168,10 @@ class TestLiveOverview:
             "liveHeroView": {
                 "selfSufficiency": 0.75,
                 "evChargersAggregated": {"power": {"value": 11000.0, "unit": "W"}},
-                "heatPumpsAggregated": {"power": {"value": 2000.0, "unit": "W"}, "powerExternal": None},
+                "heatPumpsAggregated": {
+                    "power": {"value": 2000.0, "unit": "W"},
+                    "powerExternal": None,
+                },
                 "acsAggregated": {"power": {"value": 1500.0, "unit": "W"}},
             },
             "summaryCards": {
@@ -188,7 +195,9 @@ class TestLiveOverview:
                 "gridFeedIn": {"value": 0.0, "unit": "W"},
             },
             "summaryCards": {
-                "battery": {"power": {"value": -500.0, "unit": "W"}},  # negative = charging
+                "battery": {
+                    "power": {"value": -500.0, "unit": "W"}
+                },  # negative = charging
             },
         }
         overview = LiveOverview.from_dict(data)
@@ -263,11 +272,15 @@ class TestSystemInfo:
 
 class TestEmsSettings:
     def test_auto_mode_true_when_not_overriding(self) -> None:
-        settings = EmsSettings.from_dict({"overrideAutoSettings": False, "manualSettings": {}})
+        settings = EmsSettings.from_dict(
+            {"overrideAutoSettings": False, "manualSettings": {}}
+        )
         assert settings.auto_mode is True
 
     def test_auto_mode_false_when_overriding(self) -> None:
-        settings = EmsSettings.from_dict({"overrideAutoSettings": True, "manualSettings": {}})
+        settings = EmsSettings.from_dict(
+            {"overrideAutoSettings": True, "manualSettings": {}}
+        )
         assert settings.auto_mode is False
 
     def test_auto_mode_defaults_to_true_when_key_absent(self) -> None:
@@ -277,6 +290,7 @@ class TestEmsSettings:
 
     def test_from_dict_populates_top_level_fields(self) -> None:
         from tests.fixtures import FAKE_SYSTEM_ID, make_ems_settings_data
+
         settings = EmsSettings.from_dict(make_ems_settings_data())
         assert settings.system_id == FAKE_SYSTEM_ID
         assert settings.created_at == "2025-01-23T08:09:40.508Z"
@@ -286,6 +300,7 @@ class TestEmsSettings:
 
     def test_from_dict_parses_ev_charger_device(self) -> None:
         from tests.fixtures import FAKE_EV_ID, make_ems_settings_data
+
         settings = EmsSettings.from_dict(make_ems_settings_data())
         ev = next(d for d in settings.manual_devices if d.type == "EV_CHARGER")
         assert isinstance(ev, EmsManualDevice)
@@ -296,12 +311,14 @@ class TestEmsSettings:
 
     def test_from_dict_parses_battery_device(self) -> None:
         from tests.fixtures import make_ems_settings_data
+
         settings = EmsSettings.from_dict(make_ems_settings_data())
         bat = next(d for d in settings.manual_devices if d.type == "BATTERY")
         assert bat.enable_forecast_charging is False
 
     def test_from_dict_parses_heat_pump_device(self) -> None:
         from tests.fixtures import make_ems_settings_data
+
         settings = EmsSettings.from_dict(make_ems_settings_data())
         hp = next(d for d in settings.manual_devices if d.type == "HEAT_PUMP")
         assert hp.use_solar_surplus is True
@@ -309,6 +326,7 @@ class TestEmsSettings:
 
     def test_from_dict_devices_ordered_by_index(self) -> None:
         from tests.fixtures import make_ems_settings_data
+
         settings = EmsSettings.from_dict(make_ems_settings_data())
         types = [d.type for d in settings.manual_devices]
         assert types == ["EV_CHARGER", "BATTERY", "HEAT_PUMP"]

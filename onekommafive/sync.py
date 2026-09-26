@@ -91,7 +91,9 @@ class _LoopRunner:
     def __init__(self) -> None:
         self._loop = asyncio.new_event_loop()
         self._thread = threading.Thread(
-            target=self._loop.run_forever, name="onekommafive-sync-loop", daemon=True,
+            target=self._loop.run_forever,
+            name="onekommafive-sync-loop",
+            daemon=True,
         )
         self._thread.start()
         _LOGGER.debug("Started sync-facade event loop thread %s", self._thread.name)
@@ -130,7 +132,10 @@ class Client:
     ) -> None:
         self._runner = _LoopRunner()
         self._async = _client_module.Client(
-            username, password, session=session, token_cache=token_cache,
+            username,
+            password,
+            session=session,
+            token_cache=token_cache,
         )
         self._closed = False
         Client._live.add(self)
@@ -200,7 +205,8 @@ def _close_leftover_clients() -> None:
     live = list(Client._live)
     if live:
         _LOGGER.warning(
-            "atexit: closing %d SyncClient(s) that were never explicitly closed", len(live),
+            "atexit: closing %d SyncClient(s) that were never explicitly closed",
+            len(live),
         )
     for client in live:
         # Best-effort during shutdown; a raising close() on one client
@@ -344,12 +350,16 @@ class System:
         return self._runner.run(self._async.get_heartbeat_ai_summary(resolution))
 
     def get_optimizations(
-        self, start: datetime.datetime, end: datetime.datetime,
+        self,
+        start: datetime.datetime,
+        end: datetime.datetime,
     ) -> OptimizationEvents:
         return self._runner.run(self._async.get_optimizations(start, end))
 
     def get_self_sufficiency_events(
-        self, start: datetime.datetime, end: datetime.datetime,
+        self,
+        start: datetime.datetime,
+        end: datetime.datetime,
     ) -> SelfSufficiencyEvents:
         return self._runner.run(self._async.get_self_sufficiency_events(start, end))
 
@@ -379,12 +389,16 @@ class EVCharger:
     :meth:`System.get_ev_chargers`.
     """
 
-    def __init__(self, runner: _LoopRunner, async_charger: _ev_module.EVCharger) -> None:
+    def __init__(
+        self, runner: _LoopRunner, async_charger: _ev_module.EVCharger
+    ) -> None:
         self._runner = runner
         self._async = async_charger
 
     @classmethod
-    def _wrap(cls, runner: _LoopRunner, async_charger: _ev_module.EVCharger) -> EVCharger:
+    def _wrap(
+        cls, runner: _LoopRunner, async_charger: _ev_module.EVCharger
+    ) -> EVCharger:
         return cls(runner, async_charger)
 
     # ------------------------------------------------------------------

@@ -80,14 +80,14 @@ exclude_lines = [
 ]
 
 [tool.ruff]
-line-length = 120
+line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM"]
-
-[tool.ruff.lint.per-file-ignores]
-"onekommafive/__init__.py" = ["E501"]
-"onekommafive/cli.py" = ["E501"]
+# `ruff format` enforces line width; E501 only flags long string
+# literals and docstrings the formatter can't wrap. See the
+# python-quality-baseline skill's Formatting section.
+ignore = ["E501"]
 
 [tool.mypy]
 python_version = "3.13"

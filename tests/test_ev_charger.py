@@ -19,9 +19,7 @@ from tests.fixtures import (
     make_ev_data,
 )
 
-_BASE_URL = (
-    f"https://heartbeat.1komma5grad.com/api/v2/sites/{FAKE_SYSTEM_ID}/assets/evs/{FAKE_EV_ID}"
-)
+_BASE_URL = f"https://heartbeat.1komma5grad.com/api/v2/sites/{FAKE_SYSTEM_ID}/assets/evs/{FAKE_EV_ID}"
 
 
 def _make_charger(
@@ -48,6 +46,7 @@ def _patch_body(m: aioresponses) -> dict:
 # ---------------------------------------------------------------------------
 # Read-only properties
 # ---------------------------------------------------------------------------
+
 
 class TestEvChargerProperties:
     """Tests for read-only accessor methods."""
@@ -160,6 +159,7 @@ class TestEvChargerProperties:
 # current_soc
 # ---------------------------------------------------------------------------
 
+
 class TestCurrentSoc:
     """Tests for EVCharger.current_soc."""
 
@@ -183,6 +183,7 @@ class TestCurrentSoc:
 # ---------------------------------------------------------------------------
 # set_charging_mode
 # ---------------------------------------------------------------------------
+
 
 class TestSetChargingMode:
     """Tests for EVCharger.set_charging_mode."""
@@ -227,6 +228,7 @@ class TestSetChargingMode:
 # ---------------------------------------------------------------------------
 # set_current_soc
 # ---------------------------------------------------------------------------
+
 
 class TestSetCurrentSoc:
     """Tests for EVCharger.set_current_soc."""
@@ -274,6 +276,7 @@ class TestSetCurrentSoc:
 # set_target_soc
 # ---------------------------------------------------------------------------
 
+
 class TestSetTargetSoc:
     """Tests for EVCharger.set_target_soc."""
 
@@ -308,7 +311,9 @@ class TestSetTargetSoc:
             m.patch(_BASE_URL, payload={"error": "bad request"}, status=400)
 
             charger = _make_charger()
-            with pytest.raises(RequestError, match="Failed to set target state of charge"):
+            with pytest.raises(
+                RequestError, match="Failed to set target state of charge"
+            ):
                 await charger.set_target_soc(90.0)
             await charger._client.close()
 
@@ -316,6 +321,7 @@ class TestSetTargetSoc:
 # ---------------------------------------------------------------------------
 # set_primary_departure_time
 # ---------------------------------------------------------------------------
+
 
 class TestSetPrimaryDepartureTime:
     """Tests for EVCharger.set_primary_departure_time."""

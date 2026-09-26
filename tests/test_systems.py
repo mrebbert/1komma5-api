@@ -24,7 +24,11 @@ class TestGetSystems:
 
     async def test_returns_list_of_system_objects(self) -> None:
         with aioresponses() as m:
-            m.get(_SYSTEMS_URL, payload={"data": [make_system_data(FAKE_SYSTEM_ID)]}, status=200)
+            m.get(
+                _SYSTEMS_URL,
+                payload={"data": [make_system_data(FAKE_SYSTEM_ID)]},
+                status=200,
+            )
             client = make_client()
             systems = await Systems(client).get_systems()
 
@@ -55,7 +59,11 @@ class TestGetSystems:
 
     async def test_returns_empty_list_when_no_active_systems(self) -> None:
         with aioresponses() as m:
-            m.get(_SYSTEMS_URL, payload={"data": [make_system_data(NULL_SYSTEM_ID)]}, status=200)
+            m.get(
+                _SYSTEMS_URL,
+                payload={"data": [make_system_data(NULL_SYSTEM_ID)]},
+                status=200,
+            )
             client = make_client()
             systems = await Systems(client).get_systems()
             assert systems == []
@@ -92,7 +100,11 @@ class TestGetSystem:
 
     async def test_returns_system_by_id(self) -> None:
         with aioresponses() as m:
-            m.get(f"{_SYSTEMS_URL}/{FAKE_SYSTEM_ID}", payload=make_system_data(FAKE_SYSTEM_ID), status=200)
+            m.get(
+                f"{_SYSTEMS_URL}/{FAKE_SYSTEM_ID}",
+                payload=make_system_data(FAKE_SYSTEM_ID),
+                status=200,
+            )
             client = make_client()
             system = await Systems(client).get_system(FAKE_SYSTEM_ID)
 
@@ -102,7 +114,11 @@ class TestGetSystem:
 
     async def test_raises_on_not_found(self) -> None:
         with aioresponses() as m:
-            m.get(f"{_SYSTEMS_URL}/{FAKE_SYSTEM_ID}", payload={"error": "not found"}, status=404)
+            m.get(
+                f"{_SYSTEMS_URL}/{FAKE_SYSTEM_ID}",
+                payload={"error": "not found"},
+                status=404,
+            )
             client = make_client()
             with pytest.raises(RequestError, match="Failed to get system"):
                 await Systems(client).get_system(FAKE_SYSTEM_ID)

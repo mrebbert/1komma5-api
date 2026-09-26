@@ -74,6 +74,7 @@ _DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=30)
 # PKCE helpers
 # ---------------------------------------------------------------------------
 
+
 def _base64url_encode(data: bytes) -> str:
     """Return a Base64url-encoded string without padding characters."""
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
@@ -93,6 +94,7 @@ def _generate_code_challenge(verifier: str) -> str:
 # ---------------------------------------------------------------------------
 # Client
 # ---------------------------------------------------------------------------
+
 
 class Client:
     """Authenticated async HTTP client for the 1KOMMA5° API.
@@ -180,7 +182,9 @@ class Client:
             try:
                 return await self._refresh_token()
             except AuthenticationError:
-                _LOGGER.debug("Refresh failed for %s, falling back to full login", self._username)
+                _LOGGER.debug(
+                    "Refresh failed for %s, falling back to full login", self._username
+                )
                 return await self._login()
 
         return cast(str, self._token_set["access_token"])
@@ -367,7 +371,9 @@ class Client:
         challenge = _generate_code_challenge(verifier)
 
         jar = aiohttp.CookieJar(unsafe=True)
-        async with aiohttp.ClientSession(cookie_jar=jar, timeout=_DEFAULT_TIMEOUT) as auth_session:
+        async with aiohttp.ClientSession(
+            cookie_jar=jar, timeout=_DEFAULT_TIMEOUT
+        ) as auth_session:
             # Step 1 – authorise
             async with auth_session.get(
                 f"{_AUTH_BASE}/authorize",
@@ -413,7 +419,9 @@ class Client:
 
             # Step 3 – follow Auth0 resume redirect
             resume_url = _AUTH_BASE + resume_location
-            async with auth_session.get(resume_url, allow_redirects=False) as resume_response:
+            async with auth_session.get(
+                resume_url, allow_redirects=False
+            ) as resume_response:
                 if resume_response.status != 302:
                     body = await resume_response.text()
                     raise AuthenticationError(f"Login resume failed: {body}")

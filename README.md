@@ -95,19 +95,28 @@ import datetime
 from onekommafive import Client, Systems
 from onekommafive.models import ChargingMode
 
+
 async def main() -> None:
     async with Client("user@example.com", "s3cr3t") as client:
         system = (await Systems(client).get_systems())[0]
 
         # Live overview
         ov = await system.get_live_overview()
-        print(f"PV: {ov.pv_power} W  Battery: {ov.battery_power} W ({ov.battery_soc:.1f}%)")
+        print(
+            f"PV: {ov.pv_power} W  Battery: {ov.battery_power} W ({ov.battery_soc:.1f}%)"
+        )
         print(f"Grid: {ov.grid_power} W  Self-sufficiency: {ov.self_sufficiency:.0%}")
 
         # Market prices for today (EUR/kWh, hourly)
-        today = datetime.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        mp = await system.get_prices(today, today.replace(hour=23, minute=59, second=59))
-        print(f"Avg spot: {mp.average_price:.4f}  all-in: {mp.average_price_all_in:.4f} EUR/kWh")
+        today = datetime.datetime.now().replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+        mp = await system.get_prices(
+            today, today.replace(hour=23, minute=59, second=59)
+        )
+        print(
+            f"Avg spot: {mp.average_price:.4f}  all-in: {mp.average_price_all_in:.4f} EUR/kWh"
+        )
 
         # Switch the EV to solar-only charging
         ev = (await system.get_ev_chargers())[0]
@@ -117,9 +126,12 @@ async def main() -> None:
 
         # Aggregated AI performance
         summary = await system.get_heartbeat_ai_summary(resolution="1M")
-        print(f"{summary.self_sufficiency_percent:.0%} autonomous, "
-              f"{summary.earned_amount_eur:.2f} € earned, "
-              f"{summary.co2_saved_kg:.0f} kg CO2 saved")
+        print(
+            f"{summary.self_sufficiency_percent:.0%} autonomous, "
+            f"{summary.earned_amount_eur:.2f} € earned, "
+            f"{summary.co2_saved_kg:.0f} kg CO2 saved"
+        )
+
 
 asyncio.run(main())
 ```
@@ -128,6 +140,7 @@ Inside Home Assistant, pass the shared client session so lifecycle stays with th
 
 ```python
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
 client = Client(user, pw, session=async_get_clientsession(hass))
 ```
 

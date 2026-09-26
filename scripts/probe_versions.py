@@ -14,6 +14,7 @@ Usage:
 
 Cache file: ~/.cache/onekommafive/probe_token.json (chmod 600).
 """
+
 import json
 import os
 import re
@@ -109,6 +110,7 @@ def parse_client_versions() -> dict[str, tuple[str, str, str]]:
 # Step 2: Obtain Bearer token + system ID
 # ---------------------------------------------------------------------------
 
+
 def _load_cached_token() -> tuple[str, str] | None:
     """Return (token, system_id) from the cache when present and not expired."""
     if not CACHE_FILE.exists():
@@ -166,6 +168,7 @@ def get_credentials() -> tuple[str, str]:
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from onekommafive import Client  # noqa: PLC0415
     from onekommafive.systems import Systems  # noqa: PLC0415
+
     client = Client(username, password)
     token = client.get_token()
     system = os.environ.get("ONEKOMMAFIVE_SYSTEM")
@@ -184,13 +187,16 @@ def get_credentials() -> tuple[str, str]:
 # Step 3: Probe higher versions
 # ---------------------------------------------------------------------------
 
+
 def _make_url(v: int, path_template: str, system_id: str) -> str:
     path = path_template.replace("{id}", system_id)
     base = IDENTITY_BASE if "users/me" in path else HEARTBEAT_BASE
     return f"{base}/api/v{v}/{path}"
 
 
-def probe(token: str, system_id: str, path_template: str, current_ver: str) -> list[tuple[int, int]]:
+def probe(
+    token: str, system_id: str, path_template: str, current_ver: str
+) -> list[tuple[int, int]]:
     """
     Try versions current+1 .. MAX_VERSION for the given path template.
     Returns list of (version, http_status) for responses that look valid
@@ -201,7 +207,9 @@ def probe(token: str, system_id: str, path_template: str, current_ver: str) -> l
     hits = []
     for v in range(current_n + 1, MAX_VERSION + 1):
         try:
-            r = requests.get(_make_url(v, path_template, system_id), headers=headers, timeout=6)
+            r = requests.get(
+                _make_url(v, path_template, system_id), headers=headers, timeout=6
+            )
             if r.status_code not in (404, 405, 401, 403):
                 hits.append((v, r.status_code))
         except requests.RequestException:
@@ -214,6 +222,7 @@ def probe(token: str, system_id: str, path_template: str, current_ver: str) -> l
 # ---------------------------------------------------------------------------
 # Step 4: Compare two versions and summarise differences
 # ---------------------------------------------------------------------------
+
 
 def _flatten_keys(obj: object, prefix: str = "") -> set[str]:
     """Recursively collect all dot-separated key paths from a JSON object."""
@@ -228,14 +237,20 @@ def _flatten_keys(obj: object, prefix: str = "") -> set[str]:
     return keys
 
 
-def diff_summary(token: str, system_id: str, path_template: str, old_ver: str, new_ver: int) -> str:
+def diff_summary(
+    token: str, system_id: str, path_template: str, old_ver: str, new_ver: int
+) -> str:
     """Fetch both versions and return a human-readable diff summary."""
     headers = {"Authorization": f"Bearer {token}"}
     old_n = int(old_ver[1:])
 
     try:
-        r_old = requests.get(_make_url(old_n, path_template, system_id), headers=headers, timeout=6)
-        r_new = requests.get(_make_url(new_ver, path_template, system_id), headers=headers, timeout=6)
+        r_old = requests.get(
+            _make_url(old_n, path_template, system_id), headers=headers, timeout=6
+        )
+        r_new = requests.get(
+            _make_url(new_ver, path_template, system_id), headers=headers, timeout=6
+        )
         old_json = r_old.json()
         new_json = r_new.json()
     except Exception as e:
@@ -244,7 +259,7 @@ def diff_summary(token: str, system_id: str, path_template: str, old_ver: str, n
     old_keys = _flatten_keys(old_json)
     new_keys = _flatten_keys(new_json)
 
-    added   = sorted(new_keys - old_keys)
+    added = sorted(new_keys - old_keys)
     removed = sorted(old_keys - new_keys)
 
     parts = []
@@ -265,6 +280,7 @@ def diff_summary(token: str, system_id: str, path_template: str, old_ver: str, n
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     print("Parsing current API versions from source …")

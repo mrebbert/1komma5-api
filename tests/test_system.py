@@ -129,10 +129,10 @@ def _last_body(m: aioresponses) -> dict:
     return {}
 
 
-
 # ---------------------------------------------------------------------------
 # Identity
 # ---------------------------------------------------------------------------
+
 
 class TestSystemIdentity:
     def test_id_returns_correct_value(self) -> None:
@@ -145,7 +145,8 @@ class TestSystemIdentity:
 
     async def test_info_returns_system_info_instance(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"),
+            m.get(
+                _u(f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"),
                 payload=make_system_data(FAKE_SYSTEM_ID),
                 status=200,
             )
@@ -163,12 +164,14 @@ class TestSystemIdentity:
 # System details (v1)
 # ---------------------------------------------------------------------------
 
+
 class TestGetSystemDetails:
     """Tests for System.get_details."""
 
     async def test_returns_system_details_instance(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE}/details"),
+            m.get(
+                _u(f"{_SYSTEM_BASE}/details"),
                 payload=make_system_details_data(FAKE_SYSTEM_ID),
                 status=200,
             )
@@ -197,7 +200,8 @@ class TestGetSystemDetails:
     async def test_handles_minimal_response(self) -> None:
         with aioresponses() as m:
             """Systems with most optional fields missing should still parse."""
-            m.get(_u(f"{_SYSTEM_BASE}/details"),
+            m.get(
+                _u(f"{_SYSTEM_BASE}/details"),
                 payload={"id": FAKE_SYSTEM_ID},
                 status=200,
             )
@@ -213,7 +217,8 @@ class TestGetSystemDetails:
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE}/details"),
+            m.get(
+                _u(f"{_SYSTEM_BASE}/details"),
                 payload={"error": "error"},
                 status=500,
             )
@@ -225,12 +230,14 @@ class TestGetSystemDetails:
 # Live overview
 # ---------------------------------------------------------------------------
 
+
 class TestGetLiveOverview:
     """Tests for System.get_live_overview."""
 
     async def test_returns_live_overview_instance(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V3}/live-overview"),
+            m.get(
+                _u(f"{_SYSTEM_BASE_V3}/live-overview"),
                 payload=make_live_overview_data(),
                 status=200,
             )
@@ -246,8 +253,11 @@ class TestGetLiveOverview:
     async def test_handles_missing_optional_fields(self) -> None:
         with aioresponses() as m:
             """Systems without batteries should still return a valid LiveOverview."""
-            m.get(_u(f"{_SYSTEM_BASE_V3}/live-overview"),
-                payload={"liveHeroView": {"production": {"value": 1000.0, "unit": "W"}}},
+            m.get(
+                _u(f"{_SYSTEM_BASE_V3}/live-overview"),
+                payload={
+                    "liveHeroView": {"production": {"value": 1000.0, "unit": "W"}}
+                },
                 status=200,
             )
             overview = await _make_system().get_live_overview()
@@ -258,7 +268,8 @@ class TestGetLiveOverview:
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V3}/live-overview"),
+            m.get(
+                _u(f"{_SYSTEM_BASE_V3}/live-overview"),
                 payload={"error": "unavailable"},
                 status=503,
             )
@@ -280,7 +291,8 @@ class TestGetDisplayedEvChargingModes:
         with aioresponses() as m:
             from onekommafive.models import ChargingMode
 
-            m.get(_u(f"{_SITES_BASE}/assets/evs/displayed-ev-charging-modes"),
+            m.get(
+                _u(f"{_SITES_BASE}/assets/evs/displayed-ev-charging-modes"),
                 payload=make_displayed_ev_charging_modes_data(),
                 status=200,
             )
@@ -292,11 +304,14 @@ class TestGetDisplayedEvChargingModes:
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SITES_BASE}/assets/evs/displayed-ev-charging-modes"),
+            m.get(
+                _u(f"{_SITES_BASE}/assets/evs/displayed-ev-charging-modes"),
                 payload={"error": "error"},
                 status=500,
             )
-            with pytest.raises(RequestError, match="Failed to get displayed EV charging modes"):
+            with pytest.raises(
+                RequestError, match="Failed to get displayed EV charging modes"
+            ):
                 await _make_system().get_displayed_ev_charging_modes()
 
 
@@ -304,12 +319,14 @@ class TestGetDisplayedEvChargingModes:
 # EV chargers
 # ---------------------------------------------------------------------------
 
+
 class TestGetEvChargers:
     """Tests for System.get_ev_chargers."""
 
     async def test_returns_list_of_ev_charger_instances(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SITE_BASE_V2}/assets/evs"),
+            m.get(
+                _u(f"{_SITE_BASE_V2}/assets/evs"),
                 payload=[make_ev_data()],
                 status=200,
             )
@@ -320,7 +337,8 @@ class TestGetEvChargers:
 
     async def test_returns_empty_list_when_no_ev_chargers(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SITE_BASE_V2}/assets/evs"),
+            m.get(
+                _u(f"{_SITE_BASE_V2}/assets/evs"),
                 payload=[],
                 status=200,
             )
@@ -328,7 +346,8 @@ class TestGetEvChargers:
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SITE_BASE_V2}/assets/evs"),
+            m.get(
+                _u(f"{_SITE_BASE_V2}/assets/evs"),
                 payload={"error": "error"},
                 status=500,
             )
@@ -340,12 +359,14 @@ class TestGetEvChargers:
 # EMS settings
 # ---------------------------------------------------------------------------
 
+
 class TestGetEmsSettings:
     """Tests for System.get_ems_settings."""
 
     async def test_returns_ems_settings_in_auto_mode(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE}/ems/actions/get-settings"),
+            m.get(
+                _u(f"{_SYSTEM_BASE}/ems/actions/get-settings"),
                 payload=make_ems_settings_data(override=False),
                 status=200,
             )
@@ -356,7 +377,8 @@ class TestGetEmsSettings:
 
     async def test_returns_ems_settings_in_manual_mode(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE}/ems/actions/get-settings"),
+            m.get(
+                _u(f"{_SYSTEM_BASE}/ems/actions/get-settings"),
                 payload=make_ems_settings_data(override=True),
                 status=200,
             )
@@ -365,7 +387,8 @@ class TestGetEmsSettings:
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE}/ems/actions/get-settings"),
+            m.get(
+                _u(f"{_SYSTEM_BASE}/ems/actions/get-settings"),
                 payload={"error": "error"},
                 status=500,
             )
@@ -377,12 +400,14 @@ class TestGetEmsSettings:
 # Set EMS mode
 # ---------------------------------------------------------------------------
 
+
 class TestSetEmsMode:
     """Tests for System.set_ems_mode."""
 
     async def test_sets_auto_mode(self) -> None:
         with aioresponses() as m:
-            m.post(_u(f"{_SYSTEM_BASE}/ems/actions/set-manual-override"),
+            m.post(
+                _u(f"{_SYSTEM_BASE}/ems/actions/set-manual-override"),
                 payload={},
                 status=201,
             )
@@ -393,7 +418,8 @@ class TestSetEmsMode:
 
     async def test_sets_manual_override(self) -> None:
         with aioresponses() as m:
-            m.post(_u(f"{_SYSTEM_BASE}/ems/actions/set-manual-override"),
+            m.post(
+                _u(f"{_SYSTEM_BASE}/ems/actions/set-manual-override"),
                 payload={},
                 status=201,
             )
@@ -404,7 +430,8 @@ class TestSetEmsMode:
 
     async def test_raises_on_unexpected_status(self) -> None:
         with aioresponses() as m:
-            m.post(_u(f"{_SYSTEM_BASE}/ems/actions/set-manual-override"),
+            m.post(
+                _u(f"{_SYSTEM_BASE}/ems/actions/set-manual-override"),
                 payload={},
                 status=200,  # API expects 201
             )
@@ -415,6 +442,7 @@ class TestSetEmsMode:
 # ---------------------------------------------------------------------------
 # Market prices
 # ---------------------------------------------------------------------------
+
 
 class TestGetPrices:
     """Tests for System.get_prices."""
@@ -429,7 +457,8 @@ class TestGetPrices:
 
     async def test_returns_market_prices_instance(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+            m.get(
+                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -448,7 +477,8 @@ class TestGetPrices:
 
     async def test_prices_dict_keyed_by_timestamp(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+            m.get(
+                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -459,11 +489,14 @@ class TestGetPrices:
 
             assert result.prices["2024-06-01T00:00Z"] == pytest.approx(0.08)
             assert result.prices["2024-06-01T01:00Z"] == pytest.approx(0.09)
-            assert result.prices_with_grid_costs["2024-06-01T00:00Z"] == pytest.approx(0.244)
+            assert result.prices_with_grid_costs["2024-06-01T00:00Z"] == pytest.approx(
+                0.244
+            )
 
     async def test_uses_zoned_datetime_format_and_default_resolution(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+            m.get(
+                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -479,7 +512,8 @@ class TestGetPrices:
 
     async def test_passes_resolution_when_specified(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+            m.get(
+                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -494,7 +528,8 @@ class TestGetPrices:
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+            m.get(
+                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
                 payload={"error": "error"},
                 status=500,
             )
@@ -508,8 +543,11 @@ class TestGetPrices:
         with aioresponses() as m:
             """v4 rejects non-hour-aligned timestamps with HTTP 422 — the SDK
             snaps to the resolution grid so callers don't have to."""
-            m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
-                         payload=make_price_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                payload=make_price_data(),
+                status=200,
+            )
             await _make_system().get_prices(
                 start=datetime.datetime(2024, 6, 1, 0, 0, 0),
                 end=datetime.datetime(2024, 6, 1, 23, 59, 59),
@@ -520,8 +558,11 @@ class TestGetPrices:
 
     async def test_snaps_unaligned_start_down_and_end_up(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
-                         payload=make_price_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                payload=make_price_data(),
+                status=200,
+            )
             await _make_system().get_prices(
                 start=datetime.datetime(2024, 6, 1, 0, 7, 0),
                 end=datetime.datetime(2024, 6, 1, 23, 42, 0),
@@ -532,8 +573,11 @@ class TestGetPrices:
 
     async def test_snaps_15m_resolution_to_quarter_hour(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
-                         payload=make_price_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                payload=make_price_data(),
+                status=200,
+            )
             await _make_system().get_prices(
                 start=datetime.datetime(2024, 6, 1, 0, 8, 17),
                 end=datetime.datetime(2024, 6, 1, 0, 22, 0),
@@ -546,8 +590,11 @@ class TestGetPrices:
 
     async def test_already_aligned_timestamps_pass_through_unchanged(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
-                         payload=make_price_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                payload=make_price_data(),
+                status=200,
+            )
             await _make_system().get_prices(
                 start=datetime.datetime(2024, 6, 1, 0, 0, 0),
                 end=datetime.datetime(2024, 6, 2, 0, 0, 0),
@@ -561,16 +608,25 @@ class TestGetPrices:
 # Energy today
 # ---------------------------------------------------------------------------
 
+
 class TestGetEnergyToday:
     async def test_returns_energy_data_instance(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V2}/energy-today"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V2}/energy-today"),
+                payload=make_energy_data(),
+                status=200,
+            )
             result = await _make_system().get_energy_today()
             assert isinstance(result, EnergyData)
 
     async def test_scalar_totals_parsed(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V2}/energy-today"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V2}/energy-today"),
+                payload=make_energy_data(),
+                status=200,
+            )
             result = await _make_system().get_energy_today()
             assert result.energy_produced_kwh == pytest.approx(30.76)
             assert result.self_sufficiency == pytest.approx(0.61)
@@ -584,7 +640,11 @@ class TestGetEnergyToday:
 
     async def test_consumers_and_consumers_total_parsed(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V2}/energy-today"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V2}/energy-today"),
+                payload=make_energy_data(),
+                status=200,
+            )
             result = await _make_system().get_energy_today()
             # direct from PV
             assert result.consumption_household_kwh == pytest.approx(2.5)
@@ -598,7 +658,11 @@ class TestGetEnergyToday:
 
     async def test_timeseries_nested_under_data_key(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V2}/energy-today"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V2}/energy-today"),
+                payload=make_energy_data(),
+                status=200,
+            )
             result = await _make_system().get_energy_today()
             assert len(result.timeseries) == 2
             slot = result.timeseries["2026-03-08T12:00Z"]
@@ -614,13 +678,21 @@ class TestGetEnergyToday:
 
     async def test_default_resolution_is_1h(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V2}/energy-today"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V2}/energy-today"),
+                payload=make_energy_data(),
+                status=200,
+            )
             await _make_system().get_energy_today()
             assert "resolution=1h" in _recorded_url(m, 0)
 
     async def test_passes_resolution_15m(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V2}/energy-today"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V2}/energy-today"),
+                payload=make_energy_data(),
+                status=200,
+            )
             await _make_system().get_energy_today(resolution="15m")
             assert "resolution=15m" in _recorded_url(m, 0)
 
@@ -635,10 +707,15 @@ class TestGetEnergyToday:
 # Energy historical
 # ---------------------------------------------------------------------------
 
+
 class TestGetEnergyHistorical:
     async def test_returns_energy_data_instance(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V3}/energy-historical"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V3}/energy-historical"),
+                payload=make_energy_data(),
+                status=200,
+            )
             result = await _make_system().get_energy_historical(
                 from_date=datetime.date(2026, 3, 8), to_date=datetime.date(2026, 3, 8)
             )
@@ -647,7 +724,11 @@ class TestGetEnergyHistorical:
 
     async def test_passes_date_and_resolution_params(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V3}/energy-historical"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V3}/energy-historical"),
+                payload=make_energy_data(),
+                status=200,
+            )
             await _make_system().get_energy_historical(
                 from_date=datetime.date(2026, 3, 1), to_date=datetime.date(2026, 3, 2)
             )
@@ -658,15 +739,25 @@ class TestGetEnergyHistorical:
 
     async def test_passes_resolution_15m(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V3}/energy-historical"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V3}/energy-historical"),
+                payload=make_energy_data(),
+                status=200,
+            )
             await _make_system().get_energy_historical(
-                from_date=datetime.date(2026, 3, 8), to_date=datetime.date(2026, 3, 8), resolution="15m"
+                from_date=datetime.date(2026, 3, 8),
+                to_date=datetime.date(2026, 3, 8),
+                resolution="15m",
             )
             assert "resolution=15m" in _recorded_url(m, 0)
 
     async def test_timeseries_parsed(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SYSTEM_BASE_V3}/energy-historical"), payload=make_energy_data(), status=200)
+            m.get(
+                _u(f"{_SYSTEM_BASE_V3}/energy-historical"),
+                payload=make_energy_data(),
+                status=200,
+            )
             result = await _make_system().get_energy_historical(
                 from_date=datetime.date(2026, 3, 8), to_date=datetime.date(2026, 3, 8)
             )
@@ -675,9 +766,12 @@ class TestGetEnergyHistorical:
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
             m.get(_u(f"{_SYSTEM_BASE_V3}/energy-historical"), payload={}, status=500)
-            with pytest.raises(RequestError, match="Failed to get historical energy data"):
+            with pytest.raises(
+                RequestError, match="Failed to get historical energy data"
+            ):
                 await _make_system().get_energy_historical(
-                    from_date=datetime.date(2026, 3, 8), to_date=datetime.date(2026, 3, 8)
+                    from_date=datetime.date(2026, 3, 8),
+                    to_date=datetime.date(2026, 3, 8),
                 )
 
 
@@ -685,12 +779,14 @@ class TestGetEnergyHistorical:
 # Status and assets (v2)
 # ---------------------------------------------------------------------------
 
+
 class TestGetStatusAndAssets:
     """Tests for System.get_status_and_assets."""
 
     async def test_returns_site_status_instance(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SITE_BASE_V3}/status-and-assets"),
+            m.get(
+                _u(f"{_SITE_BASE_V3}/status-and-assets"),
                 payload=make_status_and_assets_data(),
                 status=200,
             )
@@ -701,7 +797,8 @@ class TestGetStatusAndAssets:
 
     async def test_flattens_connection_and_network(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SITE_BASE_V3}/status-and-assets"),
+            m.get(
+                _u(f"{_SITE_BASE_V3}/status-and-assets"),
                 payload=make_status_and_assets_data(),
                 status=200,
             )
@@ -715,11 +812,14 @@ class TestGetStatusAndAssets:
 
     async def test_extracts_optional_fields(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SITE_BASE_V3}/status-and-assets"),
+            m.get(
+                _u(f"{_SITE_BASE_V3}/status-and-assets"),
                 payload=make_status_and_assets_data(),
                 status=200,
             )
-            assets = {a.type: a for a in (await _make_system().get_status_and_assets()).assets}
+            assets = {
+                a.type: a for a in (await _make_system().get_status_and_assets()).assets
+            }
             # EV charger has a name; others don't
             assert assets["EV_CHARGER"].name == "Wallbox"
             assert assets["HYBRID"].name is None
@@ -731,17 +831,21 @@ class TestGetStatusAndAssets:
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
-            m.get(_u(f"{_SITE_BASE_V3}/status-and-assets"),
+            m.get(
+                _u(f"{_SITE_BASE_V3}/status-and-assets"),
                 payload={"error": "error"},
                 status=500,
             )
-            with pytest.raises(RequestError, match="Failed to get site status and assets"):
+            with pytest.raises(
+                RequestError, match="Failed to get site status and assets"
+            ):
                 await _make_system().get_status_and_assets()
 
 
 # ---------------------------------------------------------------------------
 # Device gateways (v2 standalone endpoint)
 # ---------------------------------------------------------------------------
+
 
 class TestGetDeviceGateways:
     """Tests for System.get_device_gateways."""
@@ -795,6 +899,7 @@ class TestGetDeviceGateways:
 # Active features (customer-identity v1)
 # ---------------------------------------------------------------------------
 
+
 class TestGetActiveFeatures:
     """Tests for System.get_active_features."""
 
@@ -807,7 +912,11 @@ class TestGetActiveFeatures:
         with aioresponses() as m:
             m.get(_u(self._url()), payload=make_active_features_data(), status=200)
             features = await _make_system().get_active_features(self._CUSTOMER_ID)
-            assert features == ["DYNAMIC_TARIFF", "TIME_OF_USE_OPTIMIZATION", "SMART_CHARGING"]
+            assert features == [
+                "DYNAMIC_TARIFF",
+                "TIME_OF_USE_OPTIMIZATION",
+                "SMART_CHARGING",
+            ]
 
     async def test_returns_empty_list_when_no_features(self) -> None:
         with aioresponses() as m:
@@ -830,6 +939,7 @@ class TestGetActiveFeatures:
 # Energy savings (v1)
 # ---------------------------------------------------------------------------
 
+
 class TestGetEnergySavings:
     _URL = f"{_SYSTEM_BASE}/energy-savings"
 
@@ -850,7 +960,11 @@ class TestGetEnergySavings:
 
     async def test_passes_date_params(self) -> None:
         with aioresponses() as m:
-            m.get(_u(self._URL), payload=make_energy_savings_data(value=175.42), status=200)
+            m.get(
+                _u(self._URL),
+                payload=make_energy_savings_data(value=175.42),
+                status=200,
+            )
             await _make_system().get_energy_savings(
                 from_date=datetime.date(2026, 7, 1),
                 to_date=datetime.date(2026, 7, 31),
@@ -866,7 +980,9 @@ class TestGetEnergySavings:
 
     async def test_null_field_yields_none(self) -> None:
         with aioresponses() as m:
-            m.get(_u(self._URL), payload=make_energy_savings_data(value=None), status=200)
+            m.get(
+                _u(self._URL), payload=make_energy_savings_data(value=None), status=200
+            )
             assert (await _make_system().get_energy_savings()).savings_eur is None
 
     async def test_raises_on_server_error(self) -> None:
@@ -879,6 +995,7 @@ class TestGetEnergySavings:
 # ---------------------------------------------------------------------------
 # Weather (v1)
 # ---------------------------------------------------------------------------
+
 
 class TestGetWeather:
     _URL = f"{_SYSTEM_BASE}/weather"
@@ -913,6 +1030,7 @@ class TestGetWeather:
 # Price customizations (v2)
 # ---------------------------------------------------------------------------
 
+
 class TestGetPriceCustomizations:
     _URL = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}/price-customizations"
 
@@ -935,13 +1053,16 @@ class TestGetPriceCustomizations:
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload={}, status=500)
-            with pytest.raises(RequestError, match="Failed to get price customizations"):
+            with pytest.raises(
+                RequestError, match="Failed to get price customizations"
+            ):
                 await _make_system().get_price_customizations()
 
 
 # ---------------------------------------------------------------------------
 # Comparison price (v2)
 # ---------------------------------------------------------------------------
+
 
 class TestGetComparisonPrice:
     _URL = f"{_BASE}/api/v2/comparison-price"
@@ -957,7 +1078,9 @@ class TestGetComparisonPrice:
     async def test_handles_missing_wrapper(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload={}, status=200)
-            assert (await _make_system().get_comparison_price()).price_eur_per_kwh is None
+            assert (
+                await _make_system().get_comparison_price()
+            ).price_eur_per_kwh is None
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
@@ -969,6 +1092,7 @@ class TestGetComparisonPrice:
 # ---------------------------------------------------------------------------
 # Price guarantee (customer-identity v1)
 # ---------------------------------------------------------------------------
+
 
 class TestGetPriceGuarantee:
     _CUSTOMER_ID = "cust-0001"
@@ -986,7 +1110,9 @@ class TestGetPriceGuarantee:
 
     async def test_handles_null_value(self) -> None:
         with aioresponses() as m:
-            m.get(_u(self._URL), payload=make_price_guarantee_data(value=None), status=200)
+            m.get(
+                _u(self._URL), payload=make_price_guarantee_data(value=None), status=200
+            )
             result = await _make_system().get_price_guarantee(self._CUSTOMER_ID)
             assert result.value is None
             assert result.unit is None
@@ -1001,6 +1127,7 @@ class TestGetPriceGuarantee:
 # ---------------------------------------------------------------------------
 # Wallboxes (v1)
 # ---------------------------------------------------------------------------
+
 
 class TestGetWallboxes:
     _URL = f"{_SITE_BASE_V1}/assets/ev-chargers"
@@ -1041,6 +1168,7 @@ class TestGetWallboxes:
 # Smart meter (v1)
 # ---------------------------------------------------------------------------
 
+
 class TestGetSmartMeter:
     _URL = f"{_BASE}/api/v1/sites/{FAKE_SYSTEM_ID}/smart-meter"
 
@@ -1072,12 +1200,15 @@ class TestGetSmartMeter:
 # Monthly trading savings (v1)
 # ---------------------------------------------------------------------------
 
+
 class TestGetMonthlyTradingSavings:
     _URL = f"{_BASE}/api/v1/energy-trader-savings/{FAKE_SYSTEM_ID}/month"
 
     async def test_returns_value(self) -> None:
         with aioresponses() as m:
-            m.get(_u(self._URL), payload=make_monthly_trading_savings_data(), status=200)
+            m.get(
+                _u(self._URL), payload=make_monthly_trading_savings_data(), status=200
+            )
             result = await _make_system().get_monthly_trading_savings()
             assert isinstance(result, MonthlyTradingSavings)
             assert result.average_past_variable_savings_eur == pytest.approx(12.83)
@@ -1085,12 +1216,16 @@ class TestGetMonthlyTradingSavings:
     async def test_handles_missing_field(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload={}, status=200)
-            assert (await _make_system().get_monthly_trading_savings()).average_past_variable_savings_eur is None
+            assert (
+                await _make_system().get_monthly_trading_savings()
+            ).average_past_variable_savings_eur is None
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload={}, status=500)
-            with pytest.raises(RequestError, match="Failed to get monthly trading savings"):
+            with pytest.raises(
+                RequestError, match="Failed to get monthly trading savings"
+            ):
                 await _make_system().get_monthly_trading_savings()
 
 
@@ -1098,11 +1233,15 @@ class TestGetMonthlyTradingSavings:
 # Self-sufficiency events (v1)
 # ---------------------------------------------------------------------------
 
+
 class TestGetSelfSufficiencyEvents:
     async def test_returns_events(self) -> None:
         with aioresponses() as m:
-            m.get(_u(_SELF_SUFFICIENCY_URL),
-                         payload=make_self_sufficiency_events_data(), status=200)
+            m.get(
+                _u(_SELF_SUFFICIENCY_URL),
+                payload=make_self_sufficiency_events_data(),
+                status=200,
+            )
             result = await _make_system().get_self_sufficiency_events(
                 datetime.datetime(2026, 8, 1, 5),
                 datetime.datetime(2026, 8, 1, 6),
@@ -1114,8 +1253,11 @@ class TestGetSelfSufficiencyEvents:
 
     async def test_query_params(self) -> None:
         with aioresponses() as m:
-            m.get(_u(_SELF_SUFFICIENCY_URL),
-                         payload=make_self_sufficiency_events_data(), status=200)
+            m.get(
+                _u(_SELF_SUFFICIENCY_URL),
+                payload=make_self_sufficiency_events_data(),
+                status=200,
+            )
             await _make_system().get_self_sufficiency_events(
                 datetime.datetime(2026, 8, 1, 5, 30),
                 datetime.datetime(2026, 8, 1, 6, 45),
@@ -1128,7 +1270,9 @@ class TestGetSelfSufficiencyEvents:
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
             m.get(_u(_SELF_SUFFICIENCY_URL), payload={}, status=500)
-            with pytest.raises(RequestError, match="Failed to get self-sufficiency events"):
+            with pytest.raises(
+                RequestError, match="Failed to get self-sufficiency events"
+            ):
                 await _make_system().get_self_sufficiency_events(
                     datetime.datetime(2026, 8, 1, 5),
                     datetime.datetime(2026, 8, 1, 6),
@@ -1138,6 +1282,7 @@ class TestGetSelfSufficiencyEvents:
 # ---------------------------------------------------------------------------
 # Site details (v3)
 # ---------------------------------------------------------------------------
+
 
 class TestGetSiteDetails:
     _URL = f"{_BASE}/api/v3/sites/{FAKE_SYSTEM_ID}/details"
@@ -1198,6 +1343,7 @@ class TestGetSiteDetails:
 # Customer (v3, customer-identity)
 # ---------------------------------------------------------------------------
 
+
 class TestGetCustomer:
     _CUSTOMER_ID = "cust-0001"
     _URL = f"{_IDENTITY_BASE}/api/v3/customers/{_CUSTOMER_ID}"
@@ -1224,6 +1370,7 @@ class TestGetCustomer:
 # Subscriptions (customer-identity v1)
 # ---------------------------------------------------------------------------
 
+
 class TestGetSubscriptions:
     _CUSTOMER_ID = "cust-0001"
     _URL = f"{_IDENTITY_BASE}/api/v1/customers/{_CUSTOMER_ID}/subscriptions"
@@ -1234,12 +1381,22 @@ class TestGetSubscriptions:
             result = await _make_system().get_subscriptions(self._CUSTOMER_ID)
             assert isinstance(result, SubscriptionsList)
             types = {s.type for s in result.subscriptions}
-            assert types == {"DYNAMIC_PULSE", "SMART_METER", "HEARTBEAT", "ENERGY_TRADER"}
+            assert types == {
+                "DYNAMIC_PULSE",
+                "SMART_METER",
+                "HEARTBEAT",
+                "ENERGY_TRADER",
+            }
 
     async def test_universal_fields_parsed(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload=make_subscriptions_data(), status=200)
-            subs = {s.type: s for s in (await _make_system().get_subscriptions(self._CUSTOMER_ID)).subscriptions}
+            subs = {
+                s.type: s
+                for s in (
+                    await _make_system().get_subscriptions(self._CUSTOMER_ID)
+                ).subscriptions
+            }
             dp = subs["DYNAMIC_PULSE"]
             assert dp.id == "sub-dp-0000-0000-0000-000000000001"
             assert dp.status == "ACTIVE"
@@ -1258,7 +1415,12 @@ class TestGetSubscriptions:
     async def test_dynamic_pulse_specific_fields(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload=make_subscriptions_data(), status=200)
-            subs = {s.type: s for s in (await _make_system().get_subscriptions(self._CUSTOMER_ID)).subscriptions}
+            subs = {
+                s.type: s
+                for s in (
+                    await _make_system().get_subscriptions(self._CUSTOMER_ID)
+                ).subscriptions
+            }
             dp = subs["DYNAMIC_PULSE"]
             assert dp.electricity_contract_number == "600000001"
             assert dp.market_location_id == "50000000001"
@@ -1266,17 +1428,31 @@ class TestGetSubscriptions:
             assert dp.price_guarantee_unit == "ct/kWh"
             assert dp.price_guarantee_version == "DE_PRICE_GUARANTEE_V2"
 
-    async def test_smart_meter_type_recognized_but_hardware_fields_not_mapped(self) -> None:
+    async def test_smart_meter_type_recognized_but_hardware_fields_not_mapped(
+        self,
+    ) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload=make_subscriptions_data(), status=200)
-            subs = {s.type: s for s in (await _make_system().get_subscriptions(self._CUSTOMER_ID)).subscriptions}
+            subs = {
+                s.type: s
+                for s in (
+                    await _make_system().get_subscriptions(self._CUSTOMER_ID)
+                ).subscriptions
+            }
             sm = subs["SMART_METER"]
             assert sm.type == "SMART_METER"
             assert sm.notice_period_number == 24
             assert sm.price_eur is None  # SMART_METER has null price
             # SMART_METER-specific hardware fields must NOT be mapped as attributes
-            for attr in ("meter_id", "supplier", "device_manufacturer", "device_measuring_type"):
-                assert not hasattr(sm, attr), f"{attr!r} must not be a mapped attribute (kept in raw only)"
+            for attr in (
+                "meter_id",
+                "supplier",
+                "device_manufacturer",
+                "device_measuring_type",
+            ):
+                assert not hasattr(sm, attr), (
+                    f"{attr!r} must not be a mapped attribute (kept in raw only)"
+                )
 
     async def test_raw_preserves_pii_fields(self) -> None:
         with aioresponses() as m:
@@ -1286,21 +1462,37 @@ class TestGetSubscriptions:
             / statusHistory / CRM IDs onto Subscription.
             """
             m.get(_u(self._URL), payload=make_subscriptions_data(), status=200)
-            subs = {s.type: s for s in (await _make_system().get_subscriptions(self._CUSTOMER_ID)).subscriptions}
+            subs = {
+                s.type: s
+                for s in (
+                    await _make_system().get_subscriptions(self._CUSTOMER_ID)
+                ).subscriptions
+            }
             dp = subs["DYNAMIC_PULSE"]
             # PII is available via raw
             assert dp.raw["paymentIban"] == "DE00000000000000000000"
-            assert dp.raw["metadata"]["payload"]["payment_iban"] == "DE00000000000000000000"
-            assert dp.raw["metadata"]["payload"]["former_supplier_id"] == "9900000000000"
+            assert (
+                dp.raw["metadata"]["payload"]["payment_iban"]
+                == "DE00000000000000000000"
+            )
+            assert (
+                dp.raw["metadata"]["payload"]["former_supplier_id"] == "9900000000000"
+            )
             assert dp.raw["lumenazaContractId"] == "600000001"
             assert dp.raw["deliveryAddressStreet"] == "Musterstraße"
             assert len(dp.raw["statusHistory"]) == 1
             # PII is NOT a Subscription attribute
             for pii_attr in (
-                "payment_iban", "metadata_payload", "delivery_address_street",
-                "lumenaza_contract_id", "zoho_reference_id", "status_history",
+                "payment_iban",
+                "metadata_payload",
+                "delivery_address_street",
+                "lumenaza_contract_id",
+                "zoho_reference_id",
+                "status_history",
             ):
-                assert not hasattr(dp, pii_attr), f"{pii_attr!r} must not be a mapped attribute"
+                assert not hasattr(dp, pii_attr), (
+                    f"{pii_attr!r} must not be a mapped attribute"
+                )
 
     async def test_pagination_metadata(self) -> None:
         with aioresponses() as m:
@@ -1313,9 +1505,17 @@ class TestGetSubscriptions:
 
     async def test_empty_list_when_no_subscriptions(self) -> None:
         with aioresponses() as m:
-            m.get(_u(self._URL),
-                         payload={"data": [], "pageIndex": 0, "pageSize": 15, "totalPages": 0, "totalItems": 0},
-                         status=200)
+            m.get(
+                _u(self._URL),
+                payload={
+                    "data": [],
+                    "pageIndex": 0,
+                    "pageSize": 15,
+                    "totalPages": 0,
+                    "totalItems": 0,
+                },
+                status=200,
+            )
             result = await _make_system().get_subscriptions(self._CUSTOMER_ID)
             assert result.subscriptions == []
             assert result.total_items == 0
@@ -1337,6 +1537,7 @@ class TestGetSubscriptions:
 # ---------------------------------------------------------------------------
 # Notifications (v1)
 # ---------------------------------------------------------------------------
+
 
 class TestGetNotifications:
     _URL = f"{_BASE}/api/v1/users/{FAKE_USER_ID}/notifications/latest"
@@ -1372,6 +1573,7 @@ class TestGetNotifications:
 # Notification settings (v1)
 # ---------------------------------------------------------------------------
 
+
 class TestGetNotificationSettings:
     _URL = f"{_SYSTEM_BASE}/users/{FAKE_USER_ID}/notifications/settings"
 
@@ -1394,13 +1596,16 @@ class TestGetNotificationSettings:
         with aioresponses() as m:
             m.get(_u(_USERS_ME_URL), payload=make_user_data(), status=200)
             m.get(_u(self._URL), payload={}, status=500)
-            with pytest.raises(RequestError, match="Failed to get notification settings"):
+            with pytest.raises(
+                RequestError, match="Failed to get notification settings"
+            ):
                 await _make_system().get_notification_settings()
 
 
 # ---------------------------------------------------------------------------
 # Impact overview (v2)
 # ---------------------------------------------------------------------------
+
 
 class TestGetImpactOverview:
     _URL = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}/impact-overview"
@@ -1433,6 +1638,7 @@ class TestGetImpactOverview:
 # Energy trader (v2)
 # ---------------------------------------------------------------------------
 
+
 class TestGetEnergyTrader:
     _URL = f"{_BASE}/api/v2/energy-trader"
 
@@ -1463,6 +1669,7 @@ class TestGetEnergyTrader:
 # ---------------------------------------------------------------------------
 # Heartbeat AI summary (v2)
 # ---------------------------------------------------------------------------
+
 
 class TestGetHeartbeatPrices:
     _URL = f"{_BASE}/api/v3/heartbeat-prices"
@@ -1533,7 +1740,9 @@ class TestGetHeartbeatAiSummary:
 
     async def test_1m_returns_all_metrics(self) -> None:
         with aioresponses() as m:
-            m.get(_u(self._URL), payload=make_heartbeat_ai_summary_data("1M"), status=200)
+            m.get(
+                _u(self._URL), payload=make_heartbeat_ai_summary_data("1M"), status=200
+            )
             result = await _make_system().get_heartbeat_ai_summary()
             assert isinstance(result, HeartbeatAiSummary)
             assert result.resolution == "1M"
@@ -1559,7 +1768,9 @@ class TestGetHeartbeatAiSummary:
 
     async def test_1w_leaves_self_sufficiency_none(self) -> None:
         with aioresponses() as m:
-            m.get(_u(self._URL), payload=make_heartbeat_ai_summary_data("1W"), status=200)
+            m.get(
+                _u(self._URL), payload=make_heartbeat_ai_summary_data("1W"), status=200
+            )
             result = await _make_system().get_heartbeat_ai_summary(resolution="1W")
             assert result.resolution == "1W"
             assert result.self_sufficiency_percent is None
@@ -1568,7 +1779,9 @@ class TestGetHeartbeatAiSummary:
 
     async def test_passes_query_params(self) -> None:
         with aioresponses() as m:
-            m.get(_u(self._URL), payload=make_heartbeat_ai_summary_data("1Y"), status=200)
+            m.get(
+                _u(self._URL), payload=make_heartbeat_ai_summary_data("1Y"), status=200
+            )
             await _make_system().get_heartbeat_ai_summary(resolution="1Y")
             url = _recorded_url(m, 0)
             assert f"siteId={FAKE_SYSTEM_ID}" in url
@@ -1576,20 +1789,25 @@ class TestGetHeartbeatAiSummary:
 
     async def test_defaults_to_1m(self) -> None:
         with aioresponses() as m:
-            m.get(_u(self._URL), payload=make_heartbeat_ai_summary_data("1M"), status=200)
+            m.get(
+                _u(self._URL), payload=make_heartbeat_ai_summary_data("1M"), status=200
+            )
             await _make_system().get_heartbeat_ai_summary()
             assert "resolution=1M" in _recorded_url(m, 0)
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload={}, status=500)
-            with pytest.raises(RequestError, match="Failed to get Heartbeat AI summary"):
+            with pytest.raises(
+                RequestError, match="Failed to get Heartbeat AI summary"
+            ):
                 await _make_system().get_heartbeat_ai_summary()
 
 
 # ---------------------------------------------------------------------------
 # Optimizations (v1)
 # ---------------------------------------------------------------------------
+
 
 class TestGetOptimizations:
     async def test_returns_optimization_events(self) -> None:

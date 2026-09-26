@@ -226,7 +226,9 @@ class EnergyData:
             consumption_household_kwh=_kwh(consumers.get("household")),
             consumption_household_total_kwh=_kwh(consumers_total.get("household")),
             consumption_battery_kwh=_kwh(consumers.get("battery")),
-            savings_eur=float(savings["value"]) if savings and "value" in savings else None,
+            savings_eur=float(savings["value"])
+            if savings and "value" in savings
+            else None,
             timeseries=timeseries,
             raw=data,
         )

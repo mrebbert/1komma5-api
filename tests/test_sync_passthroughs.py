@@ -35,7 +35,9 @@ CLIENT_METHODS = [
 
 @pytest.mark.parametrize(("method", "args", "expected"), CLIENT_METHODS)
 def test_client_delegates_to_async(
-    method: str, args: tuple[Any, ...], expected: Any,
+    method: str,
+    args: tuple[Any, ...],
+    expected: Any,
 ) -> None:
     with _make_sync_client() as client:
         setattr(client._async, method, AsyncMock(return_value=expected))

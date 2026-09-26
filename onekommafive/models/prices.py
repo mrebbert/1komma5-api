@@ -34,7 +34,9 @@ class PriceCustomizations:
 
         return cls(
             grid_energy_price_eur_per_kwh=_amount(data.get("gridEnergyPrice")),
-            comparison_energy_price_eur_per_kwh=_amount(data.get("comparisonEnergyPrice")),
+            comparison_energy_price_eur_per_kwh=_amount(
+                data.get("comparisonEnergyPrice")
+            ),
             monthly_base_price_eur=_amount(data.get("monthlyBasePrice")),
             raw=data,
         )
@@ -224,9 +226,15 @@ class MarketPrices:
             average_price=_price(em, "averagePrice"),
             highest_price=_price(em, "highestPrice"),
             lowest_price=_price(em, "lowestPrice"),
-            average_price_with_grid_costs=_price(emg, "averagePrice") if emg else float("nan"),
-            highest_price_with_grid_costs=_price(emg, "highestPrice") if emg else float("nan"),
-            lowest_price_with_grid_costs=_price(emg, "lowestPrice") if emg else float("nan"),
+            average_price_with_grid_costs=_price(emg, "averagePrice")
+            if emg
+            else float("nan"),
+            highest_price_with_grid_costs=_price(emg, "highestPrice")
+            if emg
+            else float("nan"),
+            lowest_price_with_grid_costs=_price(emg, "lowestPrice")
+            if emg
+            else float("nan"),
             average_price_all_in=_price(emgv, "averagePrice") if emgv else float("nan"),
             highest_price_all_in=_price(emgv, "highestPrice") if emgv else float("nan"),
             lowest_price_all_in=_price(emgv, "lowestPrice") if emgv else float("nan"),
@@ -243,6 +251,8 @@ class MarketPrices:
             grid_cost_purchasing=_component(gc, "purchasingCost"),
             grid_cost_fixed_tariff=_component(gc, "fixedTariff"),
             grid_cost_dynamic_markup=_component(gc, "dynamicMarkup"),
-            grid_cost_feed_in_remuneration_adj=_component(gc, "feedInRemunerationAdjustment"),
+            grid_cost_feed_in_remuneration_adj=_component(
+                gc, "feedInRemunerationAdjustment"
+            ),
             raw=data,
         )
