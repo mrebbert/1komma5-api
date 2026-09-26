@@ -106,5 +106,5 @@ def test_ev_charger_read_only_accessors_pass_through() -> None:
             ev = evs[0]
             # These never hit the network; they read from cached _data.
             assert ev.id() == "ev-1"
-            assert isinstance(ev.name(), (str, type(None)))
+            assert isinstance(ev.name(), str | None)
             assert ev.charging_mode().value in {"SMART_CHARGE", "SOLAR_CHARGE", "QUICK_CHARGE"}
