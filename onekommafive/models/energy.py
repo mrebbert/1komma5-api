@@ -190,7 +190,7 @@ class EnergyData:
     def from_dict(cls, data: dict[str, Any]) -> "EnergyData":
         """Construct an :class:`EnergyData` from a raw API response dictionary."""
 
-        def _kwh(node: dict | None) -> float | None:
+        def _kwh(node: dict[str, Any] | None) -> float | None:
             if node is None:
                 return None
             return float(node["value"]) if "value" in node else None

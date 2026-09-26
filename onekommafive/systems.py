@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 from .system import System
 
@@ -24,17 +24,17 @@ class Systems:
 
         from onekommafive import Client, Systems
 
-        client = Client("user@example.com", "s3cr3t")
-        systems = Systems(client).get_systems()
-        for system in systems:
-            overview = system.get_live_overview()
-            print(system.id(), overview.pv_power)
+        async with Client("user@example.com", "s3cr3t") as client:
+            systems = await Systems(client).get_systems()
+            for system in systems:
+                overview = await system.get_live_overview()
+                print(system.id(), overview.pv_power)
     """
 
     def __init__(self, client: Client) -> None:
         self._client = client
 
-    def get_systems(self) -> list[System]:
+    async def get_systems(self) -> list[System]:
         """Return all active systems accessible to the authenticated user.
 
         Placeholder systems with the nil UUID are filtered out automatically.
@@ -45,16 +45,16 @@ class Systems:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v2/systems",
             error_label="Failed to get systems",
         )
-        raw_systems: list[dict] = data.get("data", [])
+        raw_systems = cast(list[dict[str, Any]], data.get("data", []))
         active = [s for s in raw_systems if s.get("id") != _NULL_SYSTEM_ID]
         return [System(self._client, s) for s in active]
 
-    def get_system(self, system_id: str) -> System:
+    async def get_system(self, system_id: str) -> System:
         """Retrieve a single system by its UUID.
 
         Args:
@@ -66,9 +66,9 @@ class Systems:
         Raises:
             RequestError: If the server returns a non-200 response.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v2/systems/{system_id}",
             error_label=f"Failed to get system {system_id!r}",
         )
-        return System(self._client, data)
+        return System(self._client, cast(dict[str, Any], data))

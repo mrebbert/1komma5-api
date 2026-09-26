@@ -34,7 +34,7 @@ class EVCharger:
 
     def id(self) -> str:
         """Return the unique device identifier."""
-        return self._data["id"]
+        return str(self._data["id"])
 
     def name(self) -> str | None:
         """Return the human-readable name configured in the app, or ``None``."""
@@ -173,7 +173,7 @@ class EVCharger:
             f"/assets/evs/{self.id()}"
         )
 
-    def set_charging_mode(self, mode: ChargingMode) -> None:
+    async def set_charging_mode(self, mode: ChargingMode) -> None:
         """Change the charging strategy of this EV charger.
 
         No-ops silently when *mode* matches the currently active mode.
@@ -187,7 +187,7 @@ class EVCharger:
         if self.charging_mode() == mode:
             return
 
-        self._client._request(
+        await self._client._request(
             "PATCH",
             self._url(),
             json={"chargingMode": mode.value},
@@ -195,7 +195,7 @@ class EVCharger:
         )
         self._data["chargingMode"] = mode.value
 
-    def set_current_soc(self, soc: float) -> None:
+    async def set_current_soc(self, soc: float) -> None:
         """Set the manually controlled target state-of-charge.
 
         Only effective in :attr:`~onekommafive.models.ChargingMode.SMART_CHARGE`
@@ -212,7 +212,7 @@ class EVCharger:
 
         soc_decimal = float(soc / 100.0) if soc > 0 else 0.0
 
-        self._client._request(
+        await self._client._request(
             "PATCH",
             self._url(),
             json={"manualSoc": soc_decimal},
@@ -220,7 +220,7 @@ class EVCharger:
         )
         self._data["manualSoc"] = soc_decimal
 
-    def set_target_soc(self, soc: float) -> None:
+    async def set_target_soc(self, soc: float) -> None:
         """Set the target state-of-charge for SMART_CHARGE mode.
 
         No-ops silently when *soc* matches the current target.
@@ -235,7 +235,7 @@ class EVCharger:
             return
 
         soc_decimal = soc / 100.0
-        self._client._request(
+        await self._client._request(
             "PATCH",
             self._url(),
             json={"targetSoc": soc_decimal},
@@ -243,7 +243,7 @@ class EVCharger:
         )
         self._data["targetSoc"] = soc_decimal
 
-    def set_primary_departure_time(self, time: str) -> None:
+    async def set_primary_departure_time(self, time: str) -> None:
         """Set the scheduled departure time.
 
         No-ops silently when *time* matches the current departure time.
@@ -260,7 +260,7 @@ class EVCharger:
         if self.primary_schedule_departure_time() == time:
             return
 
-        self._client._request(
+        await self._client._request(
             "PATCH",
             self._url(),
             json={"departureTime": time},
@@ -268,7 +268,7 @@ class EVCharger:
         )
         self._data["departureTime"] = time
 
-    def assign_charger(self, charger_id: str) -> None:
+    async def assign_charger(self, charger_id: str) -> None:
         """Bind this vehicle to the physical wallbox with ``charger_id``.
 
         The 1KOMMA5° model is 1:1 exclusive: a wallbox is always assigned
@@ -290,7 +290,7 @@ class EVCharger:
         if self.assigned_charger_id() == charger_id:
             return
 
-        self._client._request(
+        await self._client._request(
             "PATCH",
             self._url(),
             json={"chargerId": charger_id},

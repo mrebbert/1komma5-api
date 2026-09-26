@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from onekommafive.client import Client
 
@@ -62,15 +62,17 @@ def make_two_ambiguous_evs() -> tuple[MagicMock, MagicMock]:
 
 
 def make_client(token_set: dict | None = None) -> Client:
-    """Return a :class:`Client` instance with a pre-loaded token set.
+    """Return an async :class:`Client` instance with a pre-loaded token set.
 
     The PKCE / HTTP login flow is not exercised; token validation is
-    intentionally bypassed so tests can focus on API behaviour.
+    intentionally bypassed so tests can focus on API behaviour. The
+    owned aiohttp session is created lazily inside ``aioresponses``
+    contexts.
     """
     client = Client(username="user@example.com", password="password")
     client._token_set = token_set or FAKE_TOKEN_SET
-    # Prevent real JWT validation by making the expiry check always return False
-    client._is_token_expiring = MagicMock(return_value=False)
+    # Prevent real JWT validation by making the expiry check always return False.
+    client._is_token_expiring = AsyncMock(return_value=False)
     return client
 
 

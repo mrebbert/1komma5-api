@@ -25,7 +25,7 @@ class PriceCustomizations:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "PriceCustomizations":
-        def _amount(node: dict | None) -> float | None:
+        def _amount(node: dict[str, Any] | None) -> float | None:
             if not node:
                 return None
             price = node.get("price") if "price" in node else node
@@ -210,10 +210,10 @@ class MarketPrices:
         ts = data["timeseries"]
         gc = data.get("gridCostsComponents", {})
 
-        def _price(node: dict, key: str) -> float:
+        def _price(node: dict[str, Any], key: str) -> float:
             return float(node[key]["price"]["amount"])
 
-        def _component(node: dict, key: str) -> float | None:
+        def _component(node: dict[str, Any], key: str) -> float | None:
             entry = node.get(key)
             return float(entry["price"]["amount"]) if entry else None
 

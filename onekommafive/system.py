@@ -100,44 +100,44 @@ class System:
     # ------------------------------------------------------------------
 
     def id(self) -> str:
-        return self._data["id"]
+        return str(self._data["id"])
 
-    def info(self) -> SystemInfo:
+    async def info(self) -> SystemInfo:
         """Return static metadata for this system (``GET /api/v4/systems/{id}``)."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v4"), error_label="Failed to get system info",
         )
         return SystemInfo.from_dict(data)
 
-    def get_details(self) -> SystemDetails:
+    async def get_details(self) -> SystemDetails:
         """Return extended metadata (``GET /api/v1/systems/{id}/details``).
 
         Richer than :meth:`info`: includes EMP type, technical contact,
         embedded customer details, smart-meter status, earliest measurement
         date, and installed device gateways.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v1", "details"), error_label="Failed to get system details",
         )
         return SystemDetails.from_dict(data)
 
-    def get_status_and_assets(self) -> SiteStatus:
+    async def get_status_and_assets(self) -> SiteStatus:
         """Return site connection status and installed asset inventory."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             self._sites_url("v3", "status-and-assets"),
             error_label="Failed to get site status and assets",
         )
         return SiteStatus.from_dict(data)
 
-    def get_device_gateways(self) -> list[DeviceGateway]:
+    async def get_device_gateways(self) -> list[DeviceGateway]:
         """Return all device gateways registered to this system.
 
         ``GET /api/v2/device-gateways?systemId={id}``. Richer than the nested
         gateway list on :class:`SystemDetails`: adds gateway ``type``, GridX
         backend identifiers, installer name, and registration timestamps.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v2/device-gateways",
             params={"systemId": self.id()},
@@ -145,13 +145,13 @@ class System:
         )
         return [DeviceGateway.from_dict(g) for g in data.get("data", [])]
 
-    def get_active_features(self, customer_id: str) -> list[str]:
+    async def get_active_features(self, customer_id: str) -> list[str]:
         """Return active feature flags for this site (e.g. ``"DYNAMIC_TARIFF"``).
 
         ``customer_id`` is available via :meth:`get_details`
         (``SystemDetails.customer_id``).
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.IDENTITY_API}/api/v2/customers/{customer_id}/sites/{self.id()}/active-features",
             error_label="Failed to get active features",
@@ -162,9 +162,9 @@ class System:
     # Live data
     # ------------------------------------------------------------------
 
-    def get_live_overview(self) -> LiveOverview:
+    async def get_live_overview(self) -> LiveOverview:
         """Fetch the current real-time energy overview for this system."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v3", "live-overview"),
             error_label="Failed to get live overview",
         )
@@ -174,9 +174,9 @@ class System:
     # EV chargers
     # ------------------------------------------------------------------
 
-    def get_displayed_ev_charging_modes(self) -> list[ChargingMode]:
+    async def get_displayed_ev_charging_modes(self) -> list[ChargingMode]:
         """Fetch the EV charging modes available (and enabled) for this site."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             self._sites_url("v1", "assets", "evs", "displayed-ev-charging-modes"),
             error_label="Failed to get displayed EV charging modes",
@@ -187,14 +187,14 @@ class System:
             if not entry.get("disabled", False)
         ]
 
-    def get_ev_chargers(self) -> list[EVCharger]:
+    async def get_ev_chargers(self) -> list[EVCharger]:
         """Retrieve all EV (vehicle-side) charging profiles bound to this site.
 
         ``GET /api/v2/sites/{id}/assets/evs``.
         """
         from .ev_charger import EVCharger
 
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._sites_url("v2", "assets", "evs"),
             error_label="Failed to get EV chargers",
         )
@@ -204,16 +204,16 @@ class System:
     # Energy data
     # ------------------------------------------------------------------
 
-    def get_energy_today(self, resolution: str = "1h") -> EnergyData:
+    async def get_energy_today(self, resolution: str = "1h") -> EnergyData:
         """Fetch today's energy production and consumption (``resolution``: ``"1h"`` or ``"15m"``)."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v2", "energy-today"),
             params={"resolution": resolution},
             error_label="Failed to get energy today",
         )
         return EnergyData.from_dict(data)
 
-    def get_energy_savings(
+    async def get_energy_savings(
         self,
         from_date: datetime.date | None = None,
         to_date: datetime.date | None = None,
@@ -229,14 +229,14 @@ class System:
             params["from"] = from_date.isoformat()
         if to_date is not None:
             params["to"] = to_date.isoformat()
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v1", "energy-savings"),
             params=params or None,
             error_label="Failed to get energy savings",
         )
         return HeartbeatSavings.from_dict(data)
 
-    def get_energy_historical(
+    async def get_energy_historical(
         self,
         from_date: datetime.date,
         to_date: datetime.date,
@@ -247,7 +247,7 @@ class System:
         For ``resolution="15m"`` both dates must be the same day; for ``"1h"``
         ``to_date`` may be at most one day after ``from_date``.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v3", "energy-historical"),
             params={
                 "from": from_date.isoformat(),
@@ -262,17 +262,17 @@ class System:
     # EMS
     # ------------------------------------------------------------------
 
-    def get_ems_settings(self) -> EmsSettings:
+    async def get_ems_settings(self) -> EmsSettings:
         """Fetch the current energy-management system settings."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v1", "ems", "actions", "get-settings"),
             error_label="Failed to get EMS settings",
         )
         return EmsSettings.from_dict(data)
 
-    def set_ems_mode(self, auto: bool) -> None:
+    async def set_ems_mode(self, auto: bool) -> None:
         """Switch the EMS between auto (``True``) and manual override (``False``)."""
-        self._client._request(
+        await self._client._request(
             "POST",
             self._systems_url("v1", "ems", "actions", "set-manual-override"),
             json={"manualSettings": {}, "overrideAutoSettings": not auto},
@@ -284,7 +284,7 @@ class System:
     # Prices
     # ------------------------------------------------------------------
 
-    def get_prices(
+    async def get_prices(
         self,
         start: datetime.datetime,
         end: datetime.datetime,
@@ -300,7 +300,7 @@ class System:
         The snapped range always covers the requested window.
         """
         start, end = _align_price_range(start, end, resolution)
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v4", "charts", "market-prices"),
             params={
                 "from": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -315,9 +315,9 @@ class System:
     # Weather
     # ------------------------------------------------------------------
 
-    def get_weather(self) -> WeatherData:
+    async def get_weather(self) -> WeatherData:
         """Fetch the weather forecast: today + tomorrow summaries, plus 48 h of 3 h slots."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v1", "weather"),
             error_label="Failed to get weather",
         )
@@ -327,17 +327,17 @@ class System:
     # Prices — customizations, comparison, guarantee
     # ------------------------------------------------------------------
 
-    def get_price_customizations(self) -> PriceCustomizations:
+    async def get_price_customizations(self) -> PriceCustomizations:
         """Fetch user-configured energy prices (grid, comparison, monthly base)."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v2", "price-customizations"),
             error_label="Failed to get price customizations",
         )
         return PriceCustomizations.from_dict(data)
 
-    def get_comparison_price(self) -> ComparisonPrice:
+    async def get_comparison_price(self) -> ComparisonPrice:
         """Fetch the site's grid-supplier comparison price (EUR/kWh)."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v2/comparison-price",
             params={"siteId": self.id()},
@@ -345,7 +345,7 @@ class System:
         )
         return ComparisonPrice.from_dict(data)
 
-    def get_price_guarantee(self, customer_id: str) -> PriceGuarantee:
+    async def get_price_guarantee(self, customer_id: str) -> PriceGuarantee:
         """Fetch the contractual electricity-price guarantee for this customer.
 
         ``customer_id`` is available via :meth:`get_details`
@@ -353,7 +353,7 @@ class System:
         host and requires ``systemId`` as a query parameter (server quirk —
         the customer scope alone is not sufficient).
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.IDENTITY_API}/api/v1/customers/{customer_id}/price-guarantee",
             params={"systemId": self.id()},
@@ -365,21 +365,21 @@ class System:
     # Wallboxes (physical charging hardware) and smart meter
     # ------------------------------------------------------------------
 
-    def get_wallboxes(self) -> list[Wallbox]:
+    async def get_wallboxes(self) -> list[Wallbox]:
         """Fetch physical wallbox hardware for this site.
 
         ``GET /api/v1/sites/{id}/assets/ev-chargers``. Complements
         :meth:`get_ev_chargers` which returns the vehicle-side profiles.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._sites_url("v1", "assets", "ev-chargers"),
             error_label="Failed to get wallboxes",
         )
         return [Wallbox.from_dict(w) for w in data or []]
 
-    def get_smart_meter(self) -> SmartMeter:
+    async def get_smart_meter(self) -> SmartMeter:
         """Fetch smart-meter registration details for this site (EIC, DSO code, concession fee)."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._sites_url("v1", "smart-meter"),
             error_label="Failed to get smart meter",
         )
@@ -389,24 +389,24 @@ class System:
     # Analytics — CO2, trading, and AI-summary
     # ------------------------------------------------------------------
 
-    def get_impact_overview(self) -> ImpactOverview:
+    async def get_impact_overview(self) -> ImpactOverview:
         """Fetch lifetime CO2-savings figures for this site.
 
         Ignores any query params; the response is always lifetime totals.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._systems_url("v2", "impact-overview"),
             error_label="Failed to get impact overview",
         )
         return ImpactOverview.from_dict(data)
 
-    def get_energy_trader(self) -> EnergyTrader:
+    async def get_energy_trader(self) -> EnergyTrader:
         """Fetch lifetime energy-trading statistics for this site.
 
         Uses the account-wide endpoint ``/api/v2/energy-trader`` with the
         site ID passed as a ``siteId`` query parameter (not a path segment).
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v2/energy-trader",
             params={"siteId": self.id()},
@@ -414,7 +414,7 @@ class System:
         )
         return EnergyTrader.from_dict(data)
 
-    def get_heartbeat_prices(self) -> HeartbeatPrices:
+    async def get_heartbeat_prices(self) -> HeartbeatPrices:
         """Fetch the site's financial breakdown across five aggregation windows.
 
         ``GET /api/v3/heartbeat-prices?siteId={id}`` — for each of
@@ -428,7 +428,7 @@ class System:
         feed-in tariff, grid consumption price, effective Heartbeat
         price, comparison tariff).
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v3/heartbeat-prices",
             params={"siteId": self.id()},
@@ -436,27 +436,27 @@ class System:
         )
         return HeartbeatPrices.from_dict(data)
 
-    def get_monthly_trading_savings(self) -> MonthlyTradingSavings:
+    async def get_monthly_trading_savings(self) -> MonthlyTradingSavings:
         """Fetch the average monthly savings from Energy Trader activity.
 
         Uses ``/api/v1/energy-trader-savings/{site_id}/month`` with the
         site (not customer) ID as the path segment — verified live.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v1/energy-trader-savings/{self.id()}/month",
             error_label="Failed to get monthly trading savings",
         )
         return MonthlyTradingSavings.from_dict(data)
 
-    def get_heartbeat_ai_summary(self, resolution: str = "1M") -> HeartbeatAiSummary:
+    async def get_heartbeat_ai_summary(self, resolution: str = "1M") -> HeartbeatAiSummary:
         """Fetch aggregated Heartbeat-AI metrics for a resolution window.
 
         ``resolution`` must be one of ``"1W"``, ``"1M"``, or ``"1Y"``.
         ``"1W"`` and ``"1Y"`` return only CO2/production figures; the
         self-sufficiency and earnings fields are ``None`` in those cases.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v2/heartbeat-ai/summary",
             params={"siteId": self.id(), "resolution": resolution},
@@ -468,13 +468,13 @@ class System:
     # AI optimisations
     # ------------------------------------------------------------------
 
-    def get_optimizations(
+    async def get_optimizations(
         self,
         start: datetime.datetime,
         end: datetime.datetime,
     ) -> OptimizationEvents:
         """Fetch AI optimisation decisions for ``[start, end]`` (inclusive)."""
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v1/heartbeat-ai/optimizations",
             params={
@@ -486,7 +486,7 @@ class System:
         )
         return OptimizationEvents.from_dict(data)
 
-    def get_self_sufficiency_events(
+    async def get_self_sufficiency_events(
         self,
         start: datetime.datetime,
         end: datetime.datetime,
@@ -497,7 +497,7 @@ class System:
         endpoint that surfaces a **different subset** of AI activity
         (typically the granular battery-discharge trace).
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v1/heartbeat-ai/self-sufficiency",
             params={
@@ -513,33 +513,33 @@ class System:
     # Site details, customer, notifications
     # ------------------------------------------------------------------
 
-    def get_site_details(self) -> SiteDetails:
+    async def get_site_details(self) -> SiteDetails:
         """Fetch extended site metadata (``GET /api/v3/sites/{id}/details``).
 
         Superset of :meth:`info`/:meth:`get_details`: adds bidding zone,
         EMP connection block and — most useful — the current EMS runtime
         state (``ems_mode``, ``ems_state``, ``ems_state_reasons``).
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET", self._sites_url("v3", "details"),
             error_label="Failed to get site details",
         )
         return SiteDetails.from_dict(data)
 
-    def get_customer(self, customer_id: str) -> Customer:
+    async def get_customer(self, customer_id: str) -> Customer:
         """Fetch the full customer record (``GET /api/v3/customers/{id}``, IDENTITY host).
 
         Superset of the embedded :class:`~onekommafive.SystemCustomer`
         (which only exposes id/name/email). ``customer_id`` is available
         via :meth:`get_details`.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET", f"{self._client.IDENTITY_API}/api/v3/customers/{customer_id}",
             error_label="Failed to get customer",
         )
         return Customer.from_dict(data)
 
-    def get_subscriptions(self, customer_id: str) -> SubscriptionsList:
+    async def get_subscriptions(self, customer_id: str) -> SubscriptionsList:
         """Fetch all customer subscriptions / contracts.
 
         ``GET /api/v1/customers/{cid}/subscriptions`` (IDENTITY host).
@@ -556,21 +556,21 @@ class System:
         ``customer_id`` is available via :meth:`get_details` — same
         pattern as :meth:`get_customer`.
         """
-        data = self._client._request(
+        data = await self._client._request(
             "GET",
             f"{self._client.IDENTITY_API}/api/v1/customers/{customer_id}/subscriptions",
             error_label="Failed to get subscriptions",
         )
         return SubscriptionsList.from_dict(data)
 
-    def get_notifications(self) -> NotificationsList:
+    async def get_notifications(self) -> NotificationsList:
         """Fetch recent push/in-app notifications for the authenticated user.
 
         ``GET /api/v1/users/{uid}/notifications/latest?systemId={id}``.
         The user id is looked up lazily via :meth:`~onekommafive.Client.get_user`.
         """
-        user = self._client.get_user()
-        data = self._client._request(
+        user = await self._client.get_user()
+        data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v1/users/{user.id}/notifications/latest",
             params={"systemId": self.id()},
@@ -578,14 +578,14 @@ class System:
         )
         return NotificationsList.from_dict(data)
 
-    def get_notification_settings(self) -> NotificationSettings:
+    async def get_notification_settings(self) -> NotificationSettings:
         """Fetch the user's notification preferences for this system.
 
         ``GET /api/v1/systems/{id}/users/{uid}/notifications/settings``.
         The user id is looked up lazily via :meth:`~onekommafive.Client.get_user`.
         """
-        user = self._client.get_user()
-        data = self._client._request(
+        user = await self._client.get_user()
+        data = await self._client._request(
             "GET",
             self._systems_url("v1", "users", user.id, "notifications", "settings"),
             error_label="Failed to get notification settings",

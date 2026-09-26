@@ -7,10 +7,10 @@ import os
 import stat
 import time
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
-import responses as resp_lib
+from aioresponses import aioresponses
 
 from onekommafive.client import (
     _TOKEN_URL,
@@ -67,69 +67,68 @@ class TestPkceHelpers:
 class TestTokenManagement:
     """Tests for get_token, _is_token_expiring, and related logic."""
 
-    def test_get_token_triggers_login_when_no_token_set(self) -> None:
+    async def test_get_token_triggers_login_when_no_token_set(self) -> None:
         client = Client("user@example.com", "pass")
-        client._login = MagicMock(return_value=FAKE_ACCESS_TOKEN)
+        client._login = AsyncMock(return_value=FAKE_ACCESS_TOKEN)
 
-        result = client.get_token()
+        result = await client.get_token()
 
-        client._login.assert_called_once()
+        client._login.assert_awaited_once()
         assert result == FAKE_ACCESS_TOKEN
 
-    def test_get_token_returns_cached_token_when_valid(self) -> None:
+    async def test_get_token_returns_cached_token_when_valid(self) -> None:
         client = make_client()
-        client._refresh_token = MagicMock()
-        client._login = MagicMock()
+        client._refresh_token = AsyncMock()
+        client._login = AsyncMock()
 
-        result = client.get_token()
+        result = await client.get_token()
 
         assert result == FAKE_ACCESS_TOKEN
-        client._refresh_token.assert_not_called()
-        client._login.assert_not_called()
+        client._refresh_token.assert_not_awaited()
+        client._login.assert_not_awaited()
 
-    def test_get_token_refreshes_when_expiring(self) -> None:
+    async def test_get_token_refreshes_when_expiring(self) -> None:
         client = make_client()
-        client._is_token_expiring = MagicMock(return_value=True)
-        client._refresh_token = MagicMock(return_value="refreshed-token")
+        client._is_token_expiring = AsyncMock(return_value=True)
+        client._refresh_token = AsyncMock(return_value="refreshed-token")
 
-        result = client.get_token()
+        result = await client.get_token()
 
-        client._refresh_token.assert_called_once()
+        client._refresh_token.assert_awaited_once()
         assert result == "refreshed-token"
 
-    def test_get_token_falls_back_to_login_on_refresh_failure(self) -> None:
+    async def test_get_token_falls_back_to_login_on_refresh_failure(self) -> None:
         client = make_client()
-        client._is_token_expiring = MagicMock(return_value=True)
-        client._refresh_token = MagicMock(side_effect=AuthenticationError("expired"))
-        client._login = MagicMock(return_value="fresh-login-token")
+        client._is_token_expiring = AsyncMock(return_value=True)
+        client._refresh_token = AsyncMock(side_effect=AuthenticationError("expired"))
+        client._login = AsyncMock(return_value="fresh-login-token")
 
-        result = client.get_token()
+        result = await client.get_token()
 
-        client._login.assert_called_once()
+        client._login.assert_awaited_once()
         assert result == "fresh-login-token"
 
-    def test_is_token_expiring_returns_true_when_no_token(self) -> None:
+    async def test_is_token_expiring_returns_true_when_no_token(self) -> None:
         client = Client("u", "p")
-        # Reset the mock so we call the real implementation
-        assert client._is_token_expiring(60) is True
+        assert await client._is_token_expiring(60) is True
 
-    def test_is_token_expiring_returns_true_on_expired_signature(self) -> None:
+    async def test_is_token_expiring_returns_true_on_expired_signature(self) -> None:
         """_is_token_expiring must return True when the JWT is already expired."""
         import jwt as jwt_lib
 
         client = Client("u", "p")
         client._token_set = {"access_token": "x"}
-        client._decode_token = MagicMock(
+        client._decode_token = AsyncMock(
             side_effect=jwt_lib.exceptions.ExpiredSignatureError
         )
-        assert client._is_token_expiring(60) is True
+        assert await client._is_token_expiring(60) is True
 
-    def test_is_token_expiring_false_for_far_future_exp(self) -> None:
+    async def test_is_token_expiring_false_for_far_future_exp(self) -> None:
         client = Client("u", "p")
         client._token_set = {"access_token": "x"}
         far_future = int(time.time()) + 9999
-        client._decode_token = MagicMock(return_value={"exp": far_future})
-        assert client._is_token_expiring(60) is False
+        client._decode_token = AsyncMock(return_value={"exp": far_future})
+        assert await client._is_token_expiring(60) is False
 
 
 # ---------------------------------------------------------------------------
@@ -139,91 +138,92 @@ class TestTokenManagement:
 class TestRefreshToken:
     """Tests for the _refresh_token private method."""
 
-    def test_raises_when_no_token_set(self) -> None:
+    async def test_raises_when_no_token_set(self) -> None:
         client = Client("u", "p")
         with pytest.raises(AuthenticationError, match="No token set"):
-            client._refresh_token()
+            await client._refresh_token()
 
-    def test_raises_when_no_refresh_token_in_set(self) -> None:
+    async def test_raises_when_no_refresh_token_in_set(self) -> None:
         client = Client("u", "p")
         client._token_set = {"access_token": "x"}
         with pytest.raises(AuthenticationError, match="No refresh token"):
-            client._refresh_token()
+            await client._refresh_token()
 
-    @resp_lib.activate
-    def test_successful_refresh(self) -> None:
-        resp_lib.add(
-            resp_lib.POST,
-            _TOKEN_URL,
-            json={
-                "access_token": "new-access-token",
-                "refresh_token": "new-refresh-token",
-            },
-            status=200,
-        )
-        client = Client("u", "p")
-        client._token_set = FAKE_TOKEN_SET.copy()
+    async def test_successful_refresh(self) -> None:
+        with aioresponses() as m:
+            m.post(
+                _TOKEN_URL,
+                payload={
+                    "access_token": "new-access-token",
+                    "refresh_token": "new-refresh-token",
+                },
+                status=200,
+            )
+            client = Client("u", "p")
+            client._token_set = FAKE_TOKEN_SET.copy()
 
-        token = client._refresh_token()
+            token = await client._refresh_token()
 
-        assert token == "new-access-token"
-        assert client._token_set["access_token"] == "new-access-token"
+            assert token == "new-access-token"
+            assert client._token_set["access_token"] == "new-access-token"
+            await client.close()
 
-    @resp_lib.activate
-    def test_raises_on_server_error_during_refresh(self) -> None:
-        resp_lib.add(resp_lib.POST, _TOKEN_URL, json={"error": "invalid_grant"}, status=400)
-        client = Client("u", "p")
-        client._token_set = FAKE_TOKEN_SET.copy()
+    async def test_raises_on_server_error_during_refresh(self) -> None:
+        with aioresponses() as m:
+            m.post(_TOKEN_URL, payload={"error": "invalid_grant"}, status=400)
+            client = Client("u", "p")
+            client._token_set = FAKE_TOKEN_SET.copy()
 
-        with pytest.raises(AuthenticationError, match="Token refresh failed"):
-            client._refresh_token()
+            with pytest.raises(AuthenticationError, match="Token refresh failed"):
+                await client._refresh_token()
+            await client.close()
 
-    @resp_lib.activate
-    def test_preserves_refresh_token_when_response_omits_it(self) -> None:
+    async def test_preserves_refresh_token_when_response_omits_it(self) -> None:
         """Regression: Auth0 responses with server-side rotation OFF omit
         the refresh_token field. Previously the SDK overwrote _token_set
         with the response, dropping the still-valid refresh_token and
         causing subsequent refreshes to fail with 'No refresh token found'.
         """
-        resp_lib.add(
-            resp_lib.POST,
-            _TOKEN_URL,
-            json={
-                "access_token": "new-access-token",
-                "id_token": "new-id-token",
-                "expires_in": 86400,
-                "token_type": "Bearer",
-                # NOTE: no refresh_token in the response
-            },
-            status=200,
-        )
-        client = Client("u", "p")
-        client._token_set = {**FAKE_TOKEN_SET, "refresh_token": "original-refresh"}
+        with aioresponses() as m:
+            m.post(
+                _TOKEN_URL,
+                payload={
+                    "access_token": "new-access-token",
+                    "id_token": "new-id-token",
+                    "expires_in": 86400,
+                    "token_type": "Bearer",
+                    # NOTE: no refresh_token in the response
+                },
+                status=200,
+            )
+            client = Client("u", "p")
+            client._token_set = {**FAKE_TOKEN_SET, "refresh_token": "original-refresh"}
 
-        client._refresh_token()
+            await client._refresh_token()
 
-        assert client._token_set["access_token"] == "new-access-token"
-        assert client._token_set["refresh_token"] == "original-refresh"
+            assert client._token_set["access_token"] == "new-access-token"
+            assert client._token_set["refresh_token"] == "original-refresh"
+            await client.close()
 
-    @resp_lib.activate
-    def test_updates_refresh_token_when_response_rotates_it(self) -> None:
+    async def test_updates_refresh_token_when_response_rotates_it(self) -> None:
         """Companion test: when Auth0 does rotate, the new refresh_token
         replaces the old one (dict merge picks the newer value)."""
-        resp_lib.add(
-            resp_lib.POST,
-            _TOKEN_URL,
-            json={
-                "access_token": "new-access-token",
-                "refresh_token": "rotated-refresh",
-            },
-            status=200,
-        )
-        client = Client("u", "p")
-        client._token_set = {**FAKE_TOKEN_SET, "refresh_token": "original-refresh"}
+        with aioresponses() as m:
+            m.post(
+                _TOKEN_URL,
+                payload={
+                    "access_token": "new-access-token",
+                    "refresh_token": "rotated-refresh",
+                },
+                status=200,
+            )
+            client = Client("u", "p")
+            client._token_set = {**FAKE_TOKEN_SET, "refresh_token": "original-refresh"}
 
-        client._refresh_token()
+            await client._refresh_token()
 
-        assert client._token_set["refresh_token"] == "rotated-refresh"
+            assert client._token_set["refresh_token"] == "rotated-refresh"
+            await client.close()
 
 
 # ---------------------------------------------------------------------------
@@ -233,50 +233,45 @@ class TestRefreshToken:
 class TestGetUser:
     """Tests for Client.get_user."""
 
-    @resp_lib.activate
-    def test_returns_user_object(self) -> None:
-        resp_lib.add(
-            resp_lib.GET,
-            "https://customer-identity.1komma5grad.com/api/v1/users/me",
-            json={"id": "user-123", "email": "user@example.com", "name": "Test User"},
-            status=200,
-        )
-        client = make_client()
-        user = client.get_user()
+    _URL = "https://customer-identity.1komma5grad.com/api/v1/users/me"
 
-        assert user.id == "user-123"
-        assert user.email == "user@example.com"
+    async def test_returns_user_object(self) -> None:
+        with aioresponses() as m:
+            m.get(
+                self._URL,
+                payload={"id": "user-123", "email": "user@example.com", "name": "Test User"},
+                status=200,
+            )
+            client = make_client()
+            user = await client.get_user()
 
-    @resp_lib.activate
-    def test_raises_on_server_error(self) -> None:
-        resp_lib.add(
-            resp_lib.GET,
-            "https://customer-identity.1komma5grad.com/api/v1/users/me",
-            json={"error": "unauthorized"},
-            status=401,
-        )
-        client = make_client()
-        with pytest.raises(RequestError, match="Failed to get user"):
-            client.get_user()
+            assert user.id == "user-123"
+            assert user.email == "user@example.com"
+            await client.close()
 
-    @resp_lib.activate
-    def test_full_profile_fields_parsed(self) -> None:
-        resp_lib.add(
-            resp_lib.GET,
-            "https://customer-identity.1komma5grad.com/api/v1/users/me",
-            json=make_user_data(),
-            status=200,
-        )
-        user = make_client().get_user()
-        assert user.first_name == "John"
-        assert user.last_name == "Doe"
-        assert user.phone is None
-        assert user.status == "ACTIVE"
-        assert user.external_id == "auth0|abcdef1234567890"
-        assert len(user.connected_systems) == 2
-        assert user.connected_systems[0].name == "My Home System"
-        assert user.connected_systems[0].address_city == "Hamburg"
-        assert user.connected_systems[1].name == "Demo System"
+    async def test_raises_on_server_error(self) -> None:
+        with aioresponses() as m:
+            m.get(self._URL, payload={"error": "unauthorized"}, status=401)
+            client = make_client()
+            with pytest.raises(RequestError, match="Failed to get user"):
+                await client.get_user()
+            await client.close()
+
+    async def test_full_profile_fields_parsed(self) -> None:
+        with aioresponses() as m:
+            m.get(self._URL, payload=make_user_data(), status=200)
+            client = make_client()
+            user = await client.get_user()
+            assert user.first_name == "John"
+            assert user.last_name == "Doe"
+            assert user.phone is None
+            assert user.status == "ACTIVE"
+            assert user.external_id == "auth0|abcdef1234567890"
+            assert len(user.connected_systems) == 2
+            assert user.connected_systems[0].name == "My Home System"
+            assert user.connected_systems[0].address_city == "Hamburg"
+            assert user.connected_systems[1].name == "Demo System"
+            await client.close()
 
 
 # ---------------------------------------------------------------------------
@@ -286,27 +281,33 @@ class TestGetUser:
 class TestGetSupportedVersions:
     _URL = "https://heartbeat.1komma5grad.com/api/v1/supported-versions"
 
-    @resp_lib.activate
-    def test_returns_versions(self) -> None:
-        resp_lib.add(resp_lib.GET, self._URL, json=make_supported_versions_data(), status=200)
-        v = make_client().get_supported_versions()
-        assert v.b2b.target_version == "1.10.0"
-        assert v.b2b.minimum_supported_version == "1.12.0"
-        assert v.b2c.target_version == "1.73.0"
-        assert v.b2c.minimum_supported_version == "1.73.0"
+    async def test_returns_versions(self) -> None:
+        with aioresponses() as m:
+            m.get(self._URL, payload=make_supported_versions_data(), status=200)
+            client = make_client()
+            v = await client.get_supported_versions()
+            assert v.b2b.target_version == "1.10.0"
+            assert v.b2b.minimum_supported_version == "1.12.0"
+            assert v.b2c.target_version == "1.73.0"
+            assert v.b2c.minimum_supported_version == "1.73.0"
+            await client.close()
 
-    @resp_lib.activate
-    def test_handles_missing_channels(self) -> None:
-        resp_lib.add(resp_lib.GET, self._URL, json={}, status=200)
-        v = make_client().get_supported_versions()
-        assert v.b2b.target_version is None
-        assert v.b2c.minimum_supported_version is None
+    async def test_handles_missing_channels(self) -> None:
+        with aioresponses() as m:
+            m.get(self._URL, payload={}, status=200)
+            client = make_client()
+            v = await client.get_supported_versions()
+            assert v.b2b.target_version is None
+            assert v.b2c.minimum_supported_version is None
+            await client.close()
 
-    @resp_lib.activate
-    def test_raises_on_server_error(self) -> None:
-        resp_lib.add(resp_lib.GET, self._URL, json={}, status=500)
-        with pytest.raises(RequestError, match="Failed to get supported versions"):
-            make_client().get_supported_versions()
+    async def test_raises_on_server_error(self) -> None:
+        with aioresponses() as m:
+            m.get(self._URL, payload={}, status=500)
+            client = make_client()
+            with pytest.raises(RequestError, match="Failed to get supported versions"):
+                await client.get_supported_versions()
+            await client.close()
 
 
 # ---------------------------------------------------------------------------
@@ -316,29 +317,25 @@ class TestGetSupportedVersions:
 class TestLogout:
     """Tests for Client.logout."""
 
-    @resp_lib.activate
-    def test_clears_token_set_on_success(self) -> None:
-        resp_lib.add(
-            resp_lib.GET,
-            "https://auth.1komma5grad.com/v2/logout",
-            status=302,
-        )
-        client = make_client()
-        client.logout()
-        assert client._token_set is None
+    _URL = "https://auth.1komma5grad.com/v2/logout?client_id=zJTm6GFGM5zHcmpl07xTsi6MP0TwRAw6"
 
-    @resp_lib.activate
-    def test_clears_token_set_even_on_server_error(self) -> None:
+    async def test_clears_token_set_on_success(self) -> None:
+        with aioresponses() as m:
+            m.get(self._URL, status=302)
+            client = make_client()
+            await client.logout()
+            assert client._token_set is None
+            await client.close()
+
+    async def test_clears_token_set_even_on_server_error(self) -> None:
         """The local token cache must be cleared regardless of server response."""
-        resp_lib.add(
-            resp_lib.GET,
-            "https://auth.1komma5grad.com/v2/logout",
-            status=500,
-        )
-        client = make_client()
-        with pytest.raises(RequestError):
-            client.logout()
-        assert client._token_set is None
+        with aioresponses() as m:
+            m.get(self._URL, status=500)
+            client = make_client()
+            with pytest.raises(RequestError):
+                await client.logout()
+            assert client._token_set is None
+            await client.close()
 
 
 # ---------------------------------------------------------------------------
@@ -387,18 +384,18 @@ class TestTokenCache:
         client = Client("u@example.com", "p", token_cache="~/cache.json")
         assert client._token_cache_path == tmp_path / "cache.json"
 
-    @resp_lib.activate
-    def test_save_writes_after_refresh_with_chmod_600(self, tmp_path: Path) -> None:
+    async def test_save_writes_after_refresh_with_chmod_600(self, tmp_path: Path) -> None:
         cache = tmp_path / "token.json"
-        resp_lib.add(
-            resp_lib.POST,
-            _TOKEN_URL,
-            json={"access_token": "fresh", "refresh_token": "fresh-refresh"},
-            status=200,
-        )
-        client = Client("u@example.com", "p", token_cache=cache)
-        client._token_set = FAKE_TOKEN_SET.copy()
-        client._refresh_token()
+        with aioresponses() as m:
+            m.post(
+                _TOKEN_URL,
+                payload={"access_token": "fresh", "refresh_token": "fresh-refresh"},
+                status=200,
+            )
+            client = Client("u@example.com", "p", token_cache=cache)
+            client._token_set = FAKE_TOKEN_SET.copy()
+            await client._refresh_token()
+            await client.close()
 
         assert cache.exists()
         data = json.loads(cache.read_text())
