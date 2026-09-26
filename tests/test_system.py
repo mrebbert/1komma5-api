@@ -419,6 +419,14 @@ class TestSetEmsMode:
 class TestGetPrices:
     """Tests for System.get_prices."""
 
+    async def test_unknown_resolution_passes_timestamps_unchanged(self) -> None:
+        """Unknown resolutions skip snapping so the API surfaces its own 422."""
+        from onekommafive.system import _align_price_range
+
+        start = datetime.datetime(2024, 6, 1, 12, 34, 56)
+        end = datetime.datetime(2024, 6, 1, 13, 45, 6)
+        assert _align_price_range(start, end, "5m") == (start, end)
+
     async def test_returns_market_prices_instance(self) -> None:
         with aioresponses() as m:
             m.get(_u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),

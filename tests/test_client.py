@@ -13,6 +13,7 @@ import pytest
 from aioresponses import aioresponses
 
 from onekommafive.client import (
+    _AUTH_BASE,
     _TOKEN_URL,
     Client,
     _generate_code_challenge,
@@ -418,3 +419,132 @@ class TestTokenCache:
         client._token_set = FAKE_TOKEN_SET.copy()
         client._save_token_cache()
         assert cache.exists()
+
+
+class TestAsyncContextManager:
+    """__aenter__ / __aexit__ let the client work with ``async with``."""
+
+    async def test_async_context_manager_returns_self_and_closes(self) -> None:
+        client = make_client()
+        async with client as ctx:
+            assert ctx is client
+        assert client._session is None or client._session.closed
+
+
+import re as _re
+
+_AUTHORIZE_URL_RE = _re.compile(rf"{_re.escape(_AUTH_BASE)}/authorize.*")
+_RESUME_URL_RE = _re.compile(rf"{_re.escape(_AUTH_BASE)}/resume.*")
+_LOGIN_HTML_WITH_STATE = (
+    '<html><form action="/u/login"><input name="state" value="STATE_VALUE"/>'
+    "</form></html>"
+)
+
+
+class TestLogin:
+    """Cover the OAuth2 PKCE flow in ``_login`` end to end."""
+
+    async def test_happy_path_stores_token_set(self) -> None:
+        client = Client("user@example.com", "password")
+        with aioresponses() as m:
+            m.get(
+                _AUTHORIZE_URL_RE,
+                status=200,
+                body=_LOGIN_HTML_WITH_STATE,
+                headers={"Content-Type": "text/html"},
+            )
+            m.post(
+                _AUTHORIZE_URL_RE,
+                status=302,
+                headers={"location": "/resume?state=STATE_VALUE"},
+            )
+            m.get(
+                _RESUME_URL_RE,
+                status=302,
+                headers={
+                    "location": "com.onekommafive://callback?code=AUTHCODE&state=STATE_VALUE",
+                },
+            )
+            m.post(
+                _TOKEN_URL,
+                payload={"access_token": "login-token", "refresh_token": "r"},
+                status=200,
+            )
+            token = await client._login()
+        assert token == "login-token"
+        assert client._token_set is not None
+        assert client._token_set["access_token"] == "login-token"
+
+    async def test_raises_when_authorize_returns_non_200(self) -> None:
+        client = Client("user@example.com", "password")
+        with aioresponses() as m:
+            m.get(_AUTHORIZE_URL_RE, status=500, body="")
+            with pytest.raises(AuthenticationError, match="Authorization"):
+                await client._login()
+
+    async def test_raises_when_authorize_html_has_no_state(self) -> None:
+        client = Client("user@example.com", "password")
+        with aioresponses() as m:
+            m.get(_AUTHORIZE_URL_RE, status=200, body="<html>no state here</html>")
+            with pytest.raises(AuthenticationError, match="state"):
+                await client._login()
+
+    async def test_raises_when_credential_post_is_not_302(self) -> None:
+        client = Client("user@example.com", "password")
+        with aioresponses() as m:
+            m.get(_AUTHORIZE_URL_RE, status=200, body=_LOGIN_HTML_WITH_STATE)
+            m.post(_AUTHORIZE_URL_RE, status=401, body="bad password")
+            with pytest.raises(AuthenticationError, match="Login failed"):
+                await client._login()
+
+    async def test_raises_when_resume_is_not_302(self) -> None:
+        client = Client("user@example.com", "password")
+        with aioresponses() as m:
+            m.get(_AUTHORIZE_URL_RE, status=200, body=_LOGIN_HTML_WITH_STATE)
+            m.post(
+                _AUTHORIZE_URL_RE,
+                status=302,
+                headers={"location": "/resume?state=STATE_VALUE"},
+            )
+            m.get(
+                _RESUME_URL_RE,
+                status=500,
+                body="resume error",
+            )
+            with pytest.raises(AuthenticationError, match="resume"):
+                await client._login()
+
+    async def test_raises_when_redirect_has_no_code(self) -> None:
+        client = Client("user@example.com", "password")
+        with aioresponses() as m:
+            m.get(_AUTHORIZE_URL_RE, status=200, body=_LOGIN_HTML_WITH_STATE)
+            m.post(
+                _AUTHORIZE_URL_RE,
+                status=302,
+                headers={"location": "/resume?state=STATE_VALUE"},
+            )
+            m.get(
+                _RESUME_URL_RE,
+                status=302,
+                headers={"location": "com.onekommafive://callback?state=STATE_VALUE"},
+            )
+            with pytest.raises(AuthenticationError, match="authorisation code"):
+                await client._login()
+
+    async def test_raises_when_token_exchange_fails(self) -> None:
+        client = Client("user@example.com", "password")
+        with aioresponses() as m:
+            m.get(_AUTHORIZE_URL_RE, status=200, body=_LOGIN_HTML_WITH_STATE)
+            m.post(
+                _AUTHORIZE_URL_RE,
+                status=302,
+                headers={"location": "/resume?state=STATE_VALUE"},
+            )
+            m.get(
+                _RESUME_URL_RE,
+                status=302,
+                headers={"location": "cb?code=AUTHCODE&state=STATE_VALUE"},
+            )
+            m.post(_TOKEN_URL, status=400, body="invalid_grant")
+            with pytest.raises(AuthenticationError, match="Token exchange"):
+                await client._login()
