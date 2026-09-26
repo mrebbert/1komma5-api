@@ -26,6 +26,7 @@ import asyncio
 import atexit
 import contextlib
 import datetime
+import logging
 import threading
 from collections.abc import Coroutine
 from pathlib import Path
@@ -76,6 +77,8 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
+_LOGGER = logging.getLogger(__name__)
+
 
 class _LoopRunner:
     """A persistent event loop running in a daemon thread.
@@ -91,6 +94,7 @@ class _LoopRunner:
             target=self._loop.run_forever, name="onekommafive-sync-loop", daemon=True,
         )
         self._thread.start()
+        _LOGGER.debug("Started sync-facade event loop thread %s", self._thread.name)
 
     def run(self, coro: Coroutine[Any, Any, T]) -> T:
         """Schedule *coro* on the internal loop and block until it completes."""
@@ -102,6 +106,7 @@ class _LoopRunner:
         self._loop.call_soon_threadsafe(self._loop.stop)
         self._thread.join()
         self._loop.close()
+        _LOGGER.debug("Stopped sync-facade event loop thread %s", self._thread.name)
 
 
 class Client:
@@ -192,7 +197,12 @@ def _close_leftover_clients() -> None:
     Iterates over a snapshot of :attr:`Client._live` so ``close()`` can
     mutate the set safely.
     """
-    for client in list(Client._live):
+    live = list(Client._live)
+    if live:
+        _LOGGER.warning(
+            "atexit: closing %d SyncClient(s) that were never explicitly closed", len(live),
+        )
+    for client in live:
         # Best-effort during shutdown; a raising close() on one client
         # must not skip the others.
         with contextlib.suppress(Exception):

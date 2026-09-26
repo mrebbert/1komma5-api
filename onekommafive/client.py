@@ -19,6 +19,7 @@ import base64
 import datetime
 import hashlib
 import json
+import logging
 import re
 import secrets
 from pathlib import Path
@@ -30,6 +31,8 @@ from jwt import PyJWKSet
 
 from .errors import AuthenticationError, RequestError
 from .models import SupportedVersions, User
+
+_LOGGER = logging.getLogger(__name__)
 
 # Aliased so the ``json`` keyword argument on :meth:`Client._request`
 # does not shadow the module inside the method body.
@@ -177,6 +180,7 @@ class Client:
             try:
                 return await self._refresh_token()
             except AuthenticationError:
+                _LOGGER.debug("Refresh failed for %s, falling back to full login", self._username)
                 return await self._login()
 
         return cast(str, self._token_set["access_token"])
@@ -358,6 +362,7 @@ class Client:
         Uses a dedicated aiohttp session for the redirect chain so cookies
         stay isolated from the shared session used for API traffic.
         """
+        _LOGGER.debug("Starting OAuth2 PKCE login for %s", self._username)
         verifier = _generate_code_verifier()
         challenge = _generate_code_challenge(verifier)
 
@@ -434,6 +439,7 @@ class Client:
                     raise AuthenticationError(f"Token exchange failed: {body}")
                 self._token_set = await token_response.json()
 
+        _LOGGER.debug("OAuth2 PKCE login succeeded for %s", self._username)
         self._save_token_cache()
         assert self._token_set is not None
         return cast(str, self._token_set["access_token"])
@@ -445,6 +451,7 @@ class Client:
         if "refresh_token" not in self._token_set:
             raise AuthenticationError("No refresh token found in token set")
 
+        _LOGGER.debug("Refreshing access token for %s", self._username)
         session = await self._ensure_session()
         async with session.post(
             _TOKEN_URL,
