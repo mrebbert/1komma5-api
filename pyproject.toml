@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "onekommafive"
-version = "1.0.2"
+version = "1.0.3"
 description = "Python API client for the 1KOMMA5° Heartbeat API"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -31,12 +31,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    # aioresponses 0.7.9 breaks on aiohttp's stream_writer signature
-    # change in 3.13+. Constrain aiohttp only in the dev extra so
-    # downstream consumers (e.g. Home Assistant, which pins
-    # aiohttp==3.13.3) can install the runtime without conflict.
-    # Drop this pin when aioresponses ships a fix.
-    "aiohttp<3.13",
+    # aioresponses (<=0.7.8) doesn't yet supply the ``stream_writer`` kwarg
+    # that aiohttp 3.14 requires in ClientResponse.__init__. We patch it
+    # in tests/conftest.py (see issue #21, upstream fix in
+    # aioresponses#288). No aiohttp version pin here so downstream
+    # (Home Assistant on 3.13.3) resolves cleanly.
     "aioresponses>=0.7",
     "mypy>=1.11",
     "pre-commit>=3.5",
