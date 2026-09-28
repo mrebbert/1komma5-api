@@ -356,6 +356,9 @@ class System:
     ) -> OptimizationEvents:
         return self._runner.run(self._async.get_optimizations(start, end))
 
+    def get_live_optimizations(self) -> OptimizationEvents:
+        return self._runner.run(self._async.get_live_optimizations())
+
     def get_self_sufficiency_events(
         self,
         start: datetime.datetime,

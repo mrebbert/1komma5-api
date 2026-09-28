@@ -93,6 +93,7 @@ SYSTEM_METHODS: list[tuple[str, tuple[Any, ...]]] = [
     ("get_monthly_trading_savings", ()),
     ("get_heartbeat_ai_summary", ("1M",)),
     ("get_optimizations", (DT_START, DT_END)),
+    ("get_live_optimizations", ()),
     ("get_self_sufficiency_events", (DT_START, DT_END)),
     ("get_site_details", ()),
     ("get_customer", ("cust-1",)),
