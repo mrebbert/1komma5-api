@@ -488,12 +488,12 @@ class System:
     # AI optimisations
     # ------------------------------------------------------------------
 
-    async def get_optimizations(
+    async def _fetch_optimizations(
         self,
         start: datetime.datetime,
         end: datetime.datetime,
+        view: str,
     ) -> OptimizationEvents:
-        """Fetch AI optimisation decisions for ``[start, end]`` (inclusive)."""
         data = await self._client._request(
             "GET",
             f"{self._client.HEARTBEAT_API}/api/v1/heartbeat-ai/optimizations",
@@ -501,10 +501,35 @@ class System:
                 "siteId": self.id(),
                 "from": start.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
                 "to": end.strftime("%Y-%m-%dT%H:%M:%S.999Z"),
+                "view": view,
             },
             error_label="Failed to get optimizations",
         )
         return OptimizationEvents.from_dict(data)
+
+    async def get_optimizations(
+        self,
+        start: datetime.datetime,
+        end: datetime.datetime,
+    ) -> OptimizationEvents:
+        """Fetch past AI optimisation decisions for ``[start, end]`` (inclusive).
+
+        Sends ``view=historic`` — the endpoint requires the parameter and
+        returns an empty ``events`` list without it. For the currently
+        running optimisation slot use :meth:`get_live_optimizations`.
+        """
+        return await self._fetch_optimizations(start, end, view="historic")
+
+    async def get_live_optimizations(self) -> OptimizationEvents:
+        """Fetch the AI optimisation slot the system is running right now.
+
+        The SPA polls this with a fixed 15-minute window ending on the
+        current instant; the wrapper mirrors that shape. Use
+        :meth:`get_optimizations` for arbitrary past ranges.
+        """
+        now = datetime.datetime.now(datetime.UTC)
+        start = now - datetime.timedelta(minutes=15)
+        return await self._fetch_optimizations(start, now, view="live")
 
     async def get_self_sufficiency_events(
         self,

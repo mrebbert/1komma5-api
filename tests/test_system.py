@@ -1869,6 +1869,7 @@ class TestGetOptimizations:
             assert f"siteId={FAKE_SYSTEM_ID}" in url
             assert "from=2026-06-01T10:15:30.000Z" in url
             assert "to=2026-06-01T12:45:15.999Z" in url
+            assert "view=historic" in url
 
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
@@ -1878,3 +1879,40 @@ class TestGetOptimizations:
                     datetime.datetime(2026, 6, 1, 10),
                     datetime.datetime(2026, 6, 1, 12),
                 )
+
+
+class TestGetLiveOptimizations:
+    async def test_returns_optimization_events(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(_OPTIMIZATIONS_URL), payload=make_optimizations_data(), status=200)
+            result = await _make_system().get_live_optimizations()
+            assert isinstance(result, OptimizationEvents)
+            assert len(result.events) == 2
+
+    async def test_uses_view_live_and_15min_window(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(_OPTIMIZATIONS_URL), payload=make_optimizations_data(), status=200)
+            before = datetime.datetime.now(datetime.UTC)
+            await _make_system().get_live_optimizations()
+            after = datetime.datetime.now(datetime.UTC)
+            url = _recorded_url(m, 0)
+            assert f"siteId={FAKE_SYSTEM_ID}" in url
+            assert "view=live" in url
+
+            from urllib.parse import parse_qs, urlparse
+
+            qs = parse_qs(urlparse(url).query)
+            start = datetime.datetime.strptime(
+                qs["from"][0], "%Y-%m-%dT%H:%M:%S.000Z"
+            ).replace(tzinfo=datetime.UTC)
+            end = datetime.datetime.strptime(
+                qs["to"][0], "%Y-%m-%dT%H:%M:%S.999Z"
+            ).replace(tzinfo=datetime.UTC)
+            assert (end - start) == datetime.timedelta(minutes=15)
+            assert before - datetime.timedelta(seconds=2) <= end <= after
+
+    async def test_raises_on_server_error(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(_OPTIMIZATIONS_URL), payload={"error": "boom"}, status=500)
+            with pytest.raises(RequestError, match="Failed to get optimizations"):
+                await _make_system().get_live_optimizations()
