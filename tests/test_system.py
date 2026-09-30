@@ -1722,6 +1722,27 @@ class TestGetHeartbeatPrices:
             assert y.peak_shaving_savings_raw is None
             assert y.swedish_costs_and_savings_raw is None
 
+    async def test_module1_fields_populated_when_provisioned(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(self._URL), payload=make_heartbeat_prices_data(), status=200)
+            r = await _make_system().get_heartbeat_prices()
+            d = r.day
+            assert d.module1_provisioning_date == "2025-09-19T00:00Z"
+            assert d.module1_active_days == 1
+            assert d.module1_savings_per_year_eur == pytest.approx(121)
+            assert d.module1_total_savings_eur == pytest.approx(0.331506849)
+
+    async def test_module1_fields_none_when_not_provisioned(self) -> None:
+        """Non-day windows in the fixture have no module1 block → all four
+        attributes must degrade to ``None`` without error."""
+        with aioresponses() as m:
+            m.get(_u(self._URL), payload=make_heartbeat_prices_data(), status=200)
+            y = (await _make_system().get_heartbeat_prices()).year
+            assert y.module1_provisioning_date is None
+            assert y.module1_active_days is None
+            assert y.module1_savings_per_year_eur is None
+            assert y.module1_total_savings_eur is None
+
     async def test_url_and_site_id_query_param(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload=make_heartbeat_prices_data(), status=200)
