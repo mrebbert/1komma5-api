@@ -310,6 +310,26 @@ class HeartbeatPriceWindow:
     swedish_costs_and_savings_raw: dict[str, Any] | None
     """Raw ``swedishCostsAndSavings`` block (usually ``None``; structure unknown when populated)."""
 
+    # "Module 1" bundle. The API exposes four fields prefixed with
+    # ``module1`` / ``grossModule1``. All four flip from ``null`` to a
+    # concrete value the moment 1KOMMA5° provisions the bundle for the
+    # account. The bundle identity is not disclosed by the API; on the
+    # first observation (2026-09-30) the provisioning date matched the
+    # smart-meter installation. Wrapper keeps the API's ``module1``
+    # nomenclature and leaves the semantic mapping to callers.
+    module1_provisioning_date: str | None
+    """ISO date the ``module1`` bundle was provisioned for the account. ``None`` until provisioning."""
+
+    module1_active_days: int | None
+    """Days ``module1`` was counted as active in the window. Currently mirrors the window length verbatim."""
+
+    module1_savings_per_year_eur: float | None
+    """Annual gross savings projected for ``module1``, in EUR. Constant across all five windows."""
+
+    module1_total_savings_eur: float | None
+    """Gross ``module1`` savings accumulated over the window, in EUR.
+    Computed by the API as ``module1_savings_per_year_eur × active_days / 365``."""
+
     raw: dict[str, Any] = field(repr=False)
 
     @classmethod
@@ -348,6 +368,12 @@ class HeartbeatPriceWindow:
             feed_in_discrepancy=data.get("feedInDiscrepancy"),
             peak_shaving_savings_raw=data.get("peakShavingSavings"),
             swedish_costs_and_savings_raw=data.get("swedishCostsAndSavings"),
+            module1_provisioning_date=data.get("module1ProvisioningDate"),
+            module1_active_days=data.get("module1ActiveDaysCount"),
+            module1_savings_per_year_eur=_amount(
+                data.get("grossModule1SavingsPerYear")
+            ),
+            module1_total_savings_eur=_amount(data.get("grossModule1TotalSavings")),
             raw=data,
         )
 

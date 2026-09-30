@@ -862,6 +862,10 @@ def _make_hb_price_window(
     hb_price: str,
     comp_tariff: str = "0.274",
     implausible: bool = False,
+    module1_provisioning_date: str | None = None,
+    module1_active_days: int | None = None,
+    module1_savings_per_year: str | None = None,
+    module1_total_savings: str | None = None,
 ) -> dict:
     """Construct one window payload for /heartbeat-prices tests."""
     return {
@@ -906,6 +910,18 @@ def _make_hb_price_window(
         "fixedCostsAndSavings": {"amount": "10.0", "currency": "EUR"},
         "peakShavingSavings": None,
         "swedishCostsAndSavings": None,
+        "module1ProvisioningDate": module1_provisioning_date,
+        "module1ActiveDaysCount": module1_active_days,
+        "grossModule1SavingsPerYear": (
+            {"amount": module1_savings_per_year, "currency": "EUR"}
+            if module1_savings_per_year is not None
+            else None
+        ),
+        "grossModule1TotalSavings": (
+            {"amount": module1_total_savings, "currency": "EUR"}
+            if module1_total_savings is not None
+            else None
+        ),
     }
 
 
@@ -1088,6 +1104,10 @@ def make_heartbeat_prices_data() -> dict:
             total_kwh=17.0,
             total_cost="0.36",
             hb_price="0.0214",
+            module1_provisioning_date="2025-09-19T00:00Z",
+            module1_active_days=1,
+            module1_savings_per_year="121",
+            module1_total_savings="0.331506849",
         ),
         "week": _make_hb_price_window(
             pv_kwh=241.9,
