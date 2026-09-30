@@ -1323,12 +1323,18 @@ Values derived from observation, not officially documented.
 | `siteId` | yes | Site UUID. |
 | `from`   | yes | ISO-8601 with milliseconds, URL-encoded. Format `%Y-%m-%dT%H:%M:%S.000Z`. |
 | `to`     | yes | ISO-8601 with milliseconds, URL-encoded. Format `%Y-%m-%dT%H:%M:%S.999Z`. |
+| `view`   | yes | `historic` for arbitrary past ranges; `live` for the current slot. Without this parameter the endpoint answers 200 with `{"events": []}` — silent failure. |
+
+**`view` values**
+
+- **`historic`** — arbitrary `from`/`to` ranges for past reviews. Returns actual events for windows in which the AI took decisions.
+- **`live`** — the currently-running optimisation slot. The SPA polls this with a **15-minute window ending on the current instant**; the same shape is expected from the caller.
 
 **Example**
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  'https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/optimizations?siteId='"$ONEKOMMAFIVE_SYSTEM"'&from=2026-03-08T00%3A00%3A00.000Z&to=2026-03-08T23%3A59%3A59.999Z' | jq .
+  'https://heartbeat.1komma5grad.com/api/v1/heartbeat-ai/optimizations?siteId='"$ONEKOMMAFIVE_SYSTEM"'&from=2026-03-08T00%3A00%3A00.000Z&to=2026-03-08T23%3A59%3A59.999Z&view=historic' | jq .
 ```
 
 **Response**
@@ -1608,7 +1614,11 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
     "energyTaxReduction":   { "amount": "0",      "currency": "EUR" },
     "fixedCostsAndSavings": { "amount": "123.30", "currency": "EUR" },
     "peakShavingSavings": null,
-    "swedishCostsAndSavings": null
+    "swedishCostsAndSavings": null,
+    "module1ProvisioningDate": "2025-09-19T00:00Z",
+    "module1ActiveDaysCount": 365,
+    "grossModule1SavingsPerYear": { "amount": "121", "currency": "EUR" },
+    "grossModule1TotalSavings":   { "amount": "121", "currency": "EUR" }
   }
 }
 ```
@@ -1639,6 +1649,17 @@ The values are presented **1:1 as displayed in the 1KOMMA5° app**. German consu
 
 - `peakShavingSavings` — presumably savings from peak-shaving strategy
 - `swedishCostsAndSavings` — Sweden-specific cost structure
+
+**`module1*` bundle** (four fields, all `null` until 1KOMMA5° provisions the bundle for the account):
+
+| Field | Meaning |
+|-------|---------|
+| `module1ProvisioningDate` | ISO date the bundle was provisioned. On the observed account this coincided with the iMSys installation. |
+| `module1ActiveDaysCount` | Days the bundle was active in the window. Mirrors the window length verbatim (1/7/30/180/365). |
+| `grossModule1SavingsPerYear` | Annual gross savings projection, in EUR. Constant across all five windows. |
+| `grossModule1TotalSavings` | Accumulated bundle savings over the window, in EUR. API-computed as `grossModule1SavingsPerYear × module1ActiveDaysCount / 365`. |
+
+Working hypothesis: the **§14a EnWG "Modul 1" flat-rate grid-fee reduction** per BNetzA BK6-22-300, granted automatically for accounts with an iMSys plus a controllable consumption device (wallbox, heat pump, PV battery) unless another module (2 or 3) was actively chosen. On the observed account the API value 121 EUR/year matches the tariff area's published brutto 144 EUR/year via `121 × 1.19` — so the API value is the **net** amount. A second data point from a different grid area would promote this from hypothesis to documented fact.
 
 ---
 

@@ -879,7 +879,7 @@
                 }
               ]
             },
-            "description": "Financial breakdown across five aggregation windows (`day`/`week`/`month`/`halfYear`/`year`): PV production, grid feed-in, grid consumption, site totals, effective per-kWh Heartbeat price. THREE DISTINCT PRICE SEMANTICS — do not confuse: (1) `pvProduction.price` is Heartbeat's internal PV valuation (≈0.05 EUR/kWh, not a market price); (2) `gridFeedIn.price` is the contractual feed-in tariff; (3) `gridConsumption.price` is the effective per-kWh grid buy price averaged over the window; `heartbeatPrice` is the site's effective all-in price; `comparisonTariff` is the grundversorger reference. VAT convention: values presented as displayed in the app — most likely gross (VAT-inclusive), matching the German consumer convention. The `vat: 0.19` field is included but its role is undocumented."
+            "description": "Financial breakdown across five aggregation windows (`day`/`week`/`month`/`halfYear`/`year`): PV production, grid feed-in, grid consumption, site totals, effective per-kWh Heartbeat price. THREE DISTINCT PRICE SEMANTICS — do not confuse: (1) `pvProduction.price` is Heartbeat's internal PV valuation (≈0.05 EUR/kWh, not a market price); (2) `gridFeedIn.price` is the contractual feed-in tariff; (3) `gridConsumption.price` is the effective per-kWh grid buy price averaged over the window; `heartbeatPrice` is the site's effective all-in price; `comparisonTariff` is the grundversorger reference. VAT convention: values presented as displayed in the app — most likely gross (VAT-inclusive), matching the German consumer convention. The `vat: 0.19` field is included but its role is undocumented. MODULE1 BUNDLE: four fields (`module1ProvisioningDate`, `module1ActiveDaysCount`, `grossModule1SavingsPerYear`, `grossModule1TotalSavings`) stay null until 1KOMMA5° provisions the bundle for the account. Working hypothesis: §14a EnWG 'Modul 1' flat-rate grid-fee reduction per BNetzA BK6-22-300, granted automatically for accounts with an iMSys plus a controllable consumption device unless another module was actively chosen; API value is net (author's account: 121 EUR net matches the tariff area's published 144 EUR brutto via ×1.19)."
           },
           "response": []
         }
@@ -889,12 +889,12 @@
       "name": "AI Optimisations",
       "item": [
         {
-          "name": "Get optimizations",
+          "name": "Get optimizations (historic)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/heartbeat-ai/optimizations?siteId={{siteId}}&from=2026-06-12T00:00:00.000Z&to=2026-06-12T23:59:59.999Z",
+              "raw": "{{baseUrl}}/api/v1/heartbeat-ai/optimizations?siteId={{siteId}}&from=2026-06-12T00:00:00.000Z&to=2026-06-12T23:59:59.999Z&view=historic",
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "heartbeat-ai", "optimizations"],
               "query": [
@@ -911,10 +911,35 @@
                   "key": "to",
                   "value": "2026-06-12T23:59:59.999Z",
                   "description": "Format: %Y-%m-%dT%H:%M:%S.999Z"
+                },
+                {
+                  "key": "view",
+                  "value": "historic",
+                  "description": "REQUIRED. `historic` for arbitrary past ranges; `live` for the current 15-min slot. Without `view` the endpoint answers 200 with `{\"events\": []}` (silent failure)."
                 }
               ]
             },
-            "description": "AI optimisation decisions for the requested window. QUIRK: `data.marketPrice` values are empirically much lower than the spot price returned by `charts/market-prices` for the same timestamp (factor ~4-5) — likely the feed-in / trader-side price rather than the grid-purchase price. Not officially documented. See also `Get self-sufficiency events` for the same shape and semantic caveat."
+            "description": "AI optimisation decisions for the requested window (past reviews). QUIRK 1: the `view` query parameter is required as of 2026-09; without it the endpoint returns an empty `events` list. QUIRK 2: `data.marketPrice` values are empirically much lower than the spot price returned by `charts/market-prices` for the same timestamp (factor ~4-5) — likely the feed-in / trader-side price rather than the grid-purchase price. Not officially documented. See also `Get self-sufficiency events` for the same shape and semantic caveat."
+          },
+          "response": []
+        },
+        {
+          "name": "Get optimizations (live)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/heartbeat-ai/optimizations?siteId={{siteId}}&from=2026-06-12T11:45:00.000Z&to=2026-06-12T12:00:00.999Z&view=live",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "heartbeat-ai", "optimizations"],
+              "query": [
+                {"key": "siteId", "value": "{{siteId}}"},
+                {"key": "from", "value": "2026-06-12T11:45:00.000Z", "description": "The SPA sends `now - 15 min`."},
+                {"key": "to", "value": "2026-06-12T12:00:00.999Z", "description": "The SPA sends the current instant."},
+                {"key": "view", "value": "live", "description": "REQUIRED. Current optimisation slot only; 15-min window ending on now."}
+              ]
+            },
+            "description": "Live variant: what the AI is deciding **right now**. The SPA polls this with a 15-min window ending on the current instant. Empty `events` list means no slot is currently active. Same payload shape as the `historic` view when populated."
           },
           "response": []
         },
