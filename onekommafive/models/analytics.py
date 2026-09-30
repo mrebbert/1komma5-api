@@ -313,21 +313,35 @@ class HeartbeatPriceWindow:
     # "Module 1" bundle. The API exposes four fields prefixed with
     # ``module1`` / ``grossModule1``. All four flip from ``null`` to a
     # concrete value the moment 1KOMMA5° provisions the bundle for the
-    # account. The bundle identity is not disclosed by the API; on the
-    # first observation (2026-09-30) the provisioning date matched the
-    # smart-meter installation. Wrapper keeps the API's ``module1``
-    # nomenclature and leaves the semantic mapping to callers.
+    # account. The wrapper keeps the API's ``module1`` nomenclature.
+    #
+    # Working hypothesis (matches the first observed account, 2026-09-30):
+    # this is the flat-rate grid-fee reduction under §14a EnWG "Modul 1"
+    # per BNetzA BK6-22-300, granted automatically for accounts with an
+    # iMSys plus a controllable consumption device (wallbox, heat pump,
+    # PV battery) unless another module (2 or 3) was actively chosen.
+    # The API value is the *net* amount; multiplying by 1.19 lands on
+    # the gross figure the grid operator publishes for the tariff area
+    # (author's account: API 121 EUR, published brutto 144 EUR).
+    # Confirmation needs a second data point (different grid area).
     module1_provisioning_date: str | None
-    """ISO date the ``module1`` bundle was provisioned for the account. ``None`` until provisioning."""
+    """ISO date the ``module1`` bundle was provisioned. ``None`` until provisioning.
+
+    Coincides with the iMSys installation date on the first observed account,
+    matching §14a EnWG "Modul 1" (see class-level note)."""
 
     module1_active_days: int | None
-    """Days ``module1`` was counted as active in the window. Currently mirrors the window length verbatim."""
+    """Days ``module1`` was counted as active in the window. Currently mirrors
+    the window length verbatim (1/7/30/180/365)."""
 
     module1_savings_per_year_eur: float | None
-    """Annual gross savings projected for ``module1``, in EUR. Constant across all five windows."""
+    """Annual net savings projected for ``module1``, in EUR. Constant across
+    all five windows. Working hypothesis: net §14a Modul 1 flat-rate
+    reduction; the tariff area's published brutto value is roughly 1.19×
+    this figure."""
 
     module1_total_savings_eur: float | None
-    """Gross ``module1`` savings accumulated over the window, in EUR.
+    """``module1`` savings accumulated over the window, in EUR.
     Computed by the API as ``module1_savings_per_year_eur × active_days / 365``."""
 
     raw: dict[str, Any] = field(repr=False)
