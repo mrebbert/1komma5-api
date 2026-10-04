@@ -523,6 +523,20 @@
             "description": "All customer contracts. Typical composition: DYNAMIC_PULSE (electricity), SMART_METER (24-mo notice), HEARTBEAT (0 EUR), ENERGY_TRADER (14.99 EUR/mo). Response is PII-heavy — includes `paymentIban`, delivery/billing addresses, CRM identifiers (Zoho/Lumenaza), a `statusHistory` block, and an embedded `metadata.payload` with the full Zoho booking record. The Python client (`System.get_subscriptions`) maps only the universal contract metadata (type/status/price/dates/notice/renewal/paymentMethod-enum/terms + DYNAMIC_PULSE contract-identity fields) and keeps all PII in `.raw`."
           },
           "response": []
+        },
+        {
+          "name": "Get subscription eligibility",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/subscription-eligibility",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sites", "{{siteId}}", "subscription-eligibility"]
+            },
+            "description": "Which 1KOMMA5°Care add-on products the backend currently offers to the account. Returns a `subscriptions` list of {type, eligible, reason} entries — one per upsell product (observed: PV_SERVICE, MAINTENANCE_HEAT_PUMP). Eligibility is gated by a per-sales-order `eligibility1K5Care` tag maintained in CRM; `reason` carries the backend's explanation when `eligible` is false. Distinct from `Get subscriptions` (active contracts). Lives on the `heartbeat` host — note the different base URL."
+          },
+          "response": []
         }
       ]
     },

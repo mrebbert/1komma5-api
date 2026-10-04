@@ -16,6 +16,7 @@ Requests unless noted send `Authorization: Bearer $BEARER_TOKEN`. All personal i
   - [Customer record (v3)](#customer-record-v3)
   - [Price guarantee](#price-guarantee)
   - [Subscriptions](#subscriptions)
+  - [Subscription eligibility](#subscription-eligibility)
 - [System and site](#system-and-site)
   - [List systems](#list-systems)
   - [Single system (v4)](#single-system-v4)
@@ -342,6 +343,45 @@ Other contract types share the universal fields (`id`, `type`, `status`, `price`
 - **PII handling**: the response mixes universal contract metadata with heavy PII — `paymentIban`, complete delivery/billing addresses, CRM identifiers (`crmDealId`, `zohoReferenceId`, `lumenazaContractId`, `lumenazaConsumerId`, `crmInstallationId`), a `statusHistory` block, and an embedded `metadata.payload` with the full Zoho booking record (IBAN again, former supplier, feature flags, hardware selection). Callers building dashboards should stick to the universal fields; PII should never be logged or shared.
 - **SMART_METER duplication**: the same meter details are also served by `/sites/{id}/smart-meter`. Prefer that endpoint if you only need meter data.
 - **Invoices endpoint** (`GET /api/v1/customers/{cid}/subscriptions/{sub_id}/invoices`) exists but returns an empty list on accounts without generated invoices. Not documented here until a populated response is available for reference.
+
+---
+
+### Subscription eligibility
+
+`GET /api/v1/sites/$ONEKOMMAFIVE_SYSTEM/subscription-eligibility` — which 1KOMMA5°Care add-on products the backend currently offers to the account. Distinct from [Subscriptions](#subscriptions): that one lists contracts the customer **already holds**, this one lists upsell candidates with a per-product eligibility flag.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/subscription-eligibility" | jq .
+```
+
+**Response**
+
+```json
+{
+  "subscriptions": [
+    {
+      "type": "PV_SERVICE",
+      "eligible": false,
+      "reason": "The eligibility1K5Care tag for 1KOMMA5° PV & Battery Service subscription is not listed on any sales order. ..."
+    },
+    {
+      "type": "MAINTENANCE_HEAT_PUMP",
+      "eligible": false,
+      "reason": "The eligibility1K5Care tag for 1KOMMA5° Heatpump Maintenance subscription is not listed on any sales order. ..."
+    }
+  ]
+}
+```
+
+**Notes**
+
+- Lives on the `heartbeat` host (unlike the sibling `subscriptions` endpoint, which is on `customer-identity`).
+- Observed `type` values (not exhaustive): `PV_SERVICE`, `MAINTENANCE_HEAT_PUMP`. New types will appear as 1KOMMA5° ships more add-ons.
+- Eligibility is gated by a per-sales-order `eligibility1K5Care` tag maintained in 1KOMMA5°'s CRM; the `reason` string carries the backend's own explanation when `eligible` is `false`.
+- The response has no pagination wrapper — just the `subscriptions` list.
 
 ---
 
