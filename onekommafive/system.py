@@ -29,6 +29,7 @@ from .models import (
     SiteDetails,
     SiteStatus,
     SmartMeter,
+    SubscriptionEligibilityList,
     SubscriptionsList,
     SystemDetails,
     SystemInfo,
@@ -585,6 +586,23 @@ class System:
             error_label="Failed to get customer",
         )
         return Customer.from_dict(data)
+
+    async def get_subscription_eligibility(self) -> SubscriptionEligibilityList:
+        """Fetch add-on subscription eligibility for the site.
+
+        ``GET /api/v1/sites/{id}/subscription-eligibility``. Returns one
+        entry per 1KOMMA5°Care add-on (``PV_SERVICE``,
+        ``MAINTENANCE_HEAT_PUMP``, …) with the ``eligible`` flag plus a
+        human-readable ``reason`` when ineligibility is CRM-gated. Not
+        the same as :meth:`get_subscriptions`, which lists already-active
+        contracts.
+        """
+        data = await self._client._request(
+            "GET",
+            self._sites_url("v1", "subscription-eligibility"),
+            error_label="Failed to get subscription eligibility",
+        )
+        return SubscriptionEligibilityList.from_dict(data)
 
     async def get_subscriptions(self, customer_id: str) -> SubscriptionsList:
         """Fetch all customer subscriptions / contracts.

@@ -28,7 +28,12 @@ from .notifications import (
 from .optimizations import OptimizationEvent, OptimizationEvents, SelfSufficiencyEvents
 from .prices import ComparisonPrice, MarketPrices, PriceCustomizations, PriceGuarantee
 from .sites import Asset, SiteDetails, SiteStatus, SmartMeter
-from .subscriptions import Subscription, SubscriptionsList
+from .subscriptions import (
+    Subscription,
+    SubscriptionEligibility,
+    SubscriptionEligibilityList,
+    SubscriptionsList,
+)
 from .system import DeviceGateway, SystemCustomer, SystemDetails, SystemInfo
 from .user import ConnectedSystem, User
 from .weather import WEATHER_SYMBOLS, WeatherData, WeatherDay, WeatherSlot
@@ -67,6 +72,8 @@ __all__ = [
     "SiteStatus",
     "SmartMeter",
     "Subscription",
+    "SubscriptionEligibilityList",
+    "SubscriptionEligibility",
     "SubscriptionsList",
     "SupportedVersions",
     "SystemCustomer",

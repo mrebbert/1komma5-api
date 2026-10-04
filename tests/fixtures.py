@@ -1347,3 +1347,25 @@ def make_ems_settings_data(override: bool = False) -> dict:
         },
         "timeOfUseEnabled": True,
     }
+
+
+def make_subscription_eligibility_data() -> dict:
+    """Return a /sites/{id}/subscription-eligibility v1 response payload.
+
+    Mirrors the shape observed on 2026-10-04 (two add-on products,
+    both ineligible via the CRM gating tag).
+    """
+    return {
+        "subscriptions": [
+            {
+                "type": "PV_SERVICE",
+                "eligible": False,
+                "reason": "The eligibility1K5Care tag for PV & Battery Service is not listed on any sales order.",
+            },
+            {
+                "type": "MAINTENANCE_HEAT_PUMP",
+                "eligible": True,
+                "reason": None,
+            },
+        ],
+    }
