@@ -168,3 +168,65 @@ class SubscriptionsList:
             total_pages=int(data.get("totalPages", 0)),
             raw=data,
         )
+
+
+@dataclass
+class SubscriptionEligibility:
+    """Whether the account qualifies for one 1KOMMA5°Care add-on subscription.
+
+    One entry per upsell product offered by the backend. Eligibility is
+    gated by a per-sales-order ``eligibility1K5Care`` tag maintained in
+    1KOMMA5°'s CRM; the ``reason`` carries the backend's explanation
+    when ``eligible`` is ``False``.
+    """
+
+    type: str
+    """Add-on product identifier. Observed values: ``PV_SERVICE``,
+    ``MAINTENANCE_HEAT_PUMP``. New types may appear as 1KOMMA5° ships
+    more add-ons; the field is a free-form string."""
+
+    eligible: bool
+    """``True`` when the account may purchase this add-on."""
+
+    reason: str | None
+    """Backend-provided explanation. Typically only populated when
+    ``eligible`` is ``False`` (a CRM-side gating condition)."""
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SubscriptionEligibility":
+        return cls(
+            type=str(data.get("type", "")),
+            eligible=bool(data.get("eligible", False)),
+            reason=data.get("reason"),
+            raw=data,
+        )
+
+
+@dataclass
+class SubscriptionEligibilities:
+    """Add-on-subscription eligibility list for a site.
+
+    Returned by :meth:`~onekommafive.System.get_subscription_eligibility`
+    (``GET /api/v1/sites/{id}/subscription-eligibility``).
+    """
+
+    subscriptions: list[SubscriptionEligibility]
+    """One entry per add-on product the backend currently offers."""
+
+    raw: dict[str, Any] = field(repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SubscriptionEligibilities":
+        return cls(
+            subscriptions=[
+                SubscriptionEligibility.from_dict(s)
+                for s in data.get("subscriptions") or []
+            ],
+            raw=data,
+        )
+
+    def eligible_types(self) -> set[str]:
+        """Return the ``type`` codes for which the account is eligible."""
+        return {s.type for s in self.subscriptions if s.eligible}

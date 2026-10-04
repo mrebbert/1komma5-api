@@ -66,6 +66,7 @@ if TYPE_CHECKING:
         SiteDetails,
         SiteStatus,
         SmartMeter,
+        SubscriptionEligibilities,
         SubscriptionsList,
         SupportedVersions,
         SystemDetails,
@@ -371,6 +372,9 @@ class System:
 
     def get_customer(self, customer_id: str) -> Customer:
         return self._runner.run(self._async.get_customer(customer_id))
+
+    def get_subscription_eligibility(self) -> SubscriptionEligibilities:
+        return self._runner.run(self._async.get_subscription_eligibility())
 
     def get_subscriptions(self, customer_id: str) -> SubscriptionsList:
         return self._runner.run(self._async.get_subscriptions(customer_id))

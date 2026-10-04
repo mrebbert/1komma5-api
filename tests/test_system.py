@@ -35,6 +35,7 @@ from onekommafive.models import (
     SiteDetails,
     SiteStatus,
     SmartMeter,
+    SubscriptionEligibilities,
     SubscriptionsList,
     SystemDetails,
     SystemInfo,
@@ -71,6 +72,7 @@ from tests.fixtures import (
     make_site_details_data,
     make_smart_meter_data,
     make_status_and_assets_data,
+    make_subscription_eligibility_data,
     make_subscriptions_data,
     make_system_data,
     make_system_details_data,
@@ -1369,6 +1371,59 @@ class TestGetCustomer:
 # ---------------------------------------------------------------------------
 # Subscriptions (customer-identity v1)
 # ---------------------------------------------------------------------------
+
+
+class TestGetSubscriptionEligibility:
+    _URL = f"{_SITE_BASE_V1}/subscription-eligibility"
+
+    async def test_returns_eligibilities(self) -> None:
+        with aioresponses() as m:
+            m.get(
+                _u(self._URL),
+                payload=make_subscription_eligibility_data(),
+                status=200,
+            )
+            result = await _make_system().get_subscription_eligibility()
+            assert isinstance(result, SubscriptionEligibilities)
+            assert len(result.subscriptions) == 2
+            types = {s.type for s in result.subscriptions}
+            assert types == {"PV_SERVICE", "MAINTENANCE_HEAT_PUMP"}
+
+    async def test_eligible_types_helper(self) -> None:
+        with aioresponses() as m:
+            m.get(
+                _u(self._URL),
+                payload=make_subscription_eligibility_data(),
+                status=200,
+            )
+            result = await _make_system().get_subscription_eligibility()
+            assert result.eligible_types() == {"MAINTENANCE_HEAT_PUMP"}
+
+    async def test_reason_passthrough_and_null(self) -> None:
+        with aioresponses() as m:
+            m.get(
+                _u(self._URL),
+                payload=make_subscription_eligibility_data(),
+                status=200,
+            )
+            by_type = {
+                s.type: s
+                for s in (
+                    await _make_system().get_subscription_eligibility()
+                ).subscriptions
+            }
+            assert by_type["PV_SERVICE"].eligible is False
+            assert "eligibility1K5Care" in by_type["PV_SERVICE"].reason
+            assert by_type["MAINTENANCE_HEAT_PUMP"].eligible is True
+            assert by_type["MAINTENANCE_HEAT_PUMP"].reason is None
+
+    async def test_raises_on_server_error(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(self._URL), payload={}, status=500)
+            with pytest.raises(
+                RequestError, match="Failed to get subscription eligibility"
+            ):
+                await _make_system().get_subscription_eligibility()
 
 
 class TestGetSubscriptions:
