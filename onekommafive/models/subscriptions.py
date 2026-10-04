@@ -197,7 +197,7 @@ class SubscriptionEligibility:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SubscriptionEligibility":
         return cls(
-            type=str(data.get("type", "")),
+            type=data.get("type", ""),
             eligible=bool(data.get("eligible", False)),
             reason=data.get("reason"),
             raw=data,
@@ -205,7 +205,7 @@ class SubscriptionEligibility:
 
 
 @dataclass
-class SubscriptionEligibilities:
+class SubscriptionEligibilityList:
     """Add-on-subscription eligibility list for a site.
 
     Returned by :meth:`~onekommafive.System.get_subscription_eligibility`
@@ -218,7 +218,7 @@ class SubscriptionEligibilities:
     raw: dict[str, Any] = field(repr=False)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SubscriptionEligibilities":
+    def from_dict(cls, data: dict[str, Any]) -> "SubscriptionEligibilityList":
         return cls(
             subscriptions=[
                 SubscriptionEligibility.from_dict(s)

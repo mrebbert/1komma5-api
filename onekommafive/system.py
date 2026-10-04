@@ -29,7 +29,7 @@ from .models import (
     SiteDetails,
     SiteStatus,
     SmartMeter,
-    SubscriptionEligibilities,
+    SubscriptionEligibilityList,
     SubscriptionsList,
     SystemDetails,
     SystemInfo,
@@ -587,7 +587,7 @@ class System:
         )
         return Customer.from_dict(data)
 
-    async def get_subscription_eligibility(self) -> SubscriptionEligibilities:
+    async def get_subscription_eligibility(self) -> SubscriptionEligibilityList:
         """Fetch add-on subscription eligibility for the site.
 
         ``GET /api/v1/sites/{id}/subscription-eligibility``. Returns one
@@ -602,7 +602,7 @@ class System:
             self._sites_url("v1", "subscription-eligibility"),
             error_label="Failed to get subscription eligibility",
         )
-        return SubscriptionEligibilities.from_dict(data)
+        return SubscriptionEligibilityList.from_dict(data)
 
     async def get_subscriptions(self, customer_id: str) -> SubscriptionsList:
         """Fetch all customer subscriptions / contracts.

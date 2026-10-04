@@ -30,8 +30,8 @@ from .prices import ComparisonPrice, MarketPrices, PriceCustomizations, PriceGua
 from .sites import Asset, SiteDetails, SiteStatus, SmartMeter
 from .subscriptions import (
     Subscription,
-    SubscriptionEligibilities,
     SubscriptionEligibility,
+    SubscriptionEligibilityList,
     SubscriptionsList,
 )
 from .system import DeviceGateway, SystemCustomer, SystemDetails, SystemInfo
@@ -72,7 +72,7 @@ __all__ = [
     "SiteStatus",
     "SmartMeter",
     "Subscription",
-    "SubscriptionEligibilities",
+    "SubscriptionEligibilityList",
     "SubscriptionEligibility",
     "SubscriptionsList",
     "SupportedVersions",

@@ -35,7 +35,7 @@ from onekommafive.models import (
     SiteDetails,
     SiteStatus,
     SmartMeter,
-    SubscriptionEligibilities,
+    SubscriptionEligibilityList,
     SubscriptionsList,
     SystemDetails,
     SystemInfo,
@@ -1384,7 +1384,7 @@ class TestGetSubscriptionEligibility:
                 status=200,
             )
             result = await _make_system().get_subscription_eligibility()
-            assert isinstance(result, SubscriptionEligibilities)
+            assert isinstance(result, SubscriptionEligibilityList)
             assert len(result.subscriptions) == 2
             types = {s.type for s in result.subscriptions}
             assert types == {"PV_SERVICE", "MAINTENANCE_HEAT_PUMP"}
