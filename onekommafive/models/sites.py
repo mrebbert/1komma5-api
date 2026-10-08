@@ -181,6 +181,10 @@ class SiteDetails:
     technical_contact_id: str | None
     technical_contact_name: str | None
 
+    external_partner_id: str | None
+    """UUID of an external partner (e.g. reseller, EVU) the site is assigned
+    to. ``None`` for consumer-direct accounts."""
+
     earliest_measurement: str | None
     """ISO-8601 date (``YYYY-MM-DD``) of the earliest available measurement.
     Matches :attr:`SystemDetails.earliest_measurement`."""
@@ -255,6 +259,7 @@ class SiteDetails:
             customer=SystemCustomer.from_dict(customer_data) if customer_data else None,
             technical_contact_id=data.get("technicalContactId"),
             technical_contact_name=data.get("technicalContactName"),
+            external_partner_id=data.get("externalPartnerId"),
             earliest_measurement=data.get("earliestMeasurement"),
             energy_trader_active=(
                 bool(data["energyTraderActive"])

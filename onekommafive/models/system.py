@@ -256,6 +256,10 @@ class SystemDetails:
     customer: SystemCustomer | None
     """Customer contact details (id, name, email)."""
 
+    external_partner_id: str | None
+    """UUID of an external partner (e.g. reseller, EVU) the system is assigned
+    to. ``None`` for consumer-direct accounts."""
+
     dynamic_pulse_compatible: bool
     """Whether the system supports Dynamic Pulse (dynamic tariff optimisation)."""
 
@@ -314,6 +318,7 @@ class SystemDetails:
             technical_contact_name=data.get("technicalContactName"),
             customer_id=data.get("customerId"),
             customer=SystemCustomer.from_dict(customer_raw) if customer_raw else None,
+            external_partner_id=data.get("externalPartnerId"),
             dynamic_pulse_compatible=bool(data.get("dynamicPulseCompatible", False)),
             energy_trader_active=_opt_bool(data, "energyTraderActive"),
             electricity_contract_active=_opt_bool(data, "electricityContractActive"),

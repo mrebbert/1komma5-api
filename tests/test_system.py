@@ -191,6 +191,7 @@ class TestGetSystemDetails:
             assert details.customer.first_name == "John"
             assert details.energy_trader_active is True
             assert details.electricity_contract_active is True
+            assert details.external_partner_id is None
             assert details.has_third_party_smart_meter is None  # API returned null
             assert details.earliest_measurement == "2025-01-24"
             assert len(details.device_gateways) == 1
@@ -214,6 +215,7 @@ class TestGetSystemDetails:
             assert details.device_gateways == []
             assert details.energy_trader_active is None
             assert details.electricity_contract_active is None
+            assert details.external_partner_id is None
             assert details.has_third_party_smart_meter is None
             assert details.dynamic_pulse_compatible is False
 
@@ -1310,6 +1312,7 @@ class TestGetSiteDetails:
             assert result.energy_trader_active is True
             assert result.electricity_contract_active is True
             assert result.impacted_by_enwg is False
+            assert result.external_partner_id is None
             assert result.emp_reference_id == "emp-ref-0001"
             assert result.customer is not None
             assert result.customer.first_name == "John"
@@ -1329,6 +1332,7 @@ class TestGetSiteDetails:
             assert result.energy_trader_active is None
             assert result.electricity_contract_active is None
             assert result.impacted_by_enwg is None
+            assert result.external_partner_id is None
             assert result.earliest_measurement is None
             assert result.emp_reference_id is None
             assert result.grid_connection_point_phases is None
