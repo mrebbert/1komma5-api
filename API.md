@@ -1663,7 +1663,12 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
     "module1ProvisioningDate": "2025-09-19T00:00Z",
     "module1ActiveDaysCount": 365,
     "grossModule1SavingsPerYear": { "amount": "121", "currency": "EUR" },
-    "grossModule1TotalSavings":   { "amount": "121", "currency": "EUR" }
+    "grossModule1TotalSavings":   { "amount": "121", "currency": "EUR" },
+    "comparisonGridFee":        { "amount": "0.0989", "currency": "EUR" },
+    "comparisonGridFeesTotal":  { "amount": "257.04", "currency": "EUR" },
+    "variableGridFeesTotal":    { "amount": "225.12", "currency": "EUR" },
+    "module3SavingsTotal":      { "amount": "31.92",  "currency": "EUR" },
+    "enwg14aTotalSavings":      { "amount": "152.92", "currency": "EUR" }
   }
 }
 ```
@@ -1705,6 +1710,16 @@ The values are presented **1:1 as displayed in the 1KOMMA5° app**. German consu
 | `grossModule1TotalSavings` | Accumulated bundle savings over the window, in EUR. API-computed as `grossModule1SavingsPerYear × module1ActiveDaysCount / 365`. |
 
 Working hypothesis: the **§14a EnWG "Modul 1" flat-rate grid-fee reduction** per BNetzA BK6-22-300, granted automatically for accounts with an iMSys plus a controllable consumption device (wallbox, heat pump, PV battery) unless another module (2 or 3) was actively chosen. On the observed account the API value 121 EUR/year matches the tariff area's published brutto 144 EUR/year via `121 × 1.19` — so the API value is the **net** amount. A second data point from a different grid area would promote this from hypothesis to documented fact.
+
+**§14a EnWG "Modul 3" bundle** (five fields, all `null` until the site opts into Modul 3 — variable Netzentgelte HT/NT per BK6-22-300, added by the backend in 2026-10):
+
+| Field | Meaning |
+|-------|---------|
+| `comparisonGridFee` | Flat grid-fee reference tariff used as the Modul-3 comparison baseline, in EUR/kWh. |
+| `comparisonGridFeesTotal` | Grid fees the site would have paid in the window under the flat reference tariff, in EUR. |
+| `variableGridFeesTotal` | Grid fees actually incurred in the window under the HT/NT variable tariff, in EUR. |
+| `module3SavingsTotal` | Window savings from the variable tariff, in EUR; equals `comparisonGridFeesTotal − variableGridFeesTotal`. |
+| `enwg14aTotalSavings` | Combined §14a EnWG savings in the window (Modul 1 flat-rate reduction plus Modul 3 time-variable grid-fee savings), in EUR. |
 
 ---
 
