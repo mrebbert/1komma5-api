@@ -1802,6 +1802,45 @@ class TestGetHeartbeatPrices:
             assert y.module1_savings_per_year_eur is None
             assert y.module1_total_savings_eur is None
 
+    async def test_module3_fields_populated_on_participating_window(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(self._URL), payload=make_heartbeat_prices_data(), status=200)
+            r = await _make_system().get_heartbeat_prices()
+            mo = r.month
+            assert mo.comparison_grid_fee_eur_per_kwh == pytest.approx(0.0989)
+            assert mo.comparison_grid_fees_total_eur == pytest.approx(21.42)
+            assert mo.variable_grid_fees_total_eur == pytest.approx(18.76)
+            assert mo.enwg14a_total_savings_eur == pytest.approx(12.60)
+            assert mo.module3_total_savings_eur == pytest.approx(2.66)
+
+    async def test_module3_fields_none_without_participation(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(self._URL), payload=make_heartbeat_prices_data(), status=200)
+            y = (await _make_system().get_heartbeat_prices()).year
+            assert y.comparison_grid_fee_eur_per_kwh is None
+            assert y.comparison_grid_fees_total_eur is None
+            assert y.variable_grid_fees_total_eur is None
+            assert y.enwg14a_total_savings_eur is None
+            assert y.module3_total_savings_eur is None
+
+    async def test_module3_savings_convenience_returns_window_value(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(self._URL), payload=make_heartbeat_prices_data(), status=200)
+            r = await _make_system().get_heartbeat_prices()
+            assert r.module3_savings() == pytest.approx(2.66)  # default: month
+            assert r.module3_savings("month") == pytest.approx(2.66)
+            assert r.module3_savings("year") is None
+
+    def test_module3_savings_rejects_unknown_window(self) -> None:
+        prices = HeartbeatPrices.from_dict(make_heartbeat_prices_data())
+        with pytest.raises(ValueError, match="Unknown window 'quarter'"):
+            prices.module3_savings("quarter")
+
+    def test_module3_savings_rejects_internal_attribute(self) -> None:
+        prices = HeartbeatPrices.from_dict(make_heartbeat_prices_data())
+        with pytest.raises(ValueError, match="Unknown window 'raw'"):
+            prices.module3_savings("raw")
+
     async def test_url_and_site_id_query_param(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload=make_heartbeat_prices_data(), status=200)
