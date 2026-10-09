@@ -221,7 +221,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "systems", "{{systemId}}", "details"]
             },
-            "description": "Extended metadata: `empType`, technical contact, embedded customer, smart-meter flags, `earliestMeasurement`, `deviceGateways[]`. Also brings back v2-only `energyTraderActive` / `electricityContractActive`."
+            "description": "Extended metadata: `empType`, technical contact, embedded customer, smart-meter flags, `earliestMeasurement`, `deviceGateways[]`, `externalPartnerId` (external partner UUID; null for consumer-direct accounts). Also brings back v2-only `energyTraderActive` / `electricityContractActive`."
           },
           "response": []
         },
@@ -292,7 +292,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v3", "sites", "{{siteId}}", "details"]
             },
-            "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), `empReferenceId`, `impactedByEnwg` (EnWG regulatory flag — likely §14a controllable-consumption, but not documented by the API), `gridConnectionPointPhases`, `maxCurrentPerPhaseAmpere`, embedded `customer` block, and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those."
+            "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), `empReferenceId`, `impactedByEnwg` (EnWG regulatory flag — likely §14a controllable-consumption, but not documented by the API), `externalPartnerId` (external partner UUID; null for consumer-direct accounts), `gridConnectionPointPhases`, `maxCurrentPerPhaseAmpere`, embedded `customer` block, and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those."
           },
           "response": []
         }

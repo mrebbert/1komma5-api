@@ -416,6 +416,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
       "addressCountry": "DE",
       "addressLongitude": 0.0,
       "addressLatitude": 0.0,
+      "externalPartnerId": null,
       "dynamicPulseCompatible": true,
       "deviceGateways": [
         {
@@ -489,6 +490,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
     "lastName": "Mustermann",
     "email": "user@example.com"
   },
+  "externalPartnerId": null,
   "dynamicPulseCompatible": true,
   "energyTraderActive": true,
   "electricityContractActive": true,
@@ -513,6 +515,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 **Notes**
 
 - `empType` describes the energy-management provider; so far only `"GRIDX"` has been observed.
+- `externalPartnerId` — UUID of an external partner (e.g. reseller, EVU) the system is assigned to; `null` for consumer-direct accounts. Added by the backend in 2026-10 and now returned on all system/site details endpoints.
 - `gridxStartCode` / `serialNumber` on `deviceGateways` are hardware pairing tokens — **sensitive**, do not log or share.
 
 ---
@@ -567,6 +570,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   },
   "technicalContactId": "<uuid>",
   "technicalContactName": "1KOMMA5° <Region>",
+  "externalPartnerId": null,
   "dynamicPulseCompatible": true,
   "earliestMeasurement": "YYYY-MM-DD",
   "energyTraderActive": true,
@@ -586,6 +590,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 - `impactedByEnwg` — German regulatory flag related to the Energiewirtschaftsgesetz (EnWG). **Exact meaning not documented** by the API. Most plausible interpretation: **§14a EnWG** (since 2024-01-01, DSOs may reduce controllable consumption devices — heat pump / wallbox / battery storage / AC ≥ 4.2 kW — during grid stress, in exchange for reduced grid fees). A `true` value would presumably mean the site has at least one such device registered under §14a.
 - `gridConnectionPointPhases` / `maxCurrentPerPhaseAmpere` — grid-connection capacity (phase count; max amperes per phase). Both can be `null`.
 - `customer` is the short embedded block; for the full record see [Customer record (v3)](#customer-record-v3).
+- `externalPartnerId` — see the note on [System details (v1, extended)](#system-details-v1-extended); same field, same semantics.
 - `earliestMeasurement`, `energyTraderActive`, `electricityContractActive` are also on `/systems/{id}/details` — redundant here but included in one response.
 - Does **not** carry `deviceGateways` — use `/systems/{id}/details` for those.
 - **v2 and v3 return byte-identical payloads** (verified 2026-08-02) — no reason to switch.
