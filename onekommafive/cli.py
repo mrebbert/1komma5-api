@@ -724,6 +724,25 @@ def cmd_heartbeat_prices(args: argparse.Namespace) -> None:
         cells = "".join(f"{_fmt(getattr(w, attr), spec):>11}" for _, w in windows)
         print(f"{label:<28}{cells}")
 
+    # Optional §14a EnWG section (Modul 1 flat-rate + Modul 3 variable
+    # Netzentgelte). Shown only when any window carries a figure, so
+    # accounts outside §14a keep the plain table.
+    enwg_rows = [
+        ("Modul 1 total savings (€)", "module1_total_savings_eur", ",.2f"),
+        ("Modul 3 total savings (€)", "module3_total_savings_eur", ",.2f"),
+        ("§14a combined savings (€)", "enwg14a_total_savings_eur", ",.2f"),
+        ("Comparison grid fee (€/kWh)", "comparison_grid_fee_eur_per_kwh", ".4f"),
+    ]
+    if any(
+        getattr(w, attr) is not None for _, w in windows for _, attr, _ in enwg_rows
+    ):
+        print()
+        print("§14a EnWG")
+        print("-" * (28 + 11 * len(windows)))
+        for label, attr, spec in enwg_rows:
+            cells = "".join(f"{_fmt(getattr(w, attr), spec):>11}" for _, w in windows)
+            print(f"{label:<28}{cells}")
+
     # Implausibility flags
     flagged = [
         name for name, w in windows if w.should_report_implausible_pv_and_feed_in

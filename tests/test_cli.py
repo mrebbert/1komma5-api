@@ -898,6 +898,45 @@ class TestCmdHeartbeatPrices:
         _run("heartbeat-prices")
         assert "Implausible" not in capsys.readouterr().out
 
+    def test_prints_enwg14a_section_when_populated(self, mock_system, capsys) -> None:
+        # Fixture: Modul 1 is set on `day`, Modul 3 on `month`.
+        mock_system.get_heartbeat_prices.return_value = HeartbeatPrices.from_dict(
+            make_heartbeat_prices_data()
+        )
+        _run("heartbeat-prices")
+        out = capsys.readouterr().out
+        assert "§14a EnWG" in out
+        assert "Modul 1 total savings" in out
+        assert "Modul 3 total savings" in out
+        assert "§14a combined savings" in out
+        assert "Comparison grid fee" in out
+        assert "2.66" in out  # month module3_total_savings_eur
+        assert "12.60" in out  # month enwg14a_total_savings_eur
+        assert "0.0989" in out  # month comparison_grid_fee_eur_per_kwh
+
+    def test_omits_enwg14a_section_for_non_participating_account(
+        self, mock_system, capsys
+    ) -> None:
+        # Strip every §14a-related field so no window has a figure.
+        data = make_heartbeat_prices_data()
+        enwg_keys = (
+            "module1ProvisioningDate",
+            "module1ActiveDaysCount",
+            "grossModule1SavingsPerYear",
+            "grossModule1TotalSavings",
+            "comparisonGridFee",
+            "comparisonGridFeesTotal",
+            "variableGridFeesTotal",
+            "module3SavingsTotal",
+            "enwg14aTotalSavings",
+        )
+        for w in data.values():
+            for key in enwg_keys:
+                w[key] = None
+        mock_system.get_heartbeat_prices.return_value = HeartbeatPrices.from_dict(data)
+        _run("heartbeat-prices")
+        assert "§14a EnWG" not in capsys.readouterr().out
+
 
 # ---------------------------------------------------------------------------
 # details
