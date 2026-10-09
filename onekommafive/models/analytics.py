@@ -344,6 +344,35 @@ class HeartbeatPriceWindow:
     """``module1`` savings accumulated over the window, in EUR.
     Computed by the API as ``module1_savings_per_year_eur × active_days / 365``."""
 
+    # §14a EnWG "Modul 3" bundle (variable Netzentgelte HT/NT per
+    # BK6-22-300). The backend started returning these fields in 2026-10
+    # alongside Modul 1. All five flip from ``null`` to a concrete value
+    # once Modul 3 is active for the site. The savings reflect how much
+    # cheaper the variable grid-fee schedule (HT/NT) was in the window
+    # compared to the flat ``comparisonGridFee`` tariff that would apply
+    # without Modul 3.
+    comparison_grid_fee_eur_per_kwh: float | None
+    """Flat grid-fee reference tariff used as the Modul 3 comparison
+    baseline, in EUR/kWh. ``None`` until the site opts into Modul 3."""
+
+    comparison_grid_fees_total_eur: float | None
+    """Grid fees the site would have paid in the window under the flat
+    ``comparison_grid_fee`` tariff, in EUR. ``None`` until Modul 3."""
+
+    variable_grid_fees_total_eur: float | None
+    """Grid fees actually incurred in the window under the variable
+    (HT/NT) tariff of Modul 3, in EUR. ``None`` until Modul 3."""
+
+    enwg14a_total_savings_eur: float | None
+    """Combined §14a EnWG savings in the window (Modul 1 flat-rate
+    reduction plus Modul 3 time-variable grid-fee savings), in EUR.
+    ``None`` until the site participates in §14a."""
+
+    module3_total_savings_eur: float | None
+    """Modul 3 savings accumulated over the window, in EUR.
+    Equals ``comparison_grid_fees_total_eur − variable_grid_fees_total_eur``
+    when both are present. ``None`` until Modul 3."""
+
     raw: dict[str, Any] = field(repr=False)
 
     @classmethod
@@ -388,6 +417,11 @@ class HeartbeatPriceWindow:
                 data.get("grossModule1SavingsPerYear")
             ),
             module1_total_savings_eur=_amount(data.get("grossModule1TotalSavings")),
+            comparison_grid_fee_eur_per_kwh=_amount(data.get("comparisonGridFee")),
+            comparison_grid_fees_total_eur=_amount(data.get("comparisonGridFeesTotal")),
+            variable_grid_fees_total_eur=_amount(data.get("variableGridFeesTotal")),
+            enwg14a_total_savings_eur=_amount(data.get("enwg14aTotalSavings")),
+            module3_total_savings_eur=_amount(data.get("module3SavingsTotal")),
             raw=data,
         )
 
@@ -429,3 +463,35 @@ class HeartbeatPrices:
             year=HeartbeatPriceWindow.from_dict(data.get("year") or {}),
             raw=data,
         )
+
+    def module3_savings(self, window: str = "month") -> float | None:
+        """Return the §14a EnWG Modul 3 savings for ``window`` in EUR.
+
+        Modul 3 switches the site's grid fees from the flat BK6-22-300
+        reference tariff to the time-variable HT/NT schedule; the savings
+        are how much lower the variable tariff was in the window.
+
+        Args:
+            window: One of ``"day"``, ``"week"``, ``"month"``,
+                ``"half_year"`` or ``"year"``. Defaults to ``"month"``.
+
+        Returns:
+            The savings in EUR, or ``None`` when the site does not
+            participate in Modul 3 (API field absent / null).
+
+        Raises:
+            ValueError: If ``window`` is not one of the five supported names.
+        """
+        try:
+            win: HeartbeatPriceWindow = getattr(self, window)
+        except AttributeError as exc:
+            raise ValueError(
+                f"Unknown window {window!r}; expected one of "
+                "'day', 'week', 'month', 'half_year', 'year'"
+            ) from exc
+        if not isinstance(win, HeartbeatPriceWindow):
+            raise ValueError(
+                f"Unknown window {window!r}; expected one of "
+                "'day', 'week', 'month', 'half_year', 'year'"
+            )
+        return win.module3_total_savings_eur

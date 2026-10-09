@@ -868,6 +868,11 @@ def _make_hb_price_window(
     module1_active_days: int | None = None,
     module1_savings_per_year: str | None = None,
     module1_total_savings: str | None = None,
+    comparison_grid_fee: str | None = None,
+    comparison_grid_fees_total: str | None = None,
+    variable_grid_fees_total: str | None = None,
+    enwg14a_total_savings: str | None = None,
+    module3_total_savings: str | None = None,
 ) -> dict:
     """Construct one window payload for /heartbeat-prices tests."""
     return {
@@ -922,6 +927,31 @@ def _make_hb_price_window(
         "grossModule1TotalSavings": (
             {"amount": module1_total_savings, "currency": "EUR"}
             if module1_total_savings is not None
+            else None
+        ),
+        "comparisonGridFee": (
+            {"amount": comparison_grid_fee, "currency": "EUR"}
+            if comparison_grid_fee is not None
+            else None
+        ),
+        "comparisonGridFeesTotal": (
+            {"amount": comparison_grid_fees_total, "currency": "EUR"}
+            if comparison_grid_fees_total is not None
+            else None
+        ),
+        "variableGridFeesTotal": (
+            {"amount": variable_grid_fees_total, "currency": "EUR"}
+            if variable_grid_fees_total is not None
+            else None
+        ),
+        "enwg14aTotalSavings": (
+            {"amount": enwg14a_total_savings, "currency": "EUR"}
+            if enwg14a_total_savings is not None
+            else None
+        ),
+        "module3SavingsTotal": (
+            {"amount": module3_total_savings, "currency": "EUR"}
+            if module3_total_savings is not None
             else None
         ),
     }
@@ -1138,6 +1168,11 @@ def make_heartbeat_prices_data() -> dict:
             total_kwh=827.6,
             total_cost="78.70",
             hb_price="0.0951",
+            comparison_grid_fee="0.0989",
+            comparison_grid_fees_total="21.42",
+            variable_grid_fees_total="18.76",
+            enwg14a_total_savings="12.60",
+            module3_total_savings="2.66",
         ),
         "halfYear": _make_hb_price_window(
             pv_kwh=4805.2,
