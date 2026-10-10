@@ -561,7 +561,7 @@
                 }
               ]
             },
-            "description": "Recent push/in-app notifications with `title`, `body`, `type`, `read`, `dismissed`, plus `notificationDetails.meta` (e.g. `{price, dateTime_utc}` for price alerts)."
+            "description": "Recent push/in-app notifications with `title`, `body`, `type`, `read`, `dismissed`, `createdAt`, `updatedAt`, plus `notificationDetails.meta` (e.g. `{price, dateTime_utc}` for price alerts)."
           },
           "response": []
         },

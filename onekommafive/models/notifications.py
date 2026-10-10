@@ -36,6 +36,9 @@ class Notification:
     created_at: str | None
     """ISO-8601 timestamp when the notification was created."""
 
+    updated_at: str | None
+    """ISO-8601 timestamp when the notification was last updated (read/dismissed state change)."""
+
     read: bool | None
     """Whether the user has opened the notification."""
 
@@ -59,6 +62,7 @@ class Notification:
             system_id=data.get("systemId"),
             user_id=data.get("userId"),
             created_at=data.get("createdAt"),
+            updated_at=data.get("updatedAt"),
             read=data.get("read"),
             dismissed=data.get("dismissed"),
             meta=details.get("meta") or {},
