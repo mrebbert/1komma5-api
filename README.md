@@ -279,7 +279,7 @@ Every model exposes a `raw` attribute (`dict[str, Any]`) with the full untouched
 
 ### Endpoint reference
 
-Complete curl-level reference for every HTTP endpoint — URLs, query parameters, response JSON, and every known API quirk — is in **[API.md](API.md)**.
+Complete curl-level reference for every HTTP endpoint — URLs, query parameters, response JSON, and every known API quirk — is in **[API.md](API.md)**, also published as a searchable site at **<https://mrebbert.github.io/1komma5-api/>**.
 
 ## Development
 
