@@ -1610,6 +1610,8 @@ class TestGetNotifications:
             assert len(result.notifications) == 1
             assert result.notifications[0].type == "ENERGY_MARKET_UPPER_TARGET_REACHED"
             assert result.notifications[0].title == "Energiepreise steigen"
+            assert result.notifications[0].created_at == "2026-07-31T18:06:38.141Z"
+            assert result.notifications[0].updated_at == "2026-07-31T18:06:38.141Z"
             assert result.notifications[0].meta["price"]["value"] == 20.41
             # Second call (notifications/latest) has systemId query
             assert f"systemId={FAKE_SYSTEM_ID}" in _recorded_url(m, 1)
