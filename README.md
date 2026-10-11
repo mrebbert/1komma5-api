@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/mrebbert/1komma5-api/actions/workflows/tests.yml/badge.svg)](https://github.com/mrebbert/1komma5-api/actions/workflows/tests.yml)
 [![PyPI](https://img.shields.io/pypi/v/onekommafive)](https://pypi.org/project/onekommafive/)
-[![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org)
+[![Python](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **`onekommafive`** is an unofficial Python client for the [1KOMMA5°](https://1komma5grad.com) Heartbeat home-energy-management API — the platform behind 1KOMMA5°'s heat pumps, solar inverters, battery storage systems, and EV chargers (wallboxes).
@@ -11,29 +11,19 @@ Read live power flows, control EV charging, monitor Dynamic Pulse market prices,
 
 > ⚠️ **Unofficial**. The API is undocumented and reverse-engineered from the mobile app; it may change without notice. Not affiliated with or endorsed by 1KOMMA5°.
 
-## Table of contents
+## Documentation
 
-- [Installation](#installation)
-- [Quick start](#quick-start)
-  - [Command-line interface](#command-line-interface)
-  - [Python library](#python-library)
-- [Features](#features)
-- [Reference](#reference)
-  - [CLI commands](#cli-commands)
-  - [Python models](#python-models)
-  - [Endpoint reference](#endpoint-reference)
-- [Development](#development)
-  - [Running tests](#running-tests)
-  - [Linting and pre-commit](#linting-and-pre-commit)
-  - [API version monitoring](#api-version-monitoring)
-- [Compatibility](#compatibility)
-- [Related projects](#related-projects)
-- [Credits](#credits)
-- [License](#license)
+Full documentation lives at **<https://mrebbert.github.io/1komma5-api/>**. The README stays short and points there.
+
+- **[CLI reference](https://mrebbert.github.io/1komma5-api/cli/)** — every `1k5` command with flags and example output.
+- **[API reference](https://mrebbert.github.io/1komma5-api/api/)** — curl-level documentation of every endpoint the client wraps: URLs, request parameters, response JSON, known quirks. Source: [`API.md`](API.md).
+- **[§14a EnWG grid-fee bundle](https://mrebbert.github.io/1komma5-api/enwg14a/)** — regulatory primer, Modul 1 vs. Modul 3, field mapping, convenience method.
+- **[FAQ](https://mrebbert.github.io/1komma5-api/faq/)** — legacy sign-in, token cache, HTTP-400 date quirks, HTTP-403 on `price-guarantee`, and other recurring questions.
+- **[Postman collection](postman/)** — importable alongside the API reference.
 
 ## Installation
 
-Requires **Python 3.13 or newer**. The SDK became async in 1.0.0 (see below); if you need Python 3.11/3.12 compatibility, pin `onekommafive<1.0`.
+Requires **Python 3.13 or newer**. The SDK became async in 1.0.0; if you need Python 3.11/3.12 compatibility, pin `onekommafive<1.0`.
 
 ```bash
 pip install onekommafive
@@ -74,18 +64,7 @@ ACs:          +1500 W
 Self-suff.:   0.0%
 ```
 
-```
-$ 1k5 ai-summary
-System:      xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Resolution:  1M
-Self-suff.:  73.0%   (solar 331.2 kWh, battery 301.3 kWh)
-Earned:      30.41 €   (378.7 kWh sold @ 0.0803 €/kWh)
-CO2 saved:   365.0 kg, ≈ 1431 car km (PV 1005.4 kWh)
-HB price:    0.0746 €/kWh
-Peak avoided: 22.50 €  (grid 60.18 € − battery 37.68 €)
-```
-
-See [CLI commands](#cli-commands) for the full list and `1k5 --help` for every option.
+Full command catalogue and flags: **[CLI reference](https://mrebbert.github.io/1komma5-api/cli/)**. Local help via `1k5 --help` or `1k5 <command> --help`.
 
 ### Python library (async, default since 1.0.0)
 
@@ -144,7 +123,7 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 client = Client(user, pw, session=async_get_clientsession(hass))
 ```
 
-Every response is a fully-typed [dataclass](#python-models); the package ships `py.typed` (PEP 561) so `mypy --strict` sees the whole surface.
+Every response is a fully-typed dataclass (see [Python models](#python-models) below); the package ships `py.typed` (PEP 561) so `mypy --strict` sees the whole surface.
 
 ### Python library (sync)
 
@@ -182,6 +161,7 @@ Same method names, same return types, just without `await`. The CLI uses this wr
 - Heartbeat AI performance summary — self-sufficiency, feed-in earnings, CO₂ saved, peak-price avoided
 - Lifetime CO₂ savings (site, community, global estimate)
 - Lifetime and monthly energy-trader savings
+- §14a EnWG Modul 1 / Modul 3 grid-fee savings — see the [regulatory primer](https://mrebbert.github.io/1komma5-api/enwg14a/)
 
 **Metadata and configuration**
 - System, site, and full customer records
@@ -198,68 +178,9 @@ Same method names, same return types, just without `await`. The CLI uses this wr
 - OAuth2 + PKCE authentication matching the mobile-app flow, with automatic silent token refresh
 - Optional persistent token cache (`chmod 600`, user-bound) — subsequent CLI calls skip the login round-trip
 - Built-in `1k5` CLI covering every read endpoint and all mutations
-- 348 unit tests, live-verified against real accounts
-- Ruff-clean, CodeQL-clean, pre-commit hooks
+- Ruff-clean, mypy-strict, CodeQL-clean, 95 % coverage gate
 
-## Reference
-
-### CLI commands
-
-Set credentials with `ONEKOMMAFIVE_USERNAME` / `ONEKOMMAFIVE_PASSWORD` env vars (see [Quick start](#quick-start)), then:
-
-| Category | Commands |
-|----------|----------|
-| System & metadata | `info`, `details`, `site-details`, `assets`, `features`, `customer`, `subscriptions`, `me` |
-| Live & energy | `live`, `energy-today`, `energy-historical`, `savings` |
-| Prices | `prices`, `price-config`, `comparison-price`, `price-guarantee` |
-| EV & wallbox | `ev`, `ev-modes`, `set-ev-mode`, `set-ev-target-soc`, `set-ev-departure`, `wallboxes` |
-| EMS | `ems`, `set-ems` |
-| AI & analytics | `optimizations`, `ai-decisions`, `ai-summary`, `heartbeat-prices`, `impact`, `trader`, `monthly-trading` |
-| Notifications | `notifications`, `notification-settings` |
-| Weather & meta | `weather`, `smart-meter`, `versions` |
-
-Run `1k5 --help` or `1k5 <command> --help` for parameters and defaults.
-
-<details>
-<summary>Example output — <code>1k5 optimizations</code></summary>
-
-```
-$ 1k5 optimizations
-System:  xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Period:  2026-03-19 – 2026-03-19
-Events:  25
-
-Timestamp               Asset     Decision                    Price    SoC
---------------------------------------------------------------------------------
-2026-03-19 00:00:00     BATTERY   BATTERY_NO_DISCHARGE        29.79     55%
-2026-03-19 00:00:00     EV        EV_CHARGE_FROM_GRID         29.79     55%
-2026-03-19 10:00:00     BATTERY   BATTERY_CHARGE_FROM_GRID    18.82     24%
-2026-03-19 14:00:00     BATTERY   BATTERY_CHARGE_FROM_GRID    21.46     92%
-2026-03-19 16:00:00     BATTERY   BATTERY_NO_DISCHARGE        28.44     87%
-2026-03-19 22:30:00     BATTERY   BATTERY_NO_DISCHARGE        31.97      —
-```
-
-</details>
-
-<details>
-<summary>Example output — <code>1k5 weather --forecasts</code></summary>
-
-```
-$ 1k5 weather --forecasts
-System:   xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-Heute:    Regen                         16.1 °C  ☀ 6.4 h  🌧 5.2 mm (87%)  ↑2026-03-11 05:57  ↓17:32
-Morgen:   Heiter                        14.3 °C  ☀ 4.1 h  🌧 1.0 mm (20%)  ↑2026-03-12 05:55  ↓17:34
-
-Zeit (UTC)           Wetter                         Temp    Wind      Regen   Prob   Sonne
---------------------------------------------------------------------------------------------
-2026-03-11 15:00     Regen                          10.2°C  3.8 m/s   1.1 mm   51%   0 min
-2026-03-11 18:00     Regen (Nacht)                   8.5°C  2.9 m/s   0.5 mm   40%   0 min
-2026-03-11 21:00     Klar (Nacht)                    7.1°C  1.8 m/s   0.0 mm    5%   0 min
-```
-
-</details>
-
-### Python models
+## Python models
 
 Every endpoint returns a typed [dataclass](https://docs.python.org/3/library/dataclasses.html) from `onekommafive.models`:
 
@@ -268,18 +189,14 @@ Every endpoint returns a typed [dataclass](https://docs.python.org/3/library/dat
 | System | `SystemInfo`, `SystemDetails`, `SystemCustomer`, `DeviceGateway`, `SiteStatus`, `Asset`, `SiteDetails`, `SmartMeter` |
 | User & customer | `User`, `ConnectedSystem`, `Customer` |
 | Live & energy | `LiveOverview`, `EnergyData`, `EnergySlot`, `HeartbeatSavings` |
-| Prices | `MarketPrices`, `PriceCustomizations`, `ComparisonPrice`, `PriceGuarantee` |
+| Prices | `MarketPrices`, `PriceCustomizations`, `ComparisonPrice`, `PriceGuarantee`, `HeartbeatPrices`, `HeartbeatPriceWindow` |
 | EV & EMS | `EVCharger`, `ChargingMode`, `Wallbox`, `EmsSettings`, `EmsManualDevice` |
 | Weather | `WeatherData`, `WeatherDay`, `WeatherSlot`, `WEATHER_SYMBOLS` |
 | AI & analytics | `OptimizationEvents`, `OptimizationEvent`, `SelfSufficiencyEvents`, `HeartbeatAiSummary`, `ImpactOverview`, `EnergyTrader`, `MonthlyTradingSavings` |
 | Notifications | `Notification`, `NotificationsList`, `NotificationSettings`, `NotificationChannelSettings` |
 | API meta | `SupportedVersions`, `VersionInfo` |
 
-Every model exposes a `raw` attribute (`dict[str, Any]`) with the full untouched API response for fields that are not (yet) mapped.
-
-### Endpoint reference
-
-Complete curl-level reference for every HTTP endpoint — URLs, query parameters, response JSON, and every known API quirk — is in **[API.md](API.md)**, also published as a searchable site at **<https://mrebbert.github.io/1komma5-api/>**.
+Every model exposes a `raw` attribute (`dict[str, Any]`) with the full untouched API response for fields that are not yet mapped. See the [FAQ entry](https://mrebbert.github.io/1komma5-api/faq/) on the escape hatch.
 
 ## Development
 
@@ -319,7 +236,7 @@ Install the [pre-commit](https://pre-commit.com/) hooks once after cloning:
 pre-commit install
 ```
 
-The hooks run ruff on every commit. CI runs ruff and CodeQL on every push and pull request.
+The hooks run ruff on every commit. CI runs ruff, mypy-strict, CodeQL and the test matrix on every push and pull request.
 
 ### API version monitoring
 
@@ -329,6 +246,8 @@ The hooks run ruff on every commit. CI runs ruff and CodeQL on every push and pu
 ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... \
 PYTHONPATH=. python scripts/probe_versions.py
 ```
+
+A daily "observatory" diff of the full response-shape surface runs out of tree; its findings land in [API.md](API.md) and this repo's commit history.
 
 ## Compatibility
 
@@ -344,6 +263,8 @@ Reference setup:
 | EV | Volkswagen ID.5 |
 | Heat pump | Stiebel Eltron WPL-A 10 HK 400 Premium |
 | Smart meter | Chint DTSU666 |
+
+Legacy accounts served only from `my.1komma5.io` / `api.gridx.de` are out of scope; see the [FAQ](https://mrebbert.github.io/1komma5-api/faq/).
 
 ## Related projects
 
