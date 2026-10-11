@@ -36,9 +36,15 @@ For the full feature tour, see the project
 
 ## What's on this site
 
+- **[CLI reference](cli.md)** — every `1k5` command with flags, example
+  output and the setter commands for EV / EMS.
 - **[API reference](api.md)** — curl-level documentation of every
   endpoint the client wraps: URL, request parameters, response shape,
   known quirks, VAT and §14a EnWG semantics.
+- **[§14a EnWG grid-fee bundle](enwg14a.md)** — regulatory primer,
+  Modul 1 vs. Modul 3, exact SDK field mapping, convenience method.
+- **[FAQ](faq.md)** — legacy sign-in, token cache, HTTP-400 date
+  quirks, 403 on `price-guarantee`, and other recurring questions.
 - **Postman collection** — exported alongside the API reference,
   available [in the repo](https://github.com/mrebbert/1komma5-api/tree/main/postman).
 
