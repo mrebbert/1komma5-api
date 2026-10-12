@@ -52,11 +52,12 @@ Fields on `HeartbeatPriceWindow`:
 |---|---|---|
 | `comparison_grid_fee_eur_per_kwh` | `float \| None` | The baseline (uniform) grid-fee tariff used for the comparison, in EUR/kWh. |
 | `comparison_grid_fees_total_eur` | `float \| None` | What the site would have paid under the baseline tariff in this window. |
+| `variable_grid_fee_eur_per_kwh` | `float \| None` | Effective variable (HT/NT) grid-fee rate for the window, in EUR/kWh. Counterpart to `comparison_grid_fee_eur_per_kwh`. |
 | `variable_grid_fees_total_eur` | `float \| None` | What the site actually paid under the HT/NT tariff. |
 | `module3_total_savings_eur` | `float \| None` | Net Modul-3 savings for the window. Backend formula: `comparison_grid_fees_total − variable_grid_fees_total`. |
 | `enwg14a_total_savings_eur` | `float \| None` | Combined Modul-1 + Modul-3 savings. Carries the §14a envelope that the UI surfaces to the user. |
 
-All five are `None` until the site opts into Modul 3. The flip usually
+All six are `None` until the site opts into Modul 3. The flip usually
 coincides with the DSO's rollout milestones.
 
 ## Convenience method

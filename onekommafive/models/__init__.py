@@ -27,7 +27,14 @@ from .notifications import (
 )
 from .optimizations import OptimizationEvent, OptimizationEvents, SelfSufficiencyEvents
 from .prices import ComparisonPrice, MarketPrices, PriceCustomizations, PriceGuarantee
-from .sites import Asset, SiteDetails, SiteStatus, SiteSystemInfo, SmartMeter
+from .sites import (
+    Asset,
+    Enwg14aModule,
+    SiteDetails,
+    SiteStatus,
+    SiteSystemInfo,
+    SmartMeter,
+)
 from .subscriptions import (
     Subscription,
     SubscriptionEligibility,
@@ -51,6 +58,7 @@ __all__ = [
     "EnergyData",
     "EnergySlot",
     "EnergyTrader",
+    "Enwg14aModule",
     "HeartbeatAiSummary",
     "HeartbeatPrices",
     "HeartbeatPriceWindow",

@@ -928,6 +928,7 @@ class TestCmdHeartbeatPrices:
             "grossModule1TotalSavings",
             "comparisonGridFee",
             "comparisonGridFeesTotal",
+            "variableGridFee",
             "variableGridFeesTotal",
             "module3SavingsTotal",
             "enwg14aTotalSavings",
@@ -993,16 +994,21 @@ class TestCmdAssets:
 class TestCmdSystemInfo:
     def test_prints_availability_and_module(self, mock_system, capsys) -> None:
         mock_system.get_system_info.return_value = SiteSystemInfo.from_dict(
-            make_system_info_data(availability="READY", enwg14a_module="MODULE_3")
+            make_system_info_data(
+                availability="READY",
+                enwg14a_module_value="module-1",
+                enwg14a_module_valid_from="2025-09-19",
+            )
         )
         _run("system-info")
         out = capsys.readouterr().out
         assert "READY" in out
-        assert "MODULE_3" in out
+        assert "module-1" in out
+        assert "2025-09-19" in out
 
     def test_prints_em_dash_when_module_absent(self, mock_system, capsys) -> None:
         mock_system.get_system_info.return_value = SiteSystemInfo.from_dict(
-            make_system_info_data(availability="READY", enwg14a_module=None)
+            make_system_info_data(availability="READY")
         )
         _run("system-info")
         out = capsys.readouterr().out

@@ -92,10 +92,11 @@ month            0.30      0.08    -42.10  -18.65
 ...
 
 §14a EnWG
-  Modul 1 (month):   12.60 €   (184 active days, 25.20 €/year)
-  Modul 3 (month):   18.76 €   (comparison 21.42 €, actual 2.66 €)
-  §14a combined:     31.36 €
-  Comparison fee:    0.0989 €/kWh
+  Modul 1 (month):     12.60 €   (184 active days, 25.20 €/year)
+  Modul 3 (month):     18.76 €   (comparison 21.42 €, actual 2.66 €)
+  §14a combined:       31.36 €
+  Comparison fee:      0.0989 €/kWh
+  Variable fee:        0.0866 €/kWh
 ```
 
 The §14a block appears only when at least one window carries populated
