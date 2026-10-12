@@ -186,7 +186,7 @@ Every endpoint returns a typed [dataclass](https://docs.python.org/3/library/dat
 
 | Domain | Classes |
 |--------|---------|
-| System | `SystemInfo`, `SystemDetails`, `SystemCustomer`, `DeviceGateway`, `SiteStatus`, `Asset`, `SiteDetails`, `SmartMeter` |
+| System | `SystemInfo`, `SystemDetails`, `SystemCustomer`, `DeviceGateway`, `SiteStatus`, `SiteSystemInfo`, `Enwg14aModule`, `Asset`, `SiteDetails`, `SmartMeter` |
 | User & customer | `User`, `ConnectedSystem`, `Customer` |
 | Live & energy | `LiveOverview`, `EnergyData`, `EnergySlot`, `HeartbeatSavings` |
 | Prices | `MarketPrices`, `PriceCustomizations`, `ComparisonPrice`, `PriceGuarantee`, `HeartbeatPrices`, `HeartbeatPriceWindow` |

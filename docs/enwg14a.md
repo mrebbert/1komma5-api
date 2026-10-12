@@ -39,6 +39,22 @@ A non-participating account carries `None` on all four across every
 window. Opting in flips all four to populated values on the next
 backend tick.
 
+## Where to read the enrolment flag
+
+Two independent sources on the SDK side:
+
+1. **`SiteSystemInfo.enwg14a_module`** (from `System.get_system_info()`)
+   is the authoritative single-field answer: either `None` or an
+   `Enwg14aModule(value, valid_from_date)` with `value` observed as
+   `"module-1"`. Cheap, no price arithmetic involved.
+2. **`HeartbeatPriceWindow`** fields: `module1_provisioning_date`
+   populated means Modul 1; `module3_total_savings_eur` populated means
+   Modul 3. Useful when you already have a `HeartbeatPrices` instance
+   in hand.
+
+The two sources are redundant by design; they came in with separate
+backend rollouts and are expected to agree.
+
 ## Modul 3: time-variable grid fees
 
 Modul 3 ties the controllable device's grid fee to time-of-use tariffs
