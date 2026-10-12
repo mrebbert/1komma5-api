@@ -310,3 +310,37 @@ class SiteStatus:
             assets=[Asset.from_dict(a) for a in data.get("assets") or []],
             raw=data,
         )
+
+
+@dataclass
+class SiteSystemInfo:
+    """Compact site-level system info.
+
+    Returned by :meth:`~onekommafive.System.get_system_info`
+    (``GET /api/v1/sites/{id}/system-info``). Added in the 2026-10
+    backend rollout alongside §14a Modul 3; the mobile app uses it as a
+    cheap availability + §14a-opt-in probe.
+    """
+
+    availability: str | None
+    """Site availability state, e.g. ``"READY"``. **Working hypothesis**:
+    other observed values may include ``"OFFLINE"`` or
+    ``"MAINTENANCE"``; only ``"READY"`` has been captured so far."""
+
+    enwg14a_module: str | None
+    """§14a EnWG module the site is enrolled in. ``None`` when the site
+    is not enrolled. **Working hypothesis**: likely ``"MODULE_3"`` once
+    Modul 3 is active; Modul 1 may surface here or stay ``None`` (it is
+    primarily tracked via :class:`HeartbeatPriceWindow` fields)."""
+
+    raw: dict[str, Any] = field(repr=False)
+    """The complete raw API response."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "SiteSystemInfo":
+        """Construct a :class:`SiteSystemInfo` from a raw API response dictionary."""
+        return cls(
+            availability=data.get("availability"),
+            enwg14a_module=data.get("enwg14aModule"),
+            raw=data,
+        )

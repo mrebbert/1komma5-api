@@ -35,6 +35,7 @@ a short real-world example per group.
 | `details` | — | Extended metadata: customer block, installer, device gateways. |
 | `site-details` | — | Site record incl. EMS runtime state. |
 | `assets` | — | Connection status + hardware list. |
+| `system-info` | — | Compact site availability + §14a module enrolment. |
 | `features` | `--customer-id UUID` | Active per-customer+site feature flags. |
 | `customer` | — | Full customer record (v3). |
 | `subscriptions` | — | Contracts / subscriptions with monthly cost. |

@@ -27,7 +27,7 @@ from .notifications import (
 )
 from .optimizations import OptimizationEvent, OptimizationEvents, SelfSufficiencyEvents
 from .prices import ComparisonPrice, MarketPrices, PriceCustomizations, PriceGuarantee
-from .sites import Asset, SiteDetails, SiteStatus, SmartMeter
+from .sites import Asset, SiteDetails, SiteStatus, SiteSystemInfo, SmartMeter
 from .subscriptions import (
     Subscription,
     SubscriptionEligibility,
@@ -70,6 +70,7 @@ __all__ = [
     "SelfSufficiencyEvents",
     "SiteDetails",
     "SiteStatus",
+    "SiteSystemInfo",
     "SmartMeter",
     "Subscription",
     "SubscriptionEligibilityList",

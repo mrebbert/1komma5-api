@@ -206,6 +206,17 @@ def make_status_and_assets_data() -> dict:
     }
 
 
+def make_system_info_data(
+    availability: str | None = "READY",
+    enwg14a_module: str | None = None,
+) -> dict:
+    """Return a /api/v1/sites/{id}/system-info v1 response payload."""
+    return {
+        "availability": availability,
+        "enwg14aModule": enwg14a_module,
+    }
+
+
 def make_device_gateways_data() -> dict:
     """Return a paginated /api/v2/device-gateways response with one gateway."""
     return {

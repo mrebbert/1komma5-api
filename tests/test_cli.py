@@ -31,6 +31,7 @@ from onekommafive.models import (
     SelfSufficiencyEvents,
     SiteDetails,
     SiteStatus,
+    SiteSystemInfo,
     SmartMeter,
     SubscriptionsList,
     SupportedVersions,
@@ -71,6 +72,7 @@ from tests.fixtures import (
     make_supported_versions_data,
     make_system_data,
     make_system_details_data,
+    make_system_info_data,
     make_two_ambiguous_evs,
     make_user_data,
     make_wallboxes_data,
@@ -981,6 +983,31 @@ class TestCmdAssets:
         )
         _run("assets")
         assert "No assets" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# system-info
+# ---------------------------------------------------------------------------
+
+
+class TestCmdSystemInfo:
+    def test_prints_availability_and_module(self, mock_system, capsys) -> None:
+        mock_system.get_system_info.return_value = SiteSystemInfo.from_dict(
+            make_system_info_data(availability="READY", enwg14a_module="MODULE_3")
+        )
+        _run("system-info")
+        out = capsys.readouterr().out
+        assert "READY" in out
+        assert "MODULE_3" in out
+
+    def test_prints_em_dash_when_module_absent(self, mock_system, capsys) -> None:
+        mock_system.get_system_info.return_value = SiteSystemInfo.from_dict(
+            make_system_info_data(availability="READY", enwg14a_module=None)
+        )
+        _run("system-info")
+        out = capsys.readouterr().out
+        assert "READY" in out
+        assert "§14a module:     —" in out
 
 
 # ---------------------------------------------------------------------------

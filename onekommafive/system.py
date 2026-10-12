@@ -28,6 +28,7 @@ from .models import (
     SelfSufficiencyEvents,
     SiteDetails,
     SiteStatus,
+    SiteSystemInfo,
     SmartMeter,
     SubscriptionEligibilityList,
     SubscriptionsList,
@@ -136,6 +137,20 @@ class System:
             error_label="Failed to get site status and assets",
         )
         return SiteStatus.from_dict(data)
+
+    async def get_system_info(self) -> SiteSystemInfo:
+        """Return the compact site-level system info.
+
+        ``GET /api/v1/sites/{id}/system-info``. Added in the 2026-10
+        backend rollout; carries ``availability`` and the §14a module
+        the site is enrolled in (``None`` when not enrolled).
+        """
+        data = await self._client._request(
+            "GET",
+            self._sites_url("v1", "system-info"),
+            error_label="Failed to get site system info",
+        )
+        return SiteSystemInfo.from_dict(data)
 
     async def get_device_gateways(self) -> list[DeviceGateway]:
         """Return all device gateways registered to this system.

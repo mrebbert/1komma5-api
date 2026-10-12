@@ -227,6 +227,14 @@ def cmd_assets(args: argparse.Namespace) -> None:
         print(f"    Status:      {a.connection_status or '—'}  (id {a.id})")
 
 
+def cmd_system_info(args: argparse.Namespace) -> None:
+    system = _get_system()
+    info = system.get_system_info()
+    print(f"System:          {system.id()}")
+    print(f"Availability:    {info.availability or '—'}")
+    print(f"§14a module:     {info.enwg14a_module or '—'}")
+
+
 def cmd_features(args: argparse.Namespace) -> None:
     system = _get_system()
     customer_id = _resolve_customer_id(args, system)
@@ -1174,6 +1182,10 @@ def main() -> None:
     sub.add_parser(
         "assets", help="Site connection status + installed hardware assets"
     ).set_defaults(func=cmd_assets)
+    sub.add_parser(
+        "system-info",
+        help="Compact site availability + §14a module enrolment",
+    ).set_defaults(func=cmd_system_info)
 
     features_p = sub.add_parser(
         "features", help="Active site feature flags (per customer + site)"
