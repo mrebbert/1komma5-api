@@ -240,6 +240,20 @@
           "response": []
         },
         {
+          "name": "Get site system info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/system-info",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sites", "{{siteId}}", "system-info"]
+            },
+            "description": "Compact site availability + §14a module enrolment. Returns `{availability, enwg14aModule}`. Added in the 2026-10 backend rollout alongside §14a Modul 3. `enwg14aModule` is null for sites not enrolled."
+          },
+          "response": []
+        },
+        {
           "name": "Get active features",
           "request": {
             "method": "GET",

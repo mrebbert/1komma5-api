@@ -65,6 +65,7 @@ if TYPE_CHECKING:
         SelfSufficiencyEvents,
         SiteDetails,
         SiteStatus,
+        SiteSystemInfo,
         SmartMeter,
         SubscriptionEligibilityList,
         SubscriptionsList,
@@ -266,6 +267,9 @@ class System:
 
     def get_status_and_assets(self) -> SiteStatus:
         return self._runner.run(self._async.get_status_and_assets())
+
+    def get_system_info(self) -> SiteSystemInfo:
+        return self._runner.run(self._async.get_system_info())
 
     def get_device_gateways(self) -> list[DeviceGateway]:
         return self._runner.run(self._async.get_device_gateways())

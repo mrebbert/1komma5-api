@@ -23,6 +23,7 @@ Requests unless noted send `Authorization: Bearer $BEARER_TOKEN`. All personal i
   - [System details (v1, extended)](#system-details-v1-extended)
   - [Site details (v2, superset)](#site-details-v2-superset)
   - [Site status and assets](#site-status-and-assets)
+  - [Site system info](#site-system-info)
   - [Active feature flags](#active-feature-flags)
   - [Device gateways (standalone, v2)](#device-gateways-standalone-v2)
 - [Live data](#live-data)
@@ -646,6 +647,33 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   | `HEAT_PUMP` | Stiebel Eltron | WPMsystem |
   | `METER` | Chint | DTSU666 |
   | `EV_CHARGER` | go-e | HOMEfix 11kW |
+
+---
+
+### Site system info
+
+`GET /api/v1/sites/$ONEKOMMAFIVE_SYSTEM/system-info` — compact site availability flag plus the §14a EnWG module the site is enrolled in. Added to the backend during the 2026-10 rollout alongside §14a Modul 3; the mobile app uses it as a cheap availability + opt-in probe.
+
+**Example**
+
+```bash
+curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
+  "https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/system-info" | jq .
+```
+
+**Response**
+
+```json
+{
+  "availability": "READY",
+  "enwg14aModule": null
+}
+```
+
+**Notes**
+
+- `availability` observed value: `"READY"`. **Working hypothesis**: other states such as `"OFFLINE"` or `"MAINTENANCE"` are plausible but have not been captured.
+- `enwg14aModule` is `null` for sites that are not enrolled in a §14a module. **Working hypothesis**: once Modul 3 is active, the value is likely `"MODULE_3"`; Modul 1 may surface here or may stay `null` (it is primarily tracked via the Modul-1 fields on `heartbeat-prices`).
 
 ---
 

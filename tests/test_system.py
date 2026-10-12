@@ -34,6 +34,7 @@ from onekommafive.models import (
     SelfSufficiencyEvents,
     SiteDetails,
     SiteStatus,
+    SiteSystemInfo,
     SmartMeter,
     SubscriptionEligibilityList,
     SubscriptionsList,
@@ -76,6 +77,7 @@ from tests.fixtures import (
     make_subscriptions_data,
     make_system_data,
     make_system_details_data,
+    make_system_info_data,
     make_user_data,
     make_wallboxes_data,
     make_weather_data,
@@ -844,6 +846,48 @@ class TestGetStatusAndAssets:
                 RequestError, match="Failed to get site status and assets"
             ):
                 await _make_system().get_status_and_assets()
+
+
+# ---------------------------------------------------------------------------
+# System info (v1)
+# ---------------------------------------------------------------------------
+
+
+class TestGetSystemInfo:
+    """Tests for System.get_system_info."""
+
+    _URL = f"{_SITE_BASE_V1}/system-info"
+
+    async def test_returns_system_info_populated(self) -> None:
+        with aioresponses() as m:
+            m.get(
+                _u(self._URL),
+                payload=make_system_info_data(
+                    availability="READY", enwg14a_module="MODULE_3"
+                ),
+                status=200,
+            )
+            result = await _make_system().get_system_info()
+            assert isinstance(result, SiteSystemInfo)
+            assert result.availability == "READY"
+            assert result.enwg14a_module == "MODULE_3"
+
+    async def test_returns_none_fields_when_not_enrolled(self) -> None:
+        with aioresponses() as m:
+            m.get(
+                _u(self._URL),
+                payload=make_system_info_data(enwg14a_module=None),
+                status=200,
+            )
+            result = await _make_system().get_system_info()
+            assert result.availability == "READY"
+            assert result.enwg14a_module is None
+
+    async def test_raises_on_server_error(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(self._URL), payload={}, status=500)
+            with pytest.raises(RequestError, match="Failed to get site system info"):
+                await _make_system().get_system_info()
 
 
 # ---------------------------------------------------------------------------
