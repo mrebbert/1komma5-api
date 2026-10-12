@@ -317,15 +317,12 @@ class Enwg14aModule:
     """§14a EnWG module enrolment record on :class:`SiteSystemInfo`.
 
     The backend returns ``None`` for sites that are not enrolled.
-    Observed values of :attr:`value` are the kebab-case module slugs
-    ``"module-1"`` and ``"module-3"``; the capitalised ``"MODULE_1"`` /
-    ``"MODULE_3"`` form seen on some backend logs has not been returned
-    on this endpoint.
     """
 
     value: str | None
-    """Module slug, e.g. ``"module-1"`` or ``"module-3"``. Lowercase with
-    a hyphen separator (not an ``ENUM_WITH_UNDERSCORES`` form)."""
+    """Module slug. Observed: ``"module-1"``. **Working hypothesis**:
+    ``"module-3"`` for Modul 3 enrolments; not yet captured. Lowercase
+    with a hyphen separator, not ``ENUM_WITH_UNDERSCORES``."""
 
     valid_from_date: str | None
     """ISO-8601 date (``YYYY-MM-DD``) from which the enrolment is
