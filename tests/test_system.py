@@ -863,20 +863,24 @@ class TestGetSystemInfo:
             m.get(
                 _u(self._URL),
                 payload=make_system_info_data(
-                    availability="READY", enwg14a_module="MODULE_3"
+                    availability="READY",
+                    enwg14a_module_value="module-1",
+                    enwg14a_module_valid_from="2025-09-19",
                 ),
                 status=200,
             )
             result = await _make_system().get_system_info()
             assert isinstance(result, SiteSystemInfo)
             assert result.availability == "READY"
-            assert result.enwg14a_module == "MODULE_3"
+            assert result.enwg14a_module is not None
+            assert result.enwg14a_module.value == "module-1"
+            assert result.enwg14a_module.valid_from_date == "2025-09-19"
 
-    async def test_returns_none_fields_when_not_enrolled(self) -> None:
+    async def test_returns_none_module_when_not_enrolled(self) -> None:
         with aioresponses() as m:
             m.get(
                 _u(self._URL),
-                payload=make_system_info_data(enwg14a_module=None),
+                payload=make_system_info_data(),
                 status=200,
             )
             result = await _make_system().get_system_info()
@@ -1855,6 +1859,7 @@ class TestGetHeartbeatPrices:
             mo = r.month
             assert mo.comparison_grid_fee_eur_per_kwh == pytest.approx(0.0989)
             assert mo.comparison_grid_fees_total_eur == pytest.approx(21.42)
+            assert mo.variable_grid_fee_eur_per_kwh == pytest.approx(0.0866)
             assert mo.variable_grid_fees_total_eur == pytest.approx(18.76)
             assert mo.enwg14a_total_savings_eur == pytest.approx(12.60)
             assert mo.module3_total_savings_eur == pytest.approx(2.66)
@@ -1865,6 +1870,7 @@ class TestGetHeartbeatPrices:
             y = (await _make_system().get_heartbeat_prices()).year
             assert y.comparison_grid_fee_eur_per_kwh is None
             assert y.comparison_grid_fees_total_eur is None
+            assert y.variable_grid_fee_eur_per_kwh is None
             assert y.variable_grid_fees_total_eur is None
             assert y.enwg14a_total_savings_eur is None
             assert y.module3_total_savings_eur is None

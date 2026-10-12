@@ -208,12 +208,25 @@ def make_status_and_assets_data() -> dict:
 
 def make_system_info_data(
     availability: str | None = "READY",
-    enwg14a_module: str | None = None,
+    enwg14a_module_value: str | None = None,
+    enwg14a_module_valid_from: str | None = None,
 ) -> dict:
-    """Return a /api/v1/sites/{id}/system-info v1 response payload."""
+    """Return a /api/v1/sites/{id}/system-info v1 response payload.
+
+    ``enwg14aModule`` is a ``{value, validFromDate}`` object on the live
+    API; ``None`` means the site is not enrolled.
+    """
+    module: dict[str, str | None] | None
+    if enwg14a_module_value is None and enwg14a_module_valid_from is None:
+        module = None
+    else:
+        module = {
+            "value": enwg14a_module_value,
+            "validFromDate": enwg14a_module_valid_from,
+        }
     return {
         "availability": availability,
-        "enwg14aModule": enwg14a_module,
+        "enwg14aModule": module,
     }
 
 
@@ -881,6 +894,7 @@ def _make_hb_price_window(
     module1_total_savings: str | None = None,
     comparison_grid_fee: str | None = None,
     comparison_grid_fees_total: str | None = None,
+    variable_grid_fee: str | None = None,
     variable_grid_fees_total: str | None = None,
     enwg14a_total_savings: str | None = None,
     module3_total_savings: str | None = None,
@@ -948,6 +962,11 @@ def _make_hb_price_window(
         "comparisonGridFeesTotal": (
             {"amount": comparison_grid_fees_total, "currency": "EUR"}
             if comparison_grid_fees_total is not None
+            else None
+        ),
+        "variableGridFee": (
+            {"amount": variable_grid_fee, "currency": "EUR"}
+            if variable_grid_fee is not None
             else None
         ),
         "variableGridFeesTotal": (
@@ -1181,6 +1200,7 @@ def make_heartbeat_prices_data() -> dict:
             hb_price="0.0951",
             comparison_grid_fee="0.0989",
             comparison_grid_fees_total="21.42",
+            variable_grid_fee="0.0866",
             variable_grid_fees_total="18.76",
             enwg14a_total_savings="12.60",
             module3_total_savings="2.66",

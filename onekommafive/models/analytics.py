@@ -359,6 +359,11 @@ class HeartbeatPriceWindow:
     """Grid fees the site would have paid in the window under the flat
     ``comparison_grid_fee`` tariff, in EUR. ``None`` until Modul 3."""
 
+    variable_grid_fee_eur_per_kwh: float | None
+    """Effective variable (HT/NT) grid-fee rate for the window, in
+    EUR/kWh. Mapped from ``variableGridFee``; counterpart to
+    ``comparison_grid_fee_eur_per_kwh``. ``None`` until Modul 3."""
+
     variable_grid_fees_total_eur: float | None
     """Grid fees actually incurred in the window under the variable
     (HT/NT) tariff of Modul 3, in EUR. ``None`` until Modul 3."""
@@ -419,6 +424,7 @@ class HeartbeatPriceWindow:
             module1_total_savings_eur=_amount(data.get("grossModule1TotalSavings")),
             comparison_grid_fee_eur_per_kwh=_amount(data.get("comparisonGridFee")),
             comparison_grid_fees_total_eur=_amount(data.get("comparisonGridFeesTotal")),
+            variable_grid_fee_eur_per_kwh=_amount(data.get("variableGridFee")),
             variable_grid_fees_total_eur=_amount(data.get("variableGridFeesTotal")),
             enwg14a_total_savings_eur=_amount(data.get("enwg14aTotalSavings")),
             module3_total_savings_eur=_amount(data.get("module3SavingsTotal")),

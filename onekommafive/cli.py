@@ -232,7 +232,12 @@ def cmd_system_info(args: argparse.Namespace) -> None:
     info = system.get_system_info()
     print(f"System:          {system.id()}")
     print(f"Availability:    {info.availability or '—'}")
-    print(f"§14a module:     {info.enwg14a_module or '—'}")
+    if info.enwg14a_module is None:
+        print("§14a module:     —")
+    else:
+        slug = info.enwg14a_module.value or "—"
+        valid_from = info.enwg14a_module.valid_from_date or "—"
+        print(f"§14a module:     {slug}  (valid from {valid_from})")
 
 
 def cmd_features(args: argparse.Namespace) -> None:
@@ -740,6 +745,7 @@ def cmd_heartbeat_prices(args: argparse.Namespace) -> None:
         ("Modul 3 total savings (€)", "module3_total_savings_eur", ",.2f"),
         ("§14a combined savings (€)", "enwg14a_total_savings_eur", ",.2f"),
         ("Comparison grid fee (€/kWh)", "comparison_grid_fee_eur_per_kwh", ".4f"),
+        ("Variable grid fee (€/kWh)", "variable_grid_fee_eur_per_kwh", ".4f"),
     ]
     if any(
         getattr(w, attr) is not None for _, w in windows for _, attr, _ in enwg_rows

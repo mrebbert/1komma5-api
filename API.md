@@ -661,7 +661,19 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
   "https://heartbeat.1komma5grad.com/api/v1/sites/$ONEKOMMAFIVE_SYSTEM/system-info" | jq .
 ```
 
-**Response**
+**Response (enrolled)**
+
+```json
+{
+  "availability": "READY",
+  "enwg14aModule": {
+    "value": "module-1",
+    "validFromDate": "2025-09-19"
+  }
+}
+```
+
+**Response (not enrolled)**
 
 ```json
 {
@@ -673,7 +685,9 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 **Notes**
 
 - `availability` observed value: `"READY"`. **Working hypothesis**: other states such as `"OFFLINE"` or `"MAINTENANCE"` are plausible but have not been captured.
-- `enwg14aModule` is `null` for sites that are not enrolled in a §14a module. **Working hypothesis**: once Modul 3 is active, the value is likely `"MODULE_3"`; Modul 1 may surface here or may stay `null` (it is primarily tracked via the Modul-1 fields on `heartbeat-prices`).
+- `enwg14aModule` is `null` for sites that are not enrolled in a §14a module; otherwise an object with:
+  - `value` — module slug, observed as `"module-1"`. The `"module-3"` slug is expected for Modul 3 but has not been captured yet. Lowercase with a hyphen, not `MODULE_1` / `MODULE_3`.
+  - `validFromDate` — ISO-8601 date (date-only) from which the enrolment is effective.
 
 ---
 
@@ -1694,6 +1708,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
     "grossModule1TotalSavings":   { "amount": "121", "currency": "EUR" },
     "comparisonGridFee":        { "amount": "0.0989", "currency": "EUR" },
     "comparisonGridFeesTotal":  { "amount": "257.04", "currency": "EUR" },
+    "variableGridFee":          { "amount": "0.0866", "currency": "EUR" },
     "variableGridFeesTotal":    { "amount": "225.12", "currency": "EUR" },
     "module3SavingsTotal":      { "amount": "31.92",  "currency": "EUR" },
     "enwg14aTotalSavings":      { "amount": "152.92", "currency": "EUR" }
@@ -1745,6 +1760,7 @@ Working hypothesis: the **§14a EnWG "Modul 1" flat-rate grid-fee reduction** pe
 |-------|---------|
 | `comparisonGridFee` | Flat grid-fee reference tariff used as the Modul-3 comparison baseline, in EUR/kWh. |
 | `comparisonGridFeesTotal` | Grid fees the site would have paid in the window under the flat reference tariff, in EUR. |
+| `variableGridFee` | Effective variable (HT/NT) grid-fee rate for the window, in EUR/kWh. Counterpart to `comparisonGridFee`. Added 2026-10-12. |
 | `variableGridFeesTotal` | Grid fees actually incurred in the window under the HT/NT variable tariff, in EUR. |
 | `module3SavingsTotal` | Window savings from the variable tariff, in EUR; equals `comparisonGridFeesTotal − variableGridFeesTotal`. |
 | `enwg14aTotalSavings` | Combined §14a EnWG savings in the window (Modul 1 flat-rate reduction plus Modul 3 time-variable grid-fee savings), in EUR. |

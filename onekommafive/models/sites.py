@@ -313,6 +313,38 @@ class SiteStatus:
 
 
 @dataclass
+class Enwg14aModule:
+    """§14a EnWG module enrolment record on :class:`SiteSystemInfo`.
+
+    The backend returns ``None`` for sites that are not enrolled.
+    Observed values of :attr:`value` are the kebab-case module slugs
+    ``"module-1"`` and ``"module-3"``; the capitalised ``"MODULE_1"`` /
+    ``"MODULE_3"`` form seen on some backend logs has not been returned
+    on this endpoint.
+    """
+
+    value: str | None
+    """Module slug, e.g. ``"module-1"`` or ``"module-3"``. Lowercase with
+    a hyphen separator (not an ``ENUM_WITH_UNDERSCORES`` form)."""
+
+    valid_from_date: str | None
+    """ISO-8601 date (``YYYY-MM-DD``) from which the enrolment is
+    effective. Date-only, no time component."""
+
+    raw: dict[str, Any] = field(repr=False)
+    """The complete raw ``enwg14aModule`` sub-dict."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Enwg14aModule":
+        """Construct an :class:`Enwg14aModule` from the raw sub-dict."""
+        return cls(
+            value=data.get("value"),
+            valid_from_date=data.get("validFromDate"),
+            raw=data,
+        )
+
+
+@dataclass
 class SiteSystemInfo:
     """Compact site-level system info.
 
@@ -327,11 +359,10 @@ class SiteSystemInfo:
     other observed values may include ``"OFFLINE"`` or
     ``"MAINTENANCE"``; only ``"READY"`` has been captured so far."""
 
-    enwg14a_module: str | None
-    """§14a EnWG module the site is enrolled in. ``None`` when the site
-    is not enrolled. **Working hypothesis**: likely ``"MODULE_3"`` once
-    Modul 3 is active; Modul 1 may surface here or stay ``None`` (it is
-    primarily tracked via :class:`HeartbeatPriceWindow` fields)."""
+    enwg14a_module: Enwg14aModule | None
+    """§14a EnWG module enrolment, or ``None`` when the site is not
+    enrolled. Carries both the module slug and the enrolment's
+    ``validFromDate``."""
 
     raw: dict[str, Any] = field(repr=False)
     """The complete raw API response."""
@@ -339,8 +370,11 @@ class SiteSystemInfo:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "SiteSystemInfo":
         """Construct a :class:`SiteSystemInfo` from a raw API response dictionary."""
+        module_data = data.get("enwg14aModule")
         return cls(
             availability=data.get("availability"),
-            enwg14a_module=data.get("enwg14aModule"),
+            enwg14a_module=(
+                Enwg14aModule.from_dict(module_data) if module_data else None
+            ),
             raw=data,
         )
