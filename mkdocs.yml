@@ -70,6 +70,7 @@ nav:
   - API reference: api.md
   - §14a EnWG grid-fee bundle: enwg14a.md
   - FAQ: faq.md
+  - Development: development.md
 
 extra:
   social:

@@ -64,6 +64,7 @@ Requests unless noted send `Authorization: Bearer $BEARER_TOKEN`. All personal i
   - [Supported versions](#supported-versions)
 - [Unit reference](#unit-reference)
 - [Known API quirks](#known-api-quirks)
+- [Endpoints observed but not wrapped](#endpoints-observed-but-not-wrapped)
 
 ---
 
@@ -2028,3 +2029,32 @@ Consolidated reference of every non-obvious behaviour documented above:
 **Response-code surprises**
 
 - `POST /ems/actions/set-manual-override` returns HTTP **201** on success, not 200.
+
+---
+
+## Endpoints observed but not wrapped
+
+Endpoints the mobile app or the daily observatory diff has shown, that
+the SDK deliberately does **not** expose. Listed here so users who find
+them in a HAR capture know why.
+
+### `GET /api/v1/sites/{id}/ev-charging-sessions/active`
+
+Returns `{"sessions": []}` on accounts whose EV asset carries
+`connectionStatus.status = "UNKNOWN"` and `dataSource = "USER_INPUT"` —
+the two markers of a non-vendor-integrated vehicle (no VW WeConnect,
+Tesla API, or similar OEM link). On those accounts the response is
+empty regardless of whether the wallbox is actively charging; verified
+2026-10-14 with 1.9 kW on `liveHeroView.evChargersAggregated.power`
+while this endpoint returned the empty list the whole time. Live EV
+power is on `live-overview`; a mapping of this endpoint will land once
+a vendor-integrated account can produce a populated response. See
+[FAQ](https://mrebbert.github.io/1komma5-api/faq/#ev-charging-sessionsactive-returns-sessions--even-while-my-ev-is-charging).
+
+### `GET /api/v1/sites/{id}/whats-new/updates/improvements`
+
+In-app changelog surface. Response is paginated with
+`{"data": [...], "pageIndex", "pageSize", "totalItems", "totalPages"}`;
+each item is a release-notes entry filtered against the
+`currentAppVersion` query parameter. Not part of the energy domain the
+SDK covers; intentionally skipped.

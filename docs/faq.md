@@ -113,3 +113,29 @@ during vendor-side deploys; a single retry resolves it.
 ## What is §14a EnWG, Modul 1 and Modul 3?
 
 See the dedicated primer in [§14a EnWG grid-fee bundle](enwg14a.md).
+
+## `/ev-charging-sessions/active` returns `{"sessions": []}` even while my EV is charging
+
+The endpoint only tracks **vendor-orchestrated** charging sessions, not
+raw wallbox power flow. Two fields on the EV asset gate what you see:
+
+- `connectionStatus.status` — anything but a concrete status (observed:
+  `UNKNOWN`) means the backend has no live link to the vehicle itself.
+- `dataSource` — `USER_INPUT` means the user types the state-of-charge
+  manually; the backend has no OEM telemetry (VW WeConnect, Tesla API,
+  etc.) to correlate against.
+
+If **both** are set to the "no live link" variant, the Heartbeat
+dashboard still shows the wallbox power
+(`liveHeroView.evChargersAggregated.power`) because that comes straight
+from the hardware, but there is no *session* for the backend to attach
+start, target SoC, departure time and progress to. `active` therefore
+stays empty. Verified live on 2026-10-14: 1.9 kW on
+`evChargersAggregated.power`, `/ev-charging-sessions/active` returned
+`{"sessions": []}` the whole time.
+
+To see a populated response, the account needs an OEM-integrated EV
+with `connectionStatus != UNKNOWN` and `dataSource != USER_INPUT`. Until
+then, the endpoint is intentionally not wrapped by the SDK, and
+`liveHeroView.evChargersAggregated.power` from
+`System.get_live_overview()` is the right field to read live EV power.
