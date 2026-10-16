@@ -38,6 +38,7 @@ dev = [
     # (Home Assistant on 3.13.3) resolves cleanly.
     "aioresponses>=0.7",
     "hypothesis>=6.0",
+    "interrogate>=1.7",
     "mypy>=1.11",
     "pre-commit>=3.5",
     "pytest>=8.0",
@@ -65,7 +66,10 @@ Issues = "https://github.com/mrebbert/1komma5-api/issues"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-addopts = "--cov --cov-report=term-missing"
+# -ra prints a short summary of every non-pass outcome at the end of
+# the run. --strict-markers rejects typos in @pytest.mark.* decorators
+# instead of silently ignoring them.
+addopts = "--cov --cov-report=term-missing -ra --strict-markers"
 
 [tool.coverage.run]
 source = ["onekommafive"]
@@ -90,7 +94,39 @@ select = ["E", "W", "F", "I", "B", "UP", "C4", "SIM"]
 # python-quality-baseline skill's Formatting section.
 ignore = ["E501"]
 
+[tool.ruff.lint.per-file-ignores]
+# B011: `assert False` is explicit test intent, not a bug.
+"tests/*" = ["B011"]
+
 [tool.mypy]
 python_version = "3.13"
 strict = true
 files = ["onekommafive"]
+
+[tool.interrogate]
+# Docstring-coverage gate for the SDK surface. Measures presence, not
+# style (ruff format handles style). Dataclass dunder methods, magic
+# methods and private helpers do not need prose - their names and
+# types already describe them.
+ignore-init-method = true           # class docstring covers __init__
+ignore-init-module = true           # __init__.py is re-exports
+ignore-magic = true                 # dunder methods seldom need prose
+ignore-nested-functions = true
+ignore-private = true
+ignore-property-decorators = true
+# from_dict classmethods are mechanical constructor delegates whose
+# name and type signature already describe them; a docstring here
+# would just repeat "Construct from a raw API response dictionary"
+# on every single model.
+ignore-regex = ["from_dict"]
+fail-under = 85
+exclude = [
+    "tests",
+    "scripts",
+    # CLI argparse glue - names and types self-describe each cmd_*.
+    "onekommafive/cli.py",
+    # sync is a mechanically generated facade over async methods;
+    # docstrings live on the async counterparts.
+    "onekommafive/sync.py",
+]
+verbose = 1
