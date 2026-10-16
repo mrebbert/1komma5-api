@@ -564,3 +564,143 @@ class TestLogin:
             m.post(_TOKEN_URL, status=400, body="invalid_grant")
             with pytest.raises(AuthenticationError, match="Token exchange"):
                 await client._login()
+
+
+# ---------------------------------------------------------------------------
+# _request empty-body handling
+# ---------------------------------------------------------------------------
+
+
+_EMPTY_URL = "https://heartbeat.1komma5grad.com/api/v1/_test_empty"
+
+
+class TestRequestEmptyBody:
+    """``_request`` returns ``None`` when the server responds with no body."""
+
+    async def test_returns_none_on_zero_content_length(self) -> None:
+        client = Client("user@example.com", "password")
+        client.get_token = AsyncMock(return_value=FAKE_ACCESS_TOKEN)
+        with aioresponses() as m:
+            m.get(
+                _EMPTY_URL,
+                status=200,
+                body="",
+                headers={"Content-Length": "0"},
+            )
+            result = await client._request("GET", _EMPTY_URL)
+        assert result is None
+
+    async def test_returns_none_on_empty_body(self) -> None:
+        client = Client("user@example.com", "password")
+        client.get_token = AsyncMock(return_value=FAKE_ACCESS_TOKEN)
+        with aioresponses() as m:
+            m.get(_EMPTY_URL, status=200, body="")
+            result = await client._request("GET", _EMPTY_URL)
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# JWKS fetch and caching
+# ---------------------------------------------------------------------------
+
+
+class _StubJWKSet:
+    """Stand-in for :class:`jwt.PyJWKSet` with controllable ``keys``."""
+
+    def __init__(self, keys: list[object]) -> None:
+        self.keys = keys
+
+
+class TestGetJwks:
+    """``_get_jwks`` fetches once and caches."""
+
+    async def test_fetches_jwks_on_first_call(self, mocker) -> None:  # type: ignore[no-untyped-def]
+        from onekommafive import client as client_module
+
+        stub = _StubJWKSet(keys=[])
+        from_json = mocker.patch.object(
+            client_module.PyJWKSet, "from_json", return_value=stub
+        )
+
+        client = Client("user@example.com", "password")
+        with aioresponses() as m:
+            m.get(client_module._JWKS_URL, status=200, body='{"keys": []}')
+            result = await client._get_jwks()
+
+        assert result is stub
+        from_json.assert_called_once_with('{"keys": []}')
+        assert client._jwks is stub
+
+    async def test_caches_jwks_between_calls(self, mocker) -> None:  # type: ignore[no-untyped-def]
+        from onekommafive import client as client_module
+
+        stub = _StubJWKSet(keys=[])
+        mocker.patch.object(client_module.PyJWKSet, "from_json", return_value=stub)
+
+        client = Client("user@example.com", "password")
+        with aioresponses() as m:
+            m.get(client_module._JWKS_URL, status=200, body='{"keys": []}')
+            first = await client._get_jwks()
+        # Second call must not hit HTTP; no aioresponses context means any
+        # outbound HTTP would raise.
+        second = await client._get_jwks()
+        assert first is second
+
+
+# ---------------------------------------------------------------------------
+# JWT decoding against the JWK set
+# ---------------------------------------------------------------------------
+
+
+class _StubJWK:
+    """Pretend JWK entry whose ``key_id`` and ``key`` match a kid lookup."""
+
+    def __init__(self, key_id: str, key: object) -> None:
+        self.key_id = key_id
+        self.key = key
+
+
+class TestDecodeToken:
+    """``_decode_token`` selects the right JWK and dispatches to ``jwt.decode``."""
+
+    async def test_decodes_with_matching_kid(self, mocker) -> None:  # type: ignore[no-untyped-def]
+        from onekommafive import client as client_module
+
+        signing_key = _StubJWK(key_id="abc", key=object())
+        stub = _StubJWKSet(keys=[signing_key])
+        client = Client("user@example.com", "password")
+        client._token_set = dict(FAKE_TOKEN_SET)
+        client._get_jwks = AsyncMock(return_value=stub)
+
+        mocker.patch.object(
+            client_module.jwt, "get_unverified_header", return_value={"kid": "abc"}
+        )
+        decode = mocker.patch.object(
+            client_module.jwt,
+            "decode",
+            return_value={"sub": "user@example.com", "exp": 9_999_999_999},
+        )
+
+        result = await client._decode_token()
+
+        assert result["sub"] == "user@example.com"
+        decode.assert_called_once()
+        kwargs = decode.call_args.kwargs
+        assert kwargs["jwt"] == FAKE_ACCESS_TOKEN
+        assert kwargs["key"] is signing_key.key
+        assert kwargs["audience"] == client_module._AUDIENCE
+        assert kwargs["algorithms"] == ["RS256"]
+
+    async def test_raises_when_no_jwk_matches_kid(self, mocker) -> None:  # type: ignore[no-untyped-def]
+        from onekommafive import client as client_module
+
+        stub = _StubJWKSet(keys=[_StubJWK(key_id="other", key=object())])
+        client = Client("user@example.com", "password")
+        client._token_set = dict(FAKE_TOKEN_SET)
+        client._get_jwks = AsyncMock(return_value=stub)
+        mocker.patch.object(
+            client_module.jwt, "get_unverified_header", return_value={"kid": "abc"}
+        )
+
+        with pytest.raises(AuthenticationError, match="No matching JWK"):
+            await client._decode_token()
