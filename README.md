@@ -207,7 +207,7 @@ lives at **[Development](https://mrebbert.github.io/1komma5-api/development/)**.
 Quick reference:
 
 ```bash
-uv sync --all-extras
+uv sync
 uv run pre-commit install
 uv run pytest
 ```

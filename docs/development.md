@@ -19,9 +19,13 @@ and probe the live API against this repository.
 ```bash
 git clone https://github.com/mrebbert/1komma5-api.git
 cd 1komma5-api
-uv sync --all-extras
+uv sync
 uv run pre-commit install
 ```
+
+`uv sync` without flags installs the `dev` dependency-group
+(aioresponses, pytest, syrupy, mypy, ruff ...). Add
+`--extra test-mutation` for the opt-in mutmut extra.
 
 ### With pip
 

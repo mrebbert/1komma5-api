@@ -1096,6 +1096,21 @@ test-mutation = [
     { name = "mutmut" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "aioresponses" },
+    { name = "hypothesis" },
+    { name = "interrogate" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-mock" },
+    { name = "ruff" },
+    { name = "syrupy" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = ">=3.10" },
@@ -1112,9 +1127,24 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.12" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8" },
-    { name = "syrupy", marker = "extra == 'dev'", specifier = ">=4.6" },
+    { name = "syrupy", marker = "extra == 'dev'", specifier = ">=6.0" },
 ]
 provides-extras = ["dev", "test-mutation"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "aioresponses", specifier = ">=0.7" },
+    { name = "hypothesis", specifier = ">=6.0" },
+    { name = "interrogate", specifier = ">=1.7" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pre-commit", specifier = ">=3.5" },
+    { name = "pytest", specifier = ">=8.0" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "pytest-cov", specifier = ">=5" },
+    { name = "pytest-mock", specifier = ">=3.12" },
+    { name = "ruff", specifier = ">=0.8" },
+    { name = "syrupy", specifier = ">=6.0" },
+]
 
 [[package]]
 name = "packaging"

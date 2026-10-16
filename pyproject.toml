@@ -30,6 +30,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Kept as the single source of truth so `pip install ".[dev]"` keeps
+# working in the pip CI matrix. The `[dependency-groups] dev` block
+# below mirrors this list via include-group so `uv sync` without
+# `--all-extras` picks the same deps up automatically.
 dev = [
     # aioresponses (<=0.7.8) doesn't yet supply the ``stream_writer`` kwarg
     # that aiohttp 3.14 requires in ClientResponse.__init__. We patch it
@@ -46,7 +50,10 @@ dev = [
     "pytest-cov>=5",
     "pytest-mock>=3.12",
     "ruff>=0.8",
-    "syrupy>=4.6",
+    # Required by tests/test_cli_snapshots.py (`snapshot` fixture).
+    # Floor matches the version CI has been running since PR #55 so
+    # the snapshot serializer format stays stable between local and CI.
+    "syrupy>=6.0",
 ]
 
 # Opt-in extra for mutation testing. Not pulled into the normal test
@@ -54,6 +61,26 @@ dev = [
 # config keys again, so pin to 3.x for stability.
 test-mutation = [
     "mutmut>=3.0,<4",
+]
+
+# PEP 735 dependency groups. uv installs the `dev` group by default on
+# `uv sync`, so contributors cloning fresh get aioresponses, syrupy,
+# hypothesis & friends without having to remember `--all-extras`.
+# Pip ignores this block; `pip install ".[dev]"` reads the extras
+# above instead.
+[dependency-groups]
+dev = [
+    "aioresponses>=0.7",
+    "hypothesis>=6.0",
+    "interrogate>=1.7",
+    "mypy>=1.11",
+    "pre-commit>=3.5",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=5",
+    "pytest-mock>=3.12",
+    "ruff>=0.8",
+    "syrupy>=6.0",
 ]
 
 [project.scripts]
