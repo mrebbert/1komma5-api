@@ -17,7 +17,8 @@ list-of-dicts).
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -33,8 +34,8 @@ from onekommafive.models import (
     LiveOverview,
     MarketPrices,
     Notification,
-    NotificationsList,
     NotificationSettings,
+    NotificationsList,
     SiteDetails,
     SiteStatus,
     SiteSystemInfo,
@@ -88,7 +89,12 @@ def _call_hbai(data: dict[str, Any]) -> HeartbeatAiSummary:
 
 
 MODEL_CASES: list[
-    tuple[str, Callable[[dict[str, Any]], Any], Callable[[], dict[str, Any]], tuple[str, ...]]
+    tuple[
+        str,
+        Callable[[dict[str, Any]], Any],
+        Callable[[], dict[str, Any]],
+        tuple[str, ...],
+    ]
 ] = [
     # (label, from_dict_callable, make_reference_data, mandatory_top_level_keys)
     ("SystemInfo", SystemInfo.from_dict, make_system_data, ("id",)),
@@ -150,7 +156,12 @@ MODEL_CASES: list[
         make_notification_settings_data,
         (),
     ),
-    ("SupportedVersions", SupportedVersions.from_dict, make_supported_versions_data, ()),
+    (
+        "SupportedVersions",
+        SupportedVersions.from_dict,
+        make_supported_versions_data,
+        (),
+    ),
     ("EmsSettings", EmsSettings.from_dict, make_ems_settings_data, ()),
 ]
 
