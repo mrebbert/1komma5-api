@@ -1,16 +1,19 @@
-"""Tests for :func:`onekommafive.cli._client` and :func:`_get_system`.
+"""Tests for :func:`onekommafive.cli._client`, :func:`_get_system`, the
+small formatter helpers (``_kwh``, ``_w``, ``_pct``) and the ``main``
+dispatch wrapper.
 
-These helpers wire the CLI to the SDK; every subcommand routes through
-them. Coverage of the env-var branches is required by the 95 % gate.
+Every CLI subcommand routes through these; coverage of the env-var and
+dispatch branches is required by the 95 % gate.
 """
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from onekommafive.cli import _client, _get_system
+from onekommafive.cli import _client, _get_system, _kwh, _pct, _w, main
 
 
 class TestClientHelper:
@@ -114,3 +117,63 @@ class TestGetSystemHelper:
             systems_ctor.return_value.get_systems.return_value = [first]
             with pytest.raises(SystemExit, match="not found"):
                 _get_system()
+
+
+class TestFormatHelpers:
+    """``_kwh``, ``_w`` and ``_pct`` cover the formatter branches used by
+    every print path."""
+
+    def test_kwh_formats_two_decimals(self) -> None:
+        assert _kwh(1.2345) == "1.23 kWh"
+
+    def test_kwh_renders_none_as_dash(self) -> None:
+        assert _kwh(None) == "—"
+
+    def test_w_adds_plus_sign_for_positive_power(self) -> None:
+        assert _w(123.6) == "+124 W"
+
+    def test_w_omits_sign_for_zero(self) -> None:
+        assert _w(0) == "0 W"
+
+    def test_w_keeps_minus_for_negative(self) -> None:
+        assert _w(-50.4) == "-50 W"
+
+    def test_w_renders_none_as_dash(self) -> None:
+        assert _w(None) == "—"
+
+    def test_pct_formats_one_decimal(self) -> None:
+        assert _pct(42.57) == "42.6%"
+
+    def test_pct_renders_none_as_dash(self) -> None:
+        assert _pct(None) == "—"
+
+
+class TestMainDispatch:
+    """``main`` dispatches to the parsed subcommand and always closes any
+    live sync-client, even when the subcommand raises."""
+
+    def test_closes_live_clients_in_finally_on_success(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(sys, "argv", ["1k5", "live"])
+        live_client = MagicMock()
+        with (
+            patch("onekommafive.cli.cmd_live") as cmd,
+            patch("onekommafive.cli.Client._live", {live_client}),
+        ):
+            main()
+        cmd.assert_called_once()
+        live_client.close.assert_called_once()
+
+    def test_closes_live_clients_in_finally_on_exception(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(sys, "argv", ["1k5", "live"])
+        live_client = MagicMock()
+        with (
+            patch("onekommafive.cli.cmd_live", side_effect=RuntimeError("boom")),
+            patch("onekommafive.cli.Client._live", {live_client}),
+            pytest.raises(RuntimeError, match="boom"),
+        ):
+            main()
+        live_client.close.assert_called_once()
