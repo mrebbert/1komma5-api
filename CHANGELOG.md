@@ -8,6 +8,36 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.1.9] - 2026-10-16
+
+Maintenance release. No changes to the installed `onekommafive`
+package; CI, docs and tests only. Safe to upgrade.
+
+### Added
+- `CHANGELOG.md` seeded from `v1.0.0..v1.1.8` git history.
+- `docs/development.md` as the single-source-of-truth developer guide
+  (setup, tests, lint, mypy, probe-versions, release), linked from
+  `README.md`, `CONTRIBUTING.md` and the mkdocs nav.
+- Landing page (`docs/index.md`) now carries the feature overview
+  instead of punting to the GitHub README.
+- FAQ entry explaining why `/ev-charging-sessions/active` returns an
+  empty list on accounts whose EV asset has `dataSource = USER_INPUT`.
+- `API.md` section `Endpoints observed but not wrapped` documenting
+  the two deliberately-skipped endpoints
+  (`ev-charging-sessions/active`, `whats-new/updates/improvements`).
+- `.github/workflows/release.yml`: tag-driven release via PyPI
+  Trusted Publishing (OIDC). No secrets in the repo.
+- `tests/test_models_properties.py`: hypothesis-based robustness
+  suite exercising every representative `from_dict` against random
+  subsets of its reference payload.
+- Test coverage for `client.py` JWT/JWKS pathways (`_get_jwks`,
+  `_decode_token`) and `cli.py` formatters (`_kwh`, `_w`, `_pct`,
+  `main`'s finally branch).
+
+### Changed
+- Project coverage 95.11 % → 96.14 %. `client.py` 90 % → 100 %,
+  `cli.py` 90 % → 91 %.
+
 ## [1.1.8] - 2026-10-12
 
 ### Added
@@ -109,7 +139,8 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 - Python 3.13+ required. For Python 3.11/3.12 compatibility, pin
   `onekommafive<1.0`.
 
-[Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.8...HEAD
+[Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.9...HEAD
+[1.1.9]: https://github.com/mrebbert/1komma5-api/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/mrebbert/1komma5-api/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/mrebbert/1komma5-api/compare/v1.1.6...v1.1.7
 [1.1.6]: https://github.com/mrebbert/1komma5-api/compare/v1.1.5...v1.1.6
