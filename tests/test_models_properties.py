@@ -114,7 +114,7 @@ MODEL_CASES: list[
     (
         "SiteSystemInfo-blank",
         SiteSystemInfo.from_dict,
-        lambda: make_system_info_data(),
+        make_system_info_data,
         (),
     ),
     ("LiveOverview", LiveOverview.from_dict, make_live_overview_data, ()),
