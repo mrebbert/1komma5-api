@@ -1,0 +1,102 @@
+name: Nightly compatibility matrix
+
+# Nightly cross-check of the test suite against aiohttp "latest" (the
+# version pip resolves today) and "pinned" (the version in uv.lock).
+# Catches aiohttp/aioresponses divergence drift — the SDK took the
+# aioresponses stream_writer hit twice before (v1.0.3 shim); nightly
+# surfaces the next divergence before users file issues.
+#
+# No live API traffic, no credentials. Everything runs against
+# aioresponses-mocked HTTP.
+
+on:
+  schedule:
+    # 05:17 UTC daily — off the typical minute 0 to spread load.
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  matrix:
+    name: ${{ matrix.python-version }} × aiohttp ${{ matrix.aiohttp }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13", "3.14"]
+        aiohttp: ["latest", "locked"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Sync from lock (locked aiohttp)
+        if: matrix.aiohttp == 'locked'
+        run: uv sync --frozen --all-extras --python ${{ matrix.python-version }}
+
+      - name: Sync + upgrade aiohttp to latest
+        if: matrix.aiohttp == 'latest'
+        run: |
+          uv sync --all-extras --python ${{ matrix.python-version }}
+          uv pip install --upgrade aiohttp
+
+      - name: Show resolved versions
+        run: |
+          uv run python -c "import aiohttp, aioresponses; print('aiohttp', aiohttp.__version__); print('aioresponses', aioresponses.__version__)"
+
+      - name: Run full test suite
+        run: uv run pytest -ra
+
+  report-failure:
+    name: Open an issue on failure
+    needs: matrix
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Create or update issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const title = `Nightly compatibility matrix failing (${new Date().toISOString().slice(0,10)})`;
+            const body = [
+              `The nightly compatibility matrix failed on ${process.env.GITHUB_SHA}.`,
+              ``,
+              `Run: https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+              ``,
+              `Common causes:`,
+              `- aiohttp released a new version with a breaking change for aioresponses`,
+              `- aioresponses released a new version with an unexpected shim mismatch`,
+              `- Python 3.14 shipped a stdlib change affecting the SDK`,
+            ].join("\n");
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+              labels: "nightly-failure",
+            });
+            if (existing.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ["nightly-failure"],
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body,
+              });
+            }
