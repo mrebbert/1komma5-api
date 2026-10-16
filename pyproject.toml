@@ -48,6 +48,13 @@ dev = [
     "ruff>=0.8",
 ]
 
+# Opt-in extra for mutation testing. Not pulled into the normal test
+# run; the mutation CI job installs it on top. mutmut 4.x changed the
+# config keys again, so pin to 3.x for stability.
+test-mutation = [
+    "mutmut>=3.0,<4",
+]
+
 [project.scripts]
 1k5 = "onekommafive.cli:main"
 
@@ -102,6 +109,27 @@ ignore = ["E501"]
 python_version = "3.13"
 strict = true
 files = ["onekommafive"]
+
+[tool.mutmut]
+# Targeted mutation testing on the pure-logic hotspots: numeric
+# transforms on analytics (§14a, VAT, Modul-3 savings math) and the
+# market-price shape conversions. The rest of the SDK is I/O glue
+# where mutmut produces more noise than signal and would push run
+# time past 20 min.
+#
+# mutmut 3.x key names: `source_paths` + `pytest_add_cli_args_test_selection`.
+# The 4.x branch is deprecated for these keys and is deliberately not
+# used.
+source_paths = [
+    "onekommafive/models/analytics.py",
+    "onekommafive/models/prices.py",
+]
+# mutmut copies only the mutated files into its `mutants/` sandbox.
+# Without `also_copy`, siblings like `__init__.py` and the rest of the
+# package are missing and pytest crashes on import.
+also_copy = ["onekommafive"]
+pytest_add_cli_args_test_selection = ["tests/"]
+runner = "pytest -x -p no:cacheprovider --no-cov"
 
 [tool.interrogate]
 # Docstring-coverage gate for the SDK surface. Measures presence, not

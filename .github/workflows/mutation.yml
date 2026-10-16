@@ -1,0 +1,79 @@
+name: Mutation testing
+
+# Opt-in: runs on main pushes to the hotspot modules and on manual
+# dispatch. Not a required check for PRs because a full run on
+# analytics.py + prices.py may take 10–20 min.
+#
+# Hypothesis-Property-Tests prove shape robustness; mutation testing
+# proves that the numeric transforms (VAT, §14a Modul-3 savings,
+# market-price formulas) actually get caught by assertions when a `+`
+# flips to `-`, a `>` to `>=`, or a constant drifts. Together they
+# cover both axes.
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "onekommafive/models/analytics.py"
+      - "onekommafive/models/prices.py"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mutation:
+    name: Mutation score (analytics + prices)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Sync dev + mutation extras
+        run: uv sync --frozen --all-extras --python 3.13
+
+      - name: Install mutmut on top
+        run: uv pip install 'mutmut>=3.0,<4'
+
+      - name: Run mutmut
+        # Non-zero exit is expected when mutants survive; the results
+        # step surfaces them and the artifact keeps them around.
+        run: uv run mutmut run || true
+
+      - name: Dump results
+        if: always()
+        run: uv run mutmut results | tee mutation-results.txt
+
+      - name: Upload results artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-results
+          path: mutation-results.txt
+          retention-days: 30
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Mutation testing results"
+            echo
+            echo "Hotspot modules:"
+            echo
+            echo "- onekommafive/models/analytics.py"
+            echo "- onekommafive/models/prices.py"
+            echo
+            echo '<details><summary>Raw mutmut output (click to expand)</summary>'
+            echo
+            echo '```'
+            head -200 mutation-results.txt
+            echo '```'
+            echo
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
