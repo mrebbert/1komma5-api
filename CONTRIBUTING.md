@@ -6,7 +6,7 @@ hobby-maintained project; issues and pull requests are welcome.
 Setup, test invocations, lint commands, type-check commands and the
 "add a new API endpoint" recipe live on the dedicated developer page:
 
-**<https://mrebbert.github.io/1komma5-api/development/>**  
+**<https://mrebbert.github.io/1komma5-api/development/>**
 (Source: [`docs/development.md`](docs/development.md).)
 
 ## Pull-request policy
