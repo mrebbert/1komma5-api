@@ -19,6 +19,8 @@ Full documentation lives at **<https://mrebbert.github.io/1komma5-api/>**. The R
 - **[API reference](https://mrebbert.github.io/1komma5-api/api/)** — curl-level documentation of every endpoint the client wraps: URLs, request parameters, response JSON, known quirks. Source: [`API.md`](API.md).
 - **[§14a EnWG grid-fee bundle](https://mrebbert.github.io/1komma5-api/enwg14a/)** — regulatory primer, Modul 1 vs. Modul 3, field mapping, convenience method.
 - **[FAQ](https://mrebbert.github.io/1komma5-api/faq/)** — legacy sign-in, token cache, HTTP-400 date quirks, HTTP-403 on `price-guarantee`, and other recurring questions.
+- **[Development](https://mrebbert.github.io/1komma5-api/development/)** — setup, tests, lint, type-check, probe-versions, release flow.
+- **[Changelog](CHANGELOG.md)** — per-version additions, changes and fixes.
 - **[Postman collection](postman/)** — importable alongside the API reference.
 
 ## Installation
@@ -200,54 +202,23 @@ Every model exposes a `raw` attribute (`dict[str, Any]`) with the full untouched
 
 ## Development
 
-### Running tests
-
-Standard (pip):
-
-```bash
-pip install "onekommafive[dev]"
-pytest
-```
-
-Alternative (uv, faster and backed by the checked-in `uv.lock`):
+Full developer guide (setup, tests, lint, type-check, probe, release)
+lives at **[Development](https://mrebbert.github.io/1komma5-api/development/)**.
+Quick reference:
 
 ```bash
 uv sync --all-extras
+uv run pre-commit install
 uv run pytest
 ```
 
-Integration tests (require credentials, read-only, no mutations):
+Integration tests opt-in via `ONEKOMMAFIVE_USERNAME` / `ONEKOMMAFIVE_PASSWORD`
+environment variables (read-only, no mutations). Contribution policy
+and PR expectations: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-```bash
-ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... pytest tests/test_integration.py -v
-```
-
-### Linting and pre-commit
-
-Lint with [ruff](https://docs.astral.sh/ruff/):
-
-```bash
-ruff check .
-```
-
-Install the [pre-commit](https://pre-commit.com/) hooks once after cloning:
-
-```bash
-pre-commit install
-```
-
-The hooks run ruff on every commit. CI runs ruff, mypy-strict, CodeQL and the test matrix on every push and pull request.
-
-### API version monitoring
-
-[`scripts/probe_versions.py`](scripts/probe_versions.md) probes every known endpoint for newer API versions than the ones currently used by the client. Run it after a 1KOMMA5° app update to catch version bumps early:
-
-```bash
-ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... \
-PYTHONPATH=. python scripts/probe_versions.py
-```
-
-A daily "observatory" diff of the full response-shape surface runs out of tree; its findings land in [API.md](API.md) and this repo's commit history.
+See [CHANGELOG.md](CHANGELOG.md) for the release history, [API.md](API.md)
+for the full curl-level endpoint reference, and `scripts/probe_versions.py`
+for the local version-bump probe.
 
 ## Compatibility
 
