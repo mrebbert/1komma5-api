@@ -8,6 +8,44 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.1.10] - 2026-10-16
+
+Maintenance release. No changes to the installed `onekommafive`
+package; CI, tests and developer tooling only. Safe to upgrade.
+
+### Added
+- `tests/test_cli_snapshots.py`: syrupy snapshot tests for seven CLI
+  subcommands (`info`, `live`, `weather`, `system-info` enrolled +
+  blank, `heartbeat-prices`, `ems`).
+- `tests/test_failure_paths.py`: named failure-path suite collecting
+  the SDK's resilience contract (error hierarchy, token-refresh
+  fallback, `_request` status/body contract, resource-method labels).
+- `.github/workflows/nightly.yml`: 05:17 UTC compatibility matrix
+  across Python 3.13/3.14 against aiohttp latest and the locked
+  version, opens an issue with the `nightly-failure` label on fail.
+- `.github/workflows/mutation.yml`: opt-in mutmut on `analytics.py` /
+  `prices.py`, triggered on direct pushes to those files or via
+  `workflow_dispatch`.
+- `[tool.mutmut]` + `[tool.interrogate]` config in `pyproject.toml`,
+  `test-mutation` opt-in extra (`mutmut>=3.0,<4`), interrogate 85 %
+  docstring-coverage gate wired into `lint.yml`.
+- `[dependency-groups] dev` (PEP 735): `uv sync` without flags now
+  installs the full test toolbelt (aioresponses, hypothesis, pytest,
+  syrupy, mypy, ruff ...). Pip's `.[dev]` extra kept for CI parity.
+
+### Changed
+- pytest `addopts = "--cov --cov-report=term-missing -ra
+  --strict-markers"`: typos in `@pytest.mark.*` decorators now fail
+  the run instead of being silently ignored.
+- syrupy pin lifted to `>=6.0` to match the serializer format CI has
+  been running since PR #55.
+- `README.md` and `docs/development.md` drop `--all-extras` from the
+  setup snippet; the dev group is picked up by default.
+
+### Fixed
+- CodeQL `py/unnecessary-lambda` on `test_models_properties.py`:
+  dropped the zero-arg lambda wrapper around `make_system_info_data`.
+
 ## [1.1.9] - 2026-10-16
 
 Maintenance release. No changes to the installed `onekommafive`
@@ -139,7 +177,8 @@ package; CI, docs and tests only. Safe to upgrade.
 - Python 3.13+ required. For Python 3.11/3.12 compatibility, pin
   `onekommafive<1.0`.
 
-[Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.9...HEAD
+[Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...HEAD
+[1.1.10]: https://github.com/mrebbert/1komma5-api/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/mrebbert/1komma5-api/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/mrebbert/1komma5-api/compare/v1.1.7...v1.1.8
 [1.1.7]: https://github.com/mrebbert/1komma5-api/compare/v1.1.6...v1.1.7
