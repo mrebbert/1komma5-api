@@ -64,7 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Create or update issue
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const title = `Nightly compatibility matrix failing (${new Date().toISOString().slice(0,10)})`;
