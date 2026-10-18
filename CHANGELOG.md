@@ -8,6 +8,17 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.1.11] - 2026-10-18
+
+Maintenance release. Pure dependency and CI-toolchain upgrades,
+no changes to the installed `onekommafive` package behavior. Safe
+to upgrade.
+
+### Changed
+- Runtime: `aiohttp` 3.14.4 → 3.14.5 (patch).
+- Dev tooling: `ruff` 0.16.10 → 0.17.0, `pre-commit` 4.6.2 → 4.7.0.
+- CI actions: `astral-sh/setup-uv` v6 → v7 (all workflows), `actions/github-script` v8 → v9, `softprops/action-gh-release` v2 → v3, `actions/upload-artifact` v4 → v7, `actions/download-artifact` v4 → v8. Release workflow now runs on a consistent Node 24 action set with digest-mismatch fail-fast on artifact downloads.
+
 ## [1.1.10] - 2026-10-16
 
 Maintenance release. No changes to the installed `onekommafive`
@@ -178,6 +189,7 @@ package; CI, docs and tests only. Safe to upgrade.
   `onekommafive<1.0`.
 
 [Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...HEAD
+[1.1.11]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/mrebbert/1komma5-api/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/mrebbert/1komma5-api/compare/v1.1.8...v1.1.9
 [1.1.8]: https://github.com/mrebbert/1komma5-api/compare/v1.1.7...v1.1.8
