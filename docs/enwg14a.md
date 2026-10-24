@@ -39,6 +39,26 @@ A non-participating account carries `None` on all four across every
 window. Opting in flips all four to populated values on the next
 backend tick.
 
+### Per-slot Netzentgelt on `MarketPrices`
+
+Since API v5 of `/charts/market-prices`, every timeseries slot also
+carries the Modul-1 Netzentgelt that applies to **that specific
+slot** in EUR/kWh:
+
+| Attribute | Type | Semantics |
+|---|---|---|
+| `MarketPrices.enwg14a_grid_fee` | `dict[str, float]` | Modul-1 Netzentgelt per ISO-8601 timestamp, before VAT. Empty on non-participating sites. |
+| `MarketPrices.enwg14a_grid_fee_with_vat` | `dict[str, float]` | Same, VAT-inclusive. Empty on non-participating sites. |
+
+These complement the window-aggregated Modul-1 fields on
+`HeartbeatPriceWindow`: the heartbeat-prices view gives you
+"how much did Modul 1 save over this window?", the per-slot
+market-prices view gives you "what is the Modul-1 Netzentgelt
+for each specific hour / 15-min slot?". A slot whose JSON value
+is `null` drops out of the mapping entirely, so iterating the
+dict is safe and `.get(ts)` returns `None` for unprovisioned
+slots.
+
 ## Where to read the enrolment flag
 
 Two independent sources on the SDK side:
@@ -114,6 +134,10 @@ for name in ("day", "week", "month", "halfYear", "year"):
 at least one window carries populated Modul-1 or Modul-3 values. On a
 non-participating account the section is suppressed, so the output
 stays clean.
+
+`1k5 prices` appends a `§14a` column (VAT-inclusive Netzentgelt per
+slot, EUR/kWh) to its timeseries table when at least one slot carries
+Modul-1 data. Hidden on non-participating sites.
 
 ## Related
 
