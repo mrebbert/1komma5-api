@@ -126,8 +126,13 @@
             },
             "url": {
               "raw": "{{authUrl}}/oauth/token",
-              "host": ["{{authUrl}}"],
-              "path": ["oauth", "token"]
+              "host": [
+                "{{authUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "token"
+              ]
             },
             "description": "Exchange a stored refresh token for a fresh access token. The attached post-response script writes the new `access_token` (and, if rotated, the `refresh_token`) back into the collection variables automatically. Values are stored in `currentValue` only, never in `initialValue`."
           },
@@ -152,8 +157,13 @@
             },
             "url": {
               "raw": "{{authUrl}}/oauth/token",
-              "host": ["{{authUrl}}"],
-              "path": ["oauth", "token"]
+              "host": [
+                "{{authUrl}}"
+              ],
+              "path": [
+                "oauth",
+                "token"
+              ]
             },
             "description": "Final step of the Authorization-Code + PKCE flow. The preceding interactive steps (authorize, login, resume) cannot be reproduced in Postman because they involve browser redirects under the mobile-app URL scheme. Use the `onekommafive` Python client to perform a full login, then paste the resulting `access_token` / `refresh_token` into the collection variables."
           },
@@ -171,8 +181,15 @@
             "header": [],
             "url": {
               "raw": "{{identityUrl}}/api/v1/users/me",
-              "host": ["{{identityUrl}}"],
-              "path": ["api", "v1", "users", "me"]
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "me"
+              ]
             },
             "description": "Returns the authenticated user's profile: id, email, first/last name, phone, status, external_id, and the `connectedSystems` list (all sites the user has access to, with per-site name and address). Use `connectedSystems[i].systemId` to switch between multi-site accounts."
           },
@@ -190,8 +207,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v2/systems",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "systems"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "systems"
+              ]
             },
             "description": "List all systems (sites) the authenticated user has access to."
           },
@@ -204,8 +227,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v4/systems/{{systemId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v4", "systems", "{{systemId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v4",
+                "systems",
+                "{{systemId}}"
+              ]
             },
             "description": "Single system metadata (v4). Does NOT include `energyTraderActive` / `electricityContractActive` — use the `/details` endpoint for those."
           },
@@ -218,8 +248,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/details",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "details"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "details"
+              ]
             },
             "description": "Extended metadata: `empType`, technical contact, embedded customer, smart-meter flags, `earliestMeasurement`, `deviceGateways[]`, `externalPartnerId` (external partner UUID; null for consumer-direct accounts). Also brings back v2-only `energyTraderActive` / `electricityContractActive`."
           },
@@ -232,8 +270,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v3/sites/{{siteId}}/status-and-assets",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v3", "sites", "{{siteId}}", "status-and-assets"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v3",
+                "sites",
+                "{{siteId}}",
+                "status-and-assets"
+              ]
             },
             "description": "Site connection status plus hardware asset inventory: HYBRID inverter, HEAT_PUMP, METER, EV_CHARGER (manufacturer, model, serial, firmware, network). Note: serial field is `serialnumber` (lowercase n)."
           },
@@ -246,8 +292,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/system-info",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "sites", "{{siteId}}", "system-info"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sites",
+                "{{siteId}}",
+                "system-info"
+              ]
             },
             "description": "Compact site availability + §14a module enrolment. Returns `{availability, enwg14aModule}` where `enwg14aModule` is either null (not enrolled) or `{value, validFromDate}` with `value` as a kebab-case slug like `module-1` / `module-3` and `validFromDate` as an ISO-8601 date. Added in the 2026-10 backend rollout."
           },
@@ -260,8 +314,18 @@
             "header": [],
             "url": {
               "raw": "{{identityUrl}}/api/v2/customers/{{customerId}}/sites/{{siteId}}/active-features",
-              "host": ["{{identityUrl}}"],
-              "path": ["api", "v2", "customers", "{{customerId}}", "sites", "{{siteId}}", "active-features"]
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "customers",
+                "{{customerId}}",
+                "sites",
+                "{{siteId}}",
+                "active-features"
+              ]
             },
             "description": "List of active feature flags (e.g. DYNAMIC_TARIFF, TIME_OF_USE_OPTIMIZATION, SMART_CHARGING). `customerId` comes from `/systems/{id}/details`."
           },
@@ -274,9 +338,20 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v2/device-gateways?systemId={{systemId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "device-gateways"],
-              "query": [{"key": "systemId", "value": "{{systemId}}"}]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "device-gateways"
+              ],
+              "query": [
+                {
+                  "key": "systemId",
+                  "value": "{{systemId}}"
+                }
+              ]
             },
             "description": "Paginated list of device gateways for the system. Richer than the `deviceGateways` block inside `/systems/{id}/details`: adds `type`, `claimedByUserId`, GridX backend ids, `provisioningJob.installerName`, `createdAt`/`updatedAt`."
           },
@@ -289,8 +364,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/smart-meter",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "sites", "{{siteId}}", "smart-meter"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sites",
+                "{{siteId}}",
+                "smart-meter"
+              ]
             },
             "description": "Smart-meter registration details: ENTSO-E control-area EIC, DSO BDEW code, municipality concession fee in EUR/kWh. The DSO code and concession fee come as arrays of historic entries with `validFromDate`/`validUntilDate` — the current entry is typically the first element."
           },
@@ -303,10 +386,62 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v3/sites/{{siteId}}/details",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v3", "sites", "{{siteId}}", "details"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v3",
+                "sites",
+                "{{siteId}}",
+                "details"
+              ]
             },
             "description": "Superset of `Get system` (v4) and `Get system details` (v1). Adds `biddingZone`, `biddingZoneEic`, `empDetails` (gateway pairing info — sensitive), `empReferenceId`, `impactedByEnwg` (EnWG regulatory flag — likely §14a controllable-consumption, but not documented by the API), `externalPartnerId` (external partner UUID; null for consumer-direct accounts), `gridConnectionPointPhases`, `maxCurrentPerPhaseAmpere`, embedded `customer` block, and — most useful — `emsMode`/`emsState`/`emsStateReasons` (EMS runtime state, not exposed by the other system endpoints). Does NOT include `deviceGateways` — use `/systems/{id}/details` for those."
+          },
+          "response": []
+        },
+        {
+          "name": "Get site details (v2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/sites/{{siteId}}/details",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "sites",
+                "{{siteId}}",
+                "details"
+              ]
+            },
+            "description": "Site-scoped details, v2 variant. Observed in production traffic alongside the v3 variant; both coexist. Partially overlaps with `GET /api/v1/systems/{id}/details` but keyed by site, not system. Useful when the client only has the site UUID."
+          },
+          "response": []
+        },
+        {
+          "name": "Get site status and assets (v2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v2/sites/{{siteId}}/status-and-assets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "sites",
+                "{{siteId}}",
+                "status-and-assets"
+              ]
+            },
+            "description": "Site-scoped status + attached assets, v2 variant. Observed in production traffic alongside the v3 variant; both coexist. Compact snapshot of what hardware the site is composed of plus the current availability flag."
           },
           "response": []
         }
@@ -322,8 +457,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v3/systems/{{systemId}}/live-overview",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v3", "systems", "{{systemId}}", "live-overview"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v3",
+                "systems",
+                "{{systemId}}",
+                "live-overview"
+              ]
             },
             "description": "Real-time energy overview. Response nests `liveHeroView` and `summaryCards`. For battery_power prefer `summaryCards.battery.power` (negated; API: negative=charging). For grid_power prefer `summaryCards.grid.power`."
           },
@@ -341,8 +484,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v2/systems/{{systemId}}/energy-today?resolution=1h",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "systems", "{{systemId}}", "energy-today"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "systems",
+                "{{systemId}}",
+                "energy-today"
+              ],
               "query": [
                 {
                   "key": "resolution",
@@ -361,8 +512,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v3/systems/{{systemId}}/energy-historical?from=2026-06-01&to=2026-06-02&resolution=1h",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v3", "systems", "{{systemId}}", "energy-historical"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v3",
+                "systems",
+                "{{systemId}}",
+                "energy-historical"
+              ],
               "query": [
                 {
                   "key": "from",
@@ -392,8 +551,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v5/systems/{{systemId}}/charts/market-prices?from=2026-06-12T00:00:00Z&to=2026-06-13T00:00:00Z&resolution=1h",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v5", "systems", "{{systemId}}", "charts", "market-prices"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v5",
+                "systems",
+                "{{systemId}}",
+                "charts",
+                "market-prices"
+              ],
               "query": [
                 {
                   "key": "from",
@@ -423,8 +591,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/energy-savings?from=2026-07-01&to=2026-07-31",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "energy-savings"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "energy-savings"
+              ],
               "query": [
                 {
                   "key": "from",
@@ -455,8 +631,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v2/systems/{{systemId}}/price-customizations",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "systems", "{{systemId}}", "price-customizations"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "systems",
+                "{{systemId}}",
+                "price-customizations"
+              ]
             },
             "description": "User-configured prices: `gridEnergyPrice`, `comparisonEnergyPrice` (both EUR/kWh as string), `monthlyBasePrice` (EUR/month)."
           },
@@ -469,8 +653,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v2/comparison-price?siteId={{siteId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "comparison-price"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "comparison-price"
+              ],
               "query": [
                 {
                   "key": "siteId",
@@ -490,8 +680,16 @@
             "header": [],
             "url": {
               "raw": "{{identityUrl}}/api/v1/customers/{{customerId}}/price-guarantee?systemId={{systemId}}",
-              "host": ["{{identityUrl}}"],
-              "path": ["api", "v1", "customers", "{{customerId}}", "price-guarantee"],
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{customerId}}",
+                "price-guarantee"
+              ],
               "query": [
                 {
                   "key": "systemId",
@@ -517,8 +715,15 @@
             "header": [],
             "url": {
               "raw": "{{identityUrl}}/api/v3/customers/{{customerId}}",
-              "host": ["{{identityUrl}}"],
-              "path": ["api", "v3", "customers", "{{customerId}}"]
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "api",
+                "v3",
+                "customers",
+                "{{customerId}}"
+              ]
             },
             "description": "Full customer profile — adds phone, address, `customerType`, `crmContactId`, `crmBranchLocation` on top of the embedded `SystemCustomer` (which only has id/name/email). Field naming quirks: `contactEmail` (not `email`), `addressCountry` as plain-name string (`\"Deutschland\"`) not ISO code."
           },
@@ -531,8 +736,16 @@
             "header": [],
             "url": {
               "raw": "{{identityUrl}}/api/v1/customers/{{customerId}}/subscriptions",
-              "host": ["{{identityUrl}}"],
-              "path": ["api", "v1", "customers", "{{customerId}}", "subscriptions"]
+              "host": [
+                "{{identityUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{customerId}}",
+                "subscriptions"
+              ]
             },
             "description": "All customer contracts. Typical composition: DYNAMIC_PULSE (electricity), SMART_METER (24-mo notice), HEARTBEAT (0 EUR), ENERGY_TRADER (14.99 EUR/mo). Response is PII-heavy — includes `paymentIban`, delivery/billing addresses, CRM identifiers (Zoho/Lumenaza), a `statusHistory` block, and an embedded `metadata.payload` with the full Zoho booking record. The Python client (`System.get_subscriptions`) maps only the universal contract metadata (type/status/price/dates/notice/renewal/paymentMethod-enum/terms + DYNAMIC_PULSE contract-identity fields) and keeps all PII in `.raw`."
           },
@@ -545,8 +758,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/subscription-eligibility",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "sites", "{{siteId}}", "subscription-eligibility"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sites",
+                "{{siteId}}",
+                "subscription-eligibility"
+              ]
             },
             "description": "Which 1KOMMA5°Care add-on products the backend currently offers to the account. Returns a `subscriptions` list of {type, eligible, reason} entries — one per upsell product (observed: PV_SERVICE, MAINTENANCE_HEAT_PUMP). Eligibility is gated by a per-sales-order `eligibility1K5Care` tag maintained in CRM; `reason` carries the backend's explanation when `eligible` is false. Distinct from `Get subscriptions` (active contracts). Lives on the `heartbeat` host — note the different base URL."
           },
@@ -565,8 +786,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/users/{{userId}}/notifications/latest?systemId={{systemId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "users", "{{userId}}", "notifications", "latest"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "users",
+                "{{userId}}",
+                "notifications",
+                "latest"
+              ],
               "query": [
                 {
                   "key": "systemId",
@@ -586,8 +816,19 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/users/{{userId}}/notifications/settings",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "users", "{{userId}}", "notifications", "settings"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "users",
+                "{{userId}}",
+                "notifications",
+                "settings"
+              ]
             },
             "description": "User's notification preferences per category (`CO2_IMPACT`, `BATTERY_SOC`, `BROADCAST_NEW_ELECTRICITY_PRICES`, `SYSTEM_HEALTH`, `ENERGY_MARKET_UPPER_TARGET_REACHED`, `ENERGY_MARKET_LOWER_TARGET_REACHED`, `EV_DYNAMIC_PULSE`, `SYSTEM_DATA_COLLECTION_ENDED`). Empty array per category = not subscribed."
           },
@@ -606,8 +847,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/supported-versions",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "supported-versions"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "supported-versions"
+              ]
             },
             "description": "API compatibility matrix: `b2b` (installer/partner) and `b2c` (end-user) `targetVersion` and `minimumSupportedVersion`. Not system-scoped."
           },
@@ -625,8 +872,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/weather",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "weather"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "weather"
+              ]
             },
             "description": "Returns `today`, `tomorrow` (temp, precipitation, sunshineMinutes, sunrise/sunset, weatherSymbolId) and `fineGrainedForecasts` (3h slots for 48h). Night symbol IDs = day ID + 100."
           },
@@ -644,8 +899,18 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/ems/actions/get-settings",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "ems", "actions", "get-settings"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "ems",
+                "actions",
+                "get-settings"
+              ]
             }
           },
           "response": []
@@ -666,8 +931,18 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/systems/{{systemId}}/ems/actions/set-manual-override",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "ems", "actions", "set-manual-override"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "ems",
+                "actions",
+                "set-manual-override"
+              ]
             },
             "description": "`overrideAutoSettings: false` → auto mode. `true` → manual override. Returns 201 on success."
           },
@@ -685,8 +960,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "devices",
+                "evs"
+              ]
             },
             "description": "Vehicle-side profiles (chargingMode, targetSoc, schedules). For the physical wallbox hardware use `List wallboxes` below."
           },
@@ -699,8 +983,17 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/sites/{{systemId}}/assets/ev-chargers",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "ev-chargers"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "devices",
+                "ev-chargers"
+              ]
             },
             "description": "Physical wallbox hardware (`id`, `name`, `assignedEvId`). Site-scoped v1 endpoint (v0.2.0+); works on both GridX-native and non-GridX/Enphase setups. Distinct from `/assets/evs` which returns the vehicle-side profiles. `assignedEvId` links to an entry in `/assets/evs`."
           },
@@ -713,8 +1006,18 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/assets/evs/displayed-ev-charging-modes",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "sites", "{{siteId}}", "assets", "evs", "displayed-ev-charging-modes"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sites",
+                "{{siteId}}",
+                "assets",
+                "evs",
+                "displayed-ev-charging-modes"
+              ]
             },
             "description": "Lists available `ChargingMode` values for this site. Entries with `disabled: true` are excluded by the client."
           },
@@ -736,8 +1039,18 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "devices",
+                "evs",
+                "{{evId}}"
+              ]
             },
             "description": "Allowed values include `SMART_CHARGE`, `FAST_CHARGE`, `SOLAR_OPTIMIZED`, `MANUAL_CHARGE`, etc. — call `Get displayed charging modes` for the active list."
           },
@@ -759,8 +1072,18 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "devices",
+                "evs",
+                "{{evId}}"
+              ]
             },
             "description": "Target state-of-charge as a decimal in [0, 1] (e.g. 0.8 = 80%)."
           },
@@ -782,8 +1105,18 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "devices",
+                "evs",
+                "{{evId}}"
+              ]
             },
             "description": "Decimal in [0, 1]. Only meaningful in `SMART_CHARGE` mode."
           },
@@ -805,8 +1138,18 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "systems", "{{systemId}}", "devices", "evs", "{{evId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "systems",
+                "{{systemId}}",
+                "devices",
+                "evs",
+                "{{evId}}"
+              ]
             },
             "description": "Format `HH:MM` (24h)."
           },
@@ -828,10 +1171,205 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/v2/sites/{{systemId}}/assets/evs/{{evId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "sites", "{{systemId}}", "assets", "evs", "{{evId}}"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "sites",
+                "{{systemId}}",
+                "assets",
+                "evs",
+                "{{evId}}"
+              ]
             },
             "description": "Bind this EV to the physical wallbox with the given UUID. 1:1 exclusive: setting chargerId on EV B automatically releases whichever EV A was previously bound to the same wallbox. The app UI offers only a switch, no separate unassign."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Growth / Onboarding",
+      "description": "App-side marketing, onboarding and referral surface. Observed in daily Observatory captures. Mostly for completeness; the Python SDK deliberately does not wrap these because they are presentation-layer concerns.",
+      "item": [
+        {
+          "name": "Get whats-new summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/whats-new/summary?currentAppVersion=1.0.0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sites",
+                "{{siteId}}",
+                "whats-new",
+                "summary"
+              ],
+              "query": [
+                {
+                  "key": "currentAppVersion",
+                  "value": "1.0.0"
+                }
+              ]
+            },
+            "description": "In-app growth / announcements panel. Called by the Flutter app on launch to decide whether to pop the `Upgrades` tab. Marketing surface, not energy data."
+          },
+          "response": []
+        },
+        {
+          "name": "Get whats-new seen-status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/users/{{userId}}/whats-new/seen-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sites",
+                "{{siteId}}",
+                "users",
+                "{{userId}}",
+                "whats-new",
+                "seen-status"
+              ]
+            },
+            "description": "Per-user flag whether the latest whats-new entries have been acknowledged. Companion to `/whats-new/summary`. Marketing surface."
+          },
+          "response": []
+        },
+        {
+          "name": "Get onboarding eligibility",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/onboardings/eligibility",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sites",
+                "{{siteId}}",
+                "onboardings",
+                "eligibility"
+              ]
+            },
+            "description": "Whether this site is eligible for new onboarding flows (e.g. a tariff change or Modul-1 nudge). Returned from the backend as a flat bag of booleans."
+          },
+          "response": []
+        },
+        {
+          "name": "Get referral overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sites/{{siteId}}/referral-overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "sites",
+                "{{siteId}}",
+                "referral-overview"
+              ]
+            },
+            "description": "Referral programme state for the site: invite code, redeemed invites, pending bonuses. Marketing surface."
+          },
+          "response": []
+        },
+        {
+          "name": "Share referral link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channel\": \"email\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/referrals/share",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "referrals",
+                "share"
+              ]
+            },
+            "description": "Triggers the backend to send a share link via the chosen channel. Payload is best-effort reverse-engineered — observed field is `channel` (email / sms / native). Not required for read-only observability."
+          },
+          "response": []
+        },
+        {
+          "name": "Get setup questionnaire",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/setup-questionnaire/sites/{{siteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "setup-questionnaire",
+                "sites",
+                "{{siteId}}"
+              ]
+            },
+            "description": "The onboarding questionnaire for this site: open sections, pending answers. The Flutter app walks the user through these on first launch."
+          },
+          "response": []
+        },
+        {
+          "name": "Get setup questionnaire segmentation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/setup-questionnaire/sites/{{siteId}}/segmentation",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "setup-questionnaire",
+                "sites",
+                "{{siteId}}",
+                "segmentation"
+              ]
+            },
+            "description": "Backend-driven user segmentation (customer type, device inventory flags) derived from the questionnaire answers. Drives which marketing surfaces appear."
           },
           "response": []
         }
@@ -848,8 +1386,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v2/systems/{{systemId}}/impact-overview",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "systems", "{{systemId}}", "impact-overview"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "systems",
+                "{{systemId}}",
+                "impact-overview"
+              ]
             },
             "description": "Lifetime CO2 figures: `co2Savings` (site, kg), `co2CollectiveSavings` (entire 1KOMMA5° customer base, kg), `co2GlobalSavingsEstimate` (marketing figure, tons). Ignores any query parameters — values are always lifetime totals."
           },
@@ -862,8 +1408,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v2/energy-trader?siteId={{siteId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "energy-trader"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "energy-trader"
+              ],
               "query": [
                 {
                   "key": "siteId",
@@ -883,8 +1435,16 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/energy-trader-savings/{{siteId}}/month",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "energy-trader-savings", "{{siteId}}", "month"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "energy-trader-savings",
+                "{{siteId}}",
+                "month"
+              ]
             },
             "description": "Average monthly Energy-Trader savings (`averagePastVariableSavings` in EUR). QUIRK: the path segment is the **site ID** (= systemId), NOT the customer ID — despite the misleading URL structure. Verified live: customer_id → HTTP 403, site_id → 200."
           },
@@ -897,8 +1457,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v3/heartbeat-prices?siteId={{siteId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v3", "heartbeat-prices"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v3",
+                "heartbeat-prices"
+              ],
               "query": [
                 {
                   "key": "siteId",
@@ -923,8 +1489,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/heartbeat-ai/optimizations?siteId={{siteId}}&from=2026-06-12T00:00:00.000Z&to=2026-06-12T23:59:59.999Z&view=historic",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "heartbeat-ai", "optimizations"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "heartbeat-ai",
+                "optimizations"
+              ],
               "query": [
                 {
                   "key": "siteId",
@@ -958,13 +1531,35 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/heartbeat-ai/optimizations?siteId={{siteId}}&from=2026-06-12T11:45:00.000Z&to=2026-06-12T12:00:00.999Z&view=live",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "heartbeat-ai", "optimizations"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "heartbeat-ai",
+                "optimizations"
+              ],
               "query": [
-                {"key": "siteId", "value": "{{siteId}}"},
-                {"key": "from", "value": "2026-06-12T11:45:00.000Z", "description": "The SPA sends `now - 15 min`."},
-                {"key": "to", "value": "2026-06-12T12:00:00.999Z", "description": "The SPA sends the current instant."},
-                {"key": "view", "value": "live", "description": "REQUIRED. Current optimisation slot only; 15-min window ending on now."}
+                {
+                  "key": "siteId",
+                  "value": "{{siteId}}"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-06-12T11:45:00.000Z",
+                  "description": "The SPA sends `now - 15 min`."
+                },
+                {
+                  "key": "to",
+                  "value": "2026-06-12T12:00:00.999Z",
+                  "description": "The SPA sends the current instant."
+                },
+                {
+                  "key": "view",
+                  "value": "live",
+                  "description": "REQUIRED. Current optimisation slot only; 15-min window ending on now."
+                }
               ]
             },
             "description": "Live variant: what the AI is deciding **right now**. The SPA polls this with a 15-min window ending on the current instant. Empty `events` list means no slot is currently active. Same payload shape as the `historic` view when populated."
@@ -978,8 +1573,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v2/heartbeat-ai/summary?siteId={{siteId}}&resolution=1M",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v2", "heartbeat-ai", "summary"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v2",
+                "heartbeat-ai",
+                "summary"
+              ],
               "query": [
                 {
                   "key": "siteId",
@@ -1004,12 +1606,31 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/v1/heartbeat-ai/self-sufficiency?siteId={{siteId}}&from=2026-08-01T00:00:00.000Z&to=2026-08-01T23:59:59.999Z",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "heartbeat-ai", "self-sufficiency"],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "heartbeat-ai",
+                "self-sufficiency"
+              ],
               "query": [
-                {"key": "siteId", "value": "{{siteId}}", "description": "REQUIRED"},
-                {"key": "from", "value": "2026-08-01T00:00:00.000Z", "description": "Format: %Y-%m-%dT%H:%M:%S.000Z"},
-                {"key": "to", "value": "2026-08-01T23:59:59.999Z", "description": "Format: %Y-%m-%dT%H:%M:%S.999Z"}
+                {
+                  "key": "siteId",
+                  "value": "{{siteId}}",
+                  "description": "REQUIRED"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-08-01T00:00:00.000Z",
+                  "description": "Format: %Y-%m-%dT%H:%M:%S.000Z"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-08-01T23:59:59.999Z",
+                  "description": "Format: %Y-%m-%dT%H:%M:%S.999Z"
+                }
               ]
             },
             "description": "AI events explaining self-sufficiency outcomes — typically the granular battery-discharge trace. Same payload shape as `Get optimizations` but a **different subset** of AI activity (complementary, not redundant). QUIRK: `data.marketPrice` values are empirically much lower than the Spot price returned by `charts/market-prices` at the same timestamp — likely the feed-in / trader-side price rather than the grid-purchase price. Not officially documented."
