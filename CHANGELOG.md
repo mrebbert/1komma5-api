@@ -8,6 +8,28 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-24
+
+Follow-up to v1.2.0 that surfaces the new §14a fields in the CLI
+and the shipped reference docs. No library-API change.
+
+### Added
+- `1k5 prices` output grows an optional `§14a` column: the
+  VAT-inclusive Modul-1 Netzentgelt per slot (EUR/kWh). Hidden
+  when the account carries no Modul-1 data, so most tenants see
+  the same compact table as in v1.2.0.
+- `docs/enwg14a.md` gains a "Per-slot Netzentgelt on
+  MarketPrices" section documenting the two new mapping
+  attributes and when to use them vs. the window-aggregated
+  Modul-1 fields on `HeartbeatPriceWindow`.
+
+### Changed
+- Postman collection `Get market prices` request path updated to
+  v5 with a description note on the two new per-slot fields.
+- `API.md` cross-link for `enwg14aModule` now points at the
+  correct `#site-system-info` anchor so `mkdocs --strict` is
+  warning-free.
+
 ## [1.2.0] - 2026-10-24
 
 Public-API change: :meth:`System.get_prices` moves to the v5
@@ -218,6 +240,7 @@ package; CI, docs and tests only. Safe to upgrade.
   `onekommafive<1.0`.
 
 [Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...HEAD
+[1.2.1]: https://github.com/mrebbert/1komma5-api/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/mrebbert/1komma5-api/compare/v1.1.11...v1.2.0
 [1.1.11]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/mrebbert/1komma5-api/compare/v1.1.9...v1.1.10
