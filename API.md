@@ -1026,7 +1026,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 - All prices are delivered as **strings** in **EUR/kWh**.
 - Timestamps are UTC. `gridConsumption` / `gridFeedIn` are in kWh.
-- `enwg14aGridFee` / `enwg14aGridFeeWithVat` carry the §14a EnWG Modul-1 Netzentgelt for the slot; `null` on sites where the operator has not provisioned Modul 1 (see `enwg14aModule` on [System info](#system-info)). Added in v5.
+- `enwg14aGridFee` / `enwg14aGridFeeWithVat` carry the §14a EnWG Modul-1 Netzentgelt for the slot; `null` on sites where the operator has not provisioned Modul 1 (see `enwg14aModule` on [Site system info](#site-system-info)). Added in v5.
 
 ---
 
