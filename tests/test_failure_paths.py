@@ -167,3 +167,95 @@ class TestResourceErrorLabels:
             m.get(url, status=500, body="server down")
             with pytest.raises(RequestError, match="Failed to get live overview"):
                 await system.get_live_overview()
+
+
+# ---------------------------------------------------------------------------
+# 5. Rate-limit retry contract
+# ---------------------------------------------------------------------------
+
+
+_BQ_RATE_LIMIT_BODY = (
+    '{"error_code":70102,"message":"Permission denied submitting query job: '
+    'Exceeded rate limits: too many api requests per user per method for this '
+    'user_method (JobService.query)."}'
+)
+
+
+class TestRateLimitRetry:
+    """Transient vendor-side rate limits are retried with exponential backoff.
+
+    Target scenario: ``/charts/market-prices`` sits in front of BigQuery
+    on the vendor side. A burst of concurrent client traffic (Flutter
+    app + HA integration + probe) can briefly saturate the shared BQ
+    ``JobService.query`` quota and return 403 with ``Exceeded rate
+    limits``. The client transparently retries up to three times.
+    """
+
+    async def test_retries_on_403_with_rate_limit_body(self, mocker) -> None:
+        mocker.patch("asyncio.sleep", new_callable=AsyncMock)
+        client = Client("user@example.com", "password")
+        client.get_token = AsyncMock(return_value=FAKE_ACCESS_TOKEN)
+        with aioresponses() as m:
+            m.get(_URL, status=403, body=_BQ_RATE_LIMIT_BODY)
+            m.get(_URL, status=200, body='{"ok": true}')
+            result = await client._request("GET", _URL)
+            assert result == {"ok": True}
+
+    async def test_retries_on_429(self, mocker) -> None:
+        mocker.patch("asyncio.sleep", new_callable=AsyncMock)
+        client = Client("user@example.com", "password")
+        client.get_token = AsyncMock(return_value=FAKE_ACCESS_TOKEN)
+        with aioresponses() as m:
+            m.get(_URL, status=429, body="rate limited")
+            m.get(_URL, status=200, body='{"ok": true}')
+            result = await client._request("GET", _URL)
+            assert result == {"ok": True}
+
+    async def test_does_not_retry_plain_403(self, mocker) -> None:
+        """A 403 without the rate-limit signature stays a hard failure."""
+        sleep = mocker.patch("asyncio.sleep", new_callable=AsyncMock)
+        client = Client("user@example.com", "password")
+        client.get_token = AsyncMock(return_value=FAKE_ACCESS_TOKEN)
+        with aioresponses() as m:
+            m.get(_URL, status=403, body="forbidden")
+            with pytest.raises(RequestError, match="forbidden"):
+                await client._request("GET", _URL)
+        sleep.assert_not_called()
+
+    async def test_gives_up_after_max_retries(self, mocker) -> None:
+        mocker.patch("asyncio.sleep", new_callable=AsyncMock)
+        client = Client("user@example.com", "password")
+        client.get_token = AsyncMock(return_value=FAKE_ACCESS_TOKEN)
+        with aioresponses() as m:
+            # 1 original + 3 retries = 4 attempts total, all rate-limited
+            for _ in range(4):
+                m.get(_URL, status=403, body=_BQ_RATE_LIMIT_BODY)
+            with pytest.raises(RequestError, match="Exceeded rate limits"):
+                await client._request("GET", _URL)
+
+    async def test_retry_can_be_disabled_per_client(self, mocker) -> None:
+        sleep = mocker.patch("asyncio.sleep", new_callable=AsyncMock)
+        client = Client(
+            "user@example.com", "password", retry_on_rate_limit=False
+        )
+        client.get_token = AsyncMock(return_value=FAKE_ACCESS_TOKEN)
+        with aioresponses() as m:
+            m.get(_URL, status=429, body="rate limited")
+            with pytest.raises(RequestError, match="rate limited"):
+                await client._request("GET", _URL)
+        sleep.assert_not_called()
+
+    async def test_retry_after_header_overrides_backoff(self, mocker) -> None:
+        sleep = mocker.patch("asyncio.sleep", new_callable=AsyncMock)
+        client = Client("user@example.com", "password")
+        client.get_token = AsyncMock(return_value=FAKE_ACCESS_TOKEN)
+        with aioresponses() as m:
+            m.get(
+                _URL,
+                status=429,
+                body="rate limited",
+                headers={"Retry-After": "7"},
+            )
+            m.get(_URL, status=200, body='{"ok": true}')
+            await client._request("GET", _URL)
+        sleep.assert_awaited_once_with(7.0)

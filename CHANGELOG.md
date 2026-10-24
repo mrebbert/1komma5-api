@@ -8,6 +8,30 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-24
+
+Resilience bump. The vendor's ``/charts/market-prices`` endpoint
+sits in front of BigQuery; its ``JobService.query`` quota is a
+rolling 100-second window shared across every client of the same
+1KOMMA5° account. A full-hour cadence that lines up with the
+Flutter app opening can briefly saturate the quota and return
+403 with "Exceeded rate limits". The SDK now transparently
+retries those.
+
+### Added
+- `Client(retry_on_rate_limit: bool = True)` option. When
+  enabled (default), `_request` retries up to three times with
+  2 / 4 / 8 s exponential backoff on 429 or on 403 whose body
+  carries ``Exceeded rate limits``. A ``Retry-After`` header, if
+  present, overrides the computed delay. Opt out with
+  ``Client(..., retry_on_rate_limit=False)`` if your caller has
+  its own retry policy.
+
+### Changed
+- Vendor rate-limit responses are now logged at warning level
+  with attempt counter and delay, so Home Assistant and other
+  structured-log hosts see the transient throttle.
+
 ## [1.2.1] - 2026-10-24
 
 Follow-up to v1.2.0 that surfaces the new §14a fields in the CLI
@@ -240,6 +264,7 @@ package; CI, docs and tests only. Safe to upgrade.
   `onekommafive<1.0`.
 
 [Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...HEAD
+[1.2.2]: https://github.com/mrebbert/1komma5-api/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/mrebbert/1komma5-api/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/mrebbert/1komma5-api/compare/v1.1.11...v1.2.0
 [1.1.11]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...v1.1.11
