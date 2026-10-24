@@ -8,6 +8,35 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-24
+
+Public-API change: :meth:`System.get_prices` moves to the v5
+endpoint and :class:`MarketPrices` exposes the two new §14a EnWG
+Modul-1 Netzentgelt fields per timeseries slot. Backwards
+compatible for callers that did not reach into the raw payload;
+callers that iterated the raw timeseries will see the two
+additional keys ``enwg14aGridFee`` / ``enwg14aGridFeeWithVat``.
+
+### Added
+- `MarketPrices.enwg14a_grid_fee` and
+  `MarketPrices.enwg14a_grid_fee_with_vat`: per-slot §14a EnWG
+  Modul-1 Netzentgelt mappings, in EUR/kWh. Empty when the
+  operator has not provisioned Modul 1 for the site; populated
+  per slot once ``enwg14aModule`` is active in
+  ``/api/v1/sites/{id}/system-info``.
+
+### Changed
+- `System.get_prices` now calls `/api/v5/systems/{id}/charts/market-prices`
+  (previously v4). v5 reuses the v4 request contract — same
+  ``from`` / ``to`` / ``resolution`` parameters, same enum
+  ``"1h"`` / ``"15m"`` — and adds the two timeseries fields.
+- Fixture `make_price_data()` and all v4 URL mocks in
+  `tests/test_system.py` updated to the v5 path.
+- The timeseries unpack helper now skips slots whose value is
+  JSON `null`, so a nullable field like `enwg14aGridFee`
+  (populated per slot, absent for others) no longer raises on
+  parse.
+
 ## [1.1.11] - 2026-10-18
 
 Maintenance release. Pure dependency and CI-toolchain upgrades,
@@ -189,6 +218,7 @@ package; CI, docs and tests only. Safe to upgrade.
   `onekommafive<1.0`.
 
 [Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...HEAD
+[1.2.0]: https://github.com/mrebbert/1komma5-api/compare/v1.1.11...v1.2.0
 [1.1.11]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...v1.1.11
 [1.1.10]: https://github.com/mrebbert/1komma5-api/compare/v1.1.9...v1.1.10
 [1.1.9]: https://github.com/mrebbert/1komma5-api/compare/v1.1.8...v1.1.9

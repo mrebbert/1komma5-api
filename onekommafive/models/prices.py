@@ -1,4 +1,4 @@
-"""Market price models (``/api/v4/systems/{id}/charts/market-prices``)."""
+"""Market price models (``/api/v5/systems/{id}/charts/market-prices``)."""
 
 from dataclasses import dataclass, field
 from typing import Any
@@ -103,7 +103,7 @@ class MarketPrices:
     """Electricity market price data for a time range.
 
     Returned by :meth:`~onekommafive.System.get_prices`.  All price values are
-    in **EUR/kWh** as provided by the API (v4).
+    in **EUR/kWh** as provided by the API (v5).
 
     The summary fields ``*_with_grid_costs`` and ``*_all_in`` are set to
     ``float("nan")`` when the API does not deliver the corresponding block
@@ -172,6 +172,17 @@ class MarketPrices:
     grid_feed_in: dict[str, float]
     """Actual grid energy fed in per slot, keyed by ISO-8601 timestamp, in kWh."""
 
+    enwg14a_grid_fee: dict[str, float]
+    """§14a EnWG Modul-1-Netzentgelt per slot, keyed by ISO-8601 timestamp,
+    in EUR/kWh. Empty when the operator has not provisioned Modul 1 for the
+    site; present per slot only once ``enwg14aModule`` is active in
+    ``system-info``. Introduced in API v5."""
+
+    enwg14a_grid_fee_with_vat: dict[str, float]
+    """§14a EnWG Modul-1-Netzentgelt including VAT per slot, keyed by
+    ISO-8601 timestamp, in EUR/kWh. Empty when Modul 1 is not provisioned.
+    Introduced in API v5."""
+
     # ------------------------------------------------------------------
     # Grid cost constants
     # ------------------------------------------------------------------
@@ -220,7 +231,11 @@ class MarketPrices:
             return float(entry["price"]["amount"]) if entry else None
 
         def _ts_field(key: str) -> dict[str, float]:
-            return {t: float(v[key]) for t, v in ts.items() if key in v}
+            return {
+                t: float(v[key])
+                for t, v in ts.items()
+                if key in v and v[key] is not None
+            }
 
         return cls(
             average_price=_price(em, "averagePrice"),
@@ -244,6 +259,8 @@ class MarketPrices:
             prices_with_grid_costs_and_vat=_ts_field("marketPriceWithGridCostAndVat"),
             grid_consumption=_ts_field("gridConsumption"),
             grid_feed_in=_ts_field("gridFeedIn"),
+            enwg14a_grid_fee=_ts_field("enwg14aGridFee"),
+            enwg14a_grid_fee_with_vat=_ts_field("enwg14aGridFeeWithVat"),
             grid_costs_total=float(data["gridCostsTotal"]["price"]["amount"]),
             vat=float(data["vat"]),
             uses_fallback_grid_costs=bool(data["usesFallbackGridCosts"]),

@@ -88,7 +88,7 @@ _IDENTITY_BASE = "https://customer-identity.1komma5grad.com"
 _SYSTEM_BASE = f"{_BASE}/api/v1/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V2 = f"{_BASE}/api/v2/systems/{FAKE_SYSTEM_ID}"
 _SYSTEM_BASE_V3 = f"{_BASE}/api/v3/systems/{FAKE_SYSTEM_ID}"
-_SYSTEM_BASE_V4 = f"{_BASE}/api/v4/systems/{FAKE_SYSTEM_ID}"
+_SYSTEM_BASE_V5 = f"{_BASE}/api/v5/systems/{FAKE_SYSTEM_ID}"
 _SITE_BASE_V1 = f"{_BASE}/api/v1/sites/{FAKE_SYSTEM_ID}"
 _SITE_BASE_V2 = f"{_BASE}/api/v2/sites/{FAKE_SYSTEM_ID}"
 _SITE_BASE_V3 = f"{_BASE}/api/v3/sites/{FAKE_SYSTEM_ID}"
@@ -464,7 +464,7 @@ class TestGetPrices:
     async def test_returns_market_prices_instance(self) -> None:
         with aioresponses() as m:
             m.get(
-                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                _u(f"{_SYSTEM_BASE_V5}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -484,7 +484,7 @@ class TestGetPrices:
     async def test_prices_dict_keyed_by_timestamp(self) -> None:
         with aioresponses() as m:
             m.get(
-                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                _u(f"{_SYSTEM_BASE_V5}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -502,7 +502,7 @@ class TestGetPrices:
     async def test_uses_zoned_datetime_format_and_default_resolution(self) -> None:
         with aioresponses() as m:
             m.get(
-                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                _u(f"{_SYSTEM_BASE_V5}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -519,7 +519,7 @@ class TestGetPrices:
     async def test_passes_resolution_when_specified(self) -> None:
         with aioresponses() as m:
             m.get(
-                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                _u(f"{_SYSTEM_BASE_V5}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -535,7 +535,7 @@ class TestGetPrices:
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
             m.get(
-                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                _u(f"{_SYSTEM_BASE_V5}/charts/market-prices"),
                 payload={"error": "error"},
                 status=500,
             )
@@ -550,7 +550,7 @@ class TestGetPrices:
             """v4 rejects non-hour-aligned timestamps with HTTP 422 — the SDK
             snaps to the resolution grid so callers don't have to."""
             m.get(
-                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                _u(f"{_SYSTEM_BASE_V5}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -565,7 +565,7 @@ class TestGetPrices:
     async def test_snaps_unaligned_start_down_and_end_up(self) -> None:
         with aioresponses() as m:
             m.get(
-                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                _u(f"{_SYSTEM_BASE_V5}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -580,7 +580,7 @@ class TestGetPrices:
     async def test_snaps_15m_resolution_to_quarter_hour(self) -> None:
         with aioresponses() as m:
             m.get(
-                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                _u(f"{_SYSTEM_BASE_V5}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
@@ -597,7 +597,7 @@ class TestGetPrices:
     async def test_already_aligned_timestamps_pass_through_unchanged(self) -> None:
         with aioresponses() as m:
             m.get(
-                _u(f"{_SYSTEM_BASE_V4}/charts/market-prices"),
+                _u(f"{_SYSTEM_BASE_V5}/charts/market-prices"),
                 payload=make_price_data(),
                 status=200,
             )
