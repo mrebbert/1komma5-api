@@ -15,6 +15,7 @@ For synchronous callers (scripts, tests), see :mod:`onekommafive.sync`.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import datetime
 import hashlib
@@ -22,6 +23,7 @@ import json
 import logging
 import re
 import secrets
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Self, cast
 
@@ -68,6 +70,42 @@ HEARTBEAT_API = "https://heartbeat.1komma5grad.com"
 _IDENTITY_API = "https://customer-identity.1komma5grad.com"
 
 _DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=30)
+
+# Transparent retry on vendor-side rate limiting. The Heartbeat API's
+# ``/charts/market-prices`` endpoint sits in front of BigQuery; its
+# ``JobService.query`` quota is a rolling 100-second window shared
+# across all clients of the same 1KOMMA5° account (Flutter app, HA
+# integration, dashboards). A burst at the full hour can briefly
+# saturate that quota and return 403 with the message below, which
+# clears on its own within seconds — exactly what a short backoff
+# retry handles. ``retry_on_rate_limit=False`` opts out for callers
+# with their own retry policy.
+_RATE_LIMIT_MAX_RETRIES = 3
+_RATE_LIMIT_BASE_DELAY = 2.0
+_RATE_LIMIT_SIGNATURE = "Exceeded rate limits"
+
+
+def _is_rate_limited(status: int, body: str) -> bool:
+    """Detect vendor-side rate-limit responses.
+
+    429 is always a rate limit. 403 is only rate-limited when the body
+    carries the specific ``Exceeded rate limits`` string — plain 403s
+    (permission errors) do not qualify and are propagated as before.
+    """
+    if status == 429:
+        return True
+    return status == 403 and _RATE_LIMIT_SIGNATURE in body
+
+
+def _retry_delay(headers: Mapping[str, str], attempt: int) -> float:
+    """Compute the next retry delay, honouring ``Retry-After`` when present."""
+    retry_after = headers.get("Retry-After")
+    if retry_after:
+        try:
+            return float(retry_after)
+        except ValueError:
+            pass
+    return float(_RATE_LIMIT_BASE_DELAY * (2**attempt))
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +174,7 @@ class Client:
         *,
         session: aiohttp.ClientSession | None = None,
         token_cache: Path | str | None = None,
+        retry_on_rate_limit: bool = True,
     ) -> None:
         self._username = username
         self._password = password
@@ -146,6 +185,7 @@ class Client:
         self._token_cache_path: Path | None = (
             Path(token_cache).expanduser() if token_cache else None
         )
+        self._retry_on_rate_limit = retry_on_rate_limit
         if self._token_cache_path is not None:
             self._load_token_cache()
 
@@ -260,26 +300,51 @@ class Client:
         Returns ``None`` for empty response bodies (e.g. 201 Created with no body).
         Raises :class:`RequestError` if the response status doesn't match
         ``expected_status``.
+
+        Transparently retries on vendor-side rate-limit responses when
+        ``retry_on_rate_limit`` was left enabled on the client. Three
+        retries, exponential 2/4/8 s backoff; a ``Retry-After`` header
+        overrides the computed delay. See :meth:`_is_rate_limited` for
+        the detection rule.
         """
         session = await self._ensure_session()
         headers = await self._auth_headers()
-        async with session.request(
-            method,
-            url,
-            params=params,
-            json=json,
-            headers=headers,
-            timeout=_DEFAULT_TIMEOUT,
-        ) as response:
-            if response.status != expected_status:
-                text = await response.text()
-                raise RequestError(f"{error_label}: {text}")
-            if response.content_length == 0:
-                return None
-            body = await response.read()
-            if not body:
-                return None
-            return json_lib.loads(body)
+
+        max_retries = _RATE_LIMIT_MAX_RETRIES if self._retry_on_rate_limit else 0
+        for attempt in range(max_retries + 1):
+            async with session.request(
+                method,
+                url,
+                params=params,
+                json=json,
+                headers=headers,
+                timeout=_DEFAULT_TIMEOUT,
+            ) as response:
+                if response.status != expected_status:
+                    text = await response.text()
+                    if attempt < max_retries and _is_rate_limited(
+                        response.status, text
+                    ):
+                        delay = _retry_delay(response.headers, attempt)
+                        _LOGGER.warning(
+                            "Rate-limited by vendor (%s); retrying in %.1fs "
+                            "(attempt %d/%d)",
+                            response.status,
+                            delay,
+                            attempt + 1,
+                            max_retries,
+                        )
+                        await asyncio.sleep(delay)
+                        continue
+                    raise RequestError(f"{error_label}: {text}")
+                if response.content_length == 0:
+                    return None
+                body = await response.read()
+                if not body:
+                    return None
+                return json_lib.loads(body)
+        # Loop always returns or raises; this line is unreachable.
+        raise AssertionError("unreachable")  # pragma: no cover
 
     # ------------------------------------------------------------------
     # Token management
