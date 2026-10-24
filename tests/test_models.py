@@ -105,6 +105,33 @@ class TestMarketPrices:
         assert mp.grid_cost_energy_tax is None
         assert mp.grid_cost_purchasing is None
 
+    def test_from_dict_populates_enwg14a_grid_fee_when_present(self) -> None:
+        mp = MarketPrices.from_dict(make_price_data())
+        # First slot carries the §14a fields; second slot carries nulls
+        # and must drop out of the mapping entirely.
+        assert mp.enwg14a_grid_fee == {"2024-06-01T00:00Z": pytest.approx(0.019)}
+        assert mp.enwg14a_grid_fee_with_vat == {
+            "2024-06-01T00:00Z": pytest.approx(0.02261)
+        }
+
+    def test_from_dict_leaves_enwg14a_empty_when_not_provisioned(self) -> None:
+        data = make_price_data()
+        for slot in data["timeseries"].values():
+            slot["enwg14aGridFee"] = None
+            slot["enwg14aGridFeeWithVat"] = None
+        mp = MarketPrices.from_dict(data)
+        assert mp.enwg14a_grid_fee == {}
+        assert mp.enwg14a_grid_fee_with_vat == {}
+
+    def test_from_dict_tolerates_missing_enwg14a_keys(self) -> None:
+        data = make_price_data()
+        for slot in data["timeseries"].values():
+            slot.pop("enwg14aGridFee", None)
+            slot.pop("enwg14aGridFeeWithVat", None)
+        mp = MarketPrices.from_dict(data)
+        assert mp.enwg14a_grid_fee == {}
+        assert mp.enwg14a_grid_fee_with_vat == {}
+
     def test_raw_is_preserved(self) -> None:
         data = make_price_data()
         mp = MarketPrices.from_dict(data)

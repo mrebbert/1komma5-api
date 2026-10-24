@@ -363,7 +363,7 @@ def make_live_overview_data() -> dict:
 
 
 def make_price_data() -> dict:
-    """Return a market-prices API response (v4, two hourly slots) matching the full API shape."""
+    """Return a market-prices API response (v5, two hourly slots) matching the full API shape."""
     return {
         "energyMarket": {
             "averagePrice": {
@@ -417,6 +417,8 @@ def make_price_data() -> dict:
                 "gridCostsWithVat": "0.152034",
                 "gridConsumption": 0.5,
                 "gridFeedIn": 0.1,
+                "enwg14aGridFee": "0.019",
+                "enwg14aGridFeeWithVat": "0.02261",
             },
             "2024-06-01T01:00Z": {
                 "marketPrice": "0.09",
@@ -427,6 +429,8 @@ def make_price_data() -> dict:
                 "gridCostsWithVat": "0.152034",
                 "gridConsumption": 0.8,
                 "gridFeedIn": 0.0,
+                "enwg14aGridFee": None,
+                "enwg14aGridFeeWithVat": None,
             },
         },
         "timeseriesMetadata": {

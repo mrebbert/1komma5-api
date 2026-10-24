@@ -979,7 +979,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ### Market prices
 
-`GET /api/v4/systems/$ONEKOMMAFIVE_SYSTEM/charts/market-prices` — spot electricity prices with grid-cost and VAT breakdowns.
+`GET /api/v5/systems/$ONEKOMMAFIVE_SYSTEM/charts/market-prices` — spot electricity prices with grid-cost and VAT breakdowns.
 
 **Query parameters**
 
@@ -993,7 +993,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 ```bash
 curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
-  'https://heartbeat.1komma5grad.com/api/v4/systems/'"$ONEKOMMAFIVE_SYSTEM"'/charts/market-prices?from=2026-03-01T00%3A00%3A00.000Z&to=2026-03-01T23%3A59%3A59.999Z&resolution=1h' | jq .
+  'https://heartbeat.1komma5grad.com/api/v5/systems/'"$ONEKOMMAFIVE_SYSTEM"'/charts/market-prices?from=2026-03-01T00%3A00%3A00.000Z&to=2026-03-01T23%3A59%3A59.999Z&resolution=1h' | jq .
 ```
 
 **Response**
@@ -1014,7 +1014,9 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
       "marketPriceWithGridCostAndVat": "0.4459049",
       "gridCosts":                     "0.13756",
       "gridConsumption": 0.00956125,
-      "gridFeedIn":      0.01150825
+      "gridFeedIn":      0.01150825,
+      "enwg14aGridFee":        "0.019",
+      "enwg14aGridFeeWithVat": "0.02261"
     }
   }
 }
@@ -1024,6 +1026,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
 - All prices are delivered as **strings** in **EUR/kWh**.
 - Timestamps are UTC. `gridConsumption` / `gridFeedIn` are in kWh.
+- `enwg14aGridFee` / `enwg14aGridFeeWithVat` carry the §14a EnWG Modul-1 Netzentgelt for the slot; `null` on sites where the operator has not provisioned Modul 1 (see `enwg14aModule` on [System info](#system-info)). Added in v5.
 
 ---
 

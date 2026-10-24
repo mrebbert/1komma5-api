@@ -53,7 +53,7 @@ def _align_price_range(
 ) -> tuple[datetime.datetime, datetime.datetime]:
     """Snap start down and end up to the resolution boundary.
 
-    The v4 /charts/market-prices endpoint validates that both timestamps
+    The /charts/market-prices endpoint validates that both timestamps
     align to the resolution grid (whole hour for "1h", 15-min slot for
     "15m") and returns HTTP 422 otherwise. Unknown resolutions pass
     through unchanged so the API surfaces its own error.
@@ -320,17 +320,22 @@ class System:
     ) -> MarketPrices:
         """Fetch market electricity prices for ``[start, end]`` (``"1h"`` or ``"15m"``).
 
-        The v4 endpoint rejects timestamps that don't sit on the
+        The endpoint rejects timestamps that don't sit on the
         resolution boundary (HTTP 422 ``Validation failed``). This
         method snaps ``start`` down and ``end`` up to the nearest
         boundary so callers can pass natural ranges (e.g. today
         00:00 – today 23:59:59) without hitting that constraint.
         The snapped range always covers the requested window.
+
+        Uses API v5, which adds the §14a EnWG Modul-1 Netzentgelt
+        fields on each timeseries slot. The two fields stay empty on
+        :class:`~onekommafive.models.MarketPrices` when Modul 1 is
+        not provisioned for the site.
         """
         start, end = _align_price_range(start, end, resolution)
         data = await self._client._request(
             "GET",
-            self._systems_url("v4", "charts", "market-prices"),
+            self._systems_url("v5", "charts", "market-prices"),
             params={
                 "from": start.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "to": end.strftime("%Y-%m-%dT%H:%M:%SZ"),
