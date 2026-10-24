@@ -252,7 +252,7 @@ class TestCmdPrices:
             _run("prices", "--resolution", "2h")
 
     def test_end_is_hour_aligned_next_midnight(self, mock_system) -> None:
-        """Regression: v4 market-prices rejects non-hour-aligned end (HTTP 422).
+        """Regression: market-prices rejects non-hour-aligned end (HTTP 422).
 
         End must land on a resolution boundary; midnight of the next day
         covers all 24 hourly slots without tripping validation.
@@ -263,6 +263,28 @@ class TestCmdPrices:
         start, end = kwargs["start"], kwargs["end"]
         assert (end.hour, end.minute, end.second, end.microsecond) == (0, 0, 0, 0)
         assert (end - start) == datetime.timedelta(days=1)
+
+    def test_shows_enwg14a_column_when_modul1_active(
+        self, mock_system, capsys
+    ) -> None:
+        mock_system.get_prices.return_value = MarketPrices.from_dict(make_price_data())
+        _run("prices")
+        out = capsys.readouterr().out
+        assert "§14a" in out
+        # fixture slot 1 carries enwg14aGridFeeWithVat=0.02261
+        assert "0.0226" in out
+
+    def test_hides_enwg14a_column_when_modul1_absent(
+        self, mock_system, capsys
+    ) -> None:
+        data = make_price_data()
+        for slot in data["timeseries"].values():
+            slot["enwg14aGridFee"] = None
+            slot["enwg14aGridFeeWithVat"] = None
+        mock_system.get_prices.return_value = MarketPrices.from_dict(data)
+        _run("prices")
+        out = capsys.readouterr().out
+        assert "§14a" not in out
 
 
 # ---------------------------------------------------------------------------

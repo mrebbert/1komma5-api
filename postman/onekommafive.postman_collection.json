@@ -391,9 +391,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v4/systems/{{systemId}}/charts/market-prices?from=2026-06-12T00:00:00Z&to=2026-06-13T00:00:00Z&resolution=1h",
+              "raw": "{{baseUrl}}/api/v5/systems/{{systemId}}/charts/market-prices?from=2026-06-12T00:00:00Z&to=2026-06-13T00:00:00Z&resolution=1h",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v4", "systems", "{{systemId}}", "charts", "market-prices"],
+              "path": ["api", "v5", "systems", "{{systemId}}", "charts", "market-prices"],
               "query": [
                 {
                   "key": "from",
@@ -412,7 +412,7 @@
                 }
               ]
             },
-            "description": "Response uses `timeseries[ts].marketPrice` (EUR/kWh) and nested `energyMarket.averagePrice.price.amount` (string)."
+            "description": "Response uses `timeseries[ts].marketPrice` (EUR/kWh) and nested `energyMarket.averagePrice.price.amount` (string). Since v5 each `timeseries[ts]` also carries `enwg14aGridFee` / `enwg14aGridFeeWithVat` (§14a EnWG Modul-1 Netzentgelt in EUR/kWh); both are `null` on sites where the operator has not provisioned Modul 1 (compare `enwg14aModule` in system-info)."
           },
           "response": []
         },

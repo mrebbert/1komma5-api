@@ -315,13 +315,21 @@ def cmd_prices(args: argparse.Namespace) -> None:
         f"Grid costs:    {mp.grid_costs_total:.4f} EUR/kWh  (VAT {vat_pct}){gc_detail}"
     )
     print()
-    print(f"{'Timestamp':<25}  {'Spot':>9}  {'+ Grid':>9}  {'All-in':>9}")
-    print("-" * 59)
+    enwg_active = bool(mp.enwg14a_grid_fee)
+    header = f"{'Timestamp':<25}  {'Spot':>9}  {'+ Grid':>9}  {'All-in':>9}"
+    if enwg_active:
+        header += f"  {'§14a':>9}"
+    print(header)
+    print("-" * (len(header)))
     for ts in sorted(mp.prices):
         spot = mp.prices[ts]
         grid = mp.prices_with_grid_costs.get(ts, float("nan"))
         all_in = mp.prices_with_grid_costs_and_vat.get(ts, float("nan"))
-        print(f"{ts:<25}  {spot:>9.4f}  {grid:>9.4f}  {all_in:>9.4f}")
+        row = f"{ts:<25}  {spot:>9.4f}  {grid:>9.4f}  {all_in:>9.4f}"
+        if enwg_active:
+            enwg = mp.enwg14a_grid_fee_with_vat.get(ts)
+            row += f"  {enwg:>9.4f}" if enwg is not None else f"  {'—':>9}"
+        print(row)
 
 
 def cmd_price_config(args: argparse.Namespace) -> None:
