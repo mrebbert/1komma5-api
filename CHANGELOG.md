@@ -8,6 +8,15 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-10-26
+
+### Changed
+- Docs: correct enwg14a_grid_fee docstring to §14a Modul 3 (per-slot
+  HT/NT), not Modul 1 (annual flat rebate). Applies to
+  `MarketPrices.enwg14a_grid_fee`, `MarketPrices.enwg14a_grid_fee_with_vat`,
+  `System.get_prices`, `docs/enwg14a.md`, `docs/cli.md` and `API.md`.
+  No code change.
+
 ## [1.2.2] - 2026-10-24
 
 Resilience bump. The vendor's ``/charts/market-prices`` endpoint
@@ -264,6 +273,7 @@ package; CI, docs and tests only. Safe to upgrade.
   `onekommafive<1.0`.
 
 [Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...HEAD
+[1.2.3]: https://github.com/mrebbert/1komma5-api/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/mrebbert/1komma5-api/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/mrebbert/1komma5-api/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/mrebbert/1komma5-api/compare/v1.1.11...v1.2.0

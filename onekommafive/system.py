@@ -327,10 +327,10 @@ class System:
         00:00 – today 23:59:59) without hitting that constraint.
         The snapped range always covers the requested window.
 
-        Uses API v5, which adds the §14a EnWG Modul-1 Netzentgelt
+        Uses API v5, which adds the §14a EnWG Modul-3 Netzentgelt
         fields on each timeseries slot. The two fields stay empty on
-        :class:`~onekommafive.models.MarketPrices` when Modul 1 is
-        not provisioned for the site.
+        :class:`~onekommafive.models.MarketPrices` when the site does
+        not use Modul 3.
         """
         start, end = _align_price_range(start, end, resolution)
         data = await self._client._request(
