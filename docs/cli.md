@@ -75,7 +75,7 @@ Grid export: 125.3 kWh
 
 | Command | Flags | Purpose |
 |---|---|---|
-| `prices` | `--resolution 1h\|15m` | Market electricity prices (today). Appends a `§14a` column with the Modul-1 Netzentgelt per slot (VAT-incl.) when the account has it. |
+| `prices` | `--resolution 1h\|15m` | Market electricity prices (today). Appends a `§14a` column with the Modul-3 Netzentgelt per slot (VAT-incl.) when the account has it. |
 | `price-config` | — | User-configured energy prices. |
 | `comparison-price` | — | Grid-supplier comparison price (EUR/kWh). |
 | `price-guarantee` | — | Contractual electricity-price guarantee. |

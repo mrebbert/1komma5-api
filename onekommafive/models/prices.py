@@ -173,15 +173,18 @@ class MarketPrices:
     """Actual grid energy fed in per slot, keyed by ISO-8601 timestamp, in kWh."""
 
     enwg14a_grid_fee: dict[str, float]
-    """§14a EnWG Modul-1-Netzentgelt per slot, keyed by ISO-8601 timestamp,
-    in EUR/kWh. Empty when the operator has not provisioned Modul 1 for the
-    site; present per slot only once ``enwg14aModule`` is active in
-    ``system-info``. Introduced in API v5."""
+    """§14a-EnWG-Modul-3-Netzentgelt pro 15-Min-Slot als Dict
+    ``{slot_end_iso: eur_per_kwh}`` (netto), slot-aligned zu ``prices``.
+    Leer bei Sites, die noch kein Modul 3 beziehen (Modul 1 oder nicht
+    provisioniert). Modul 1 ist eine jährliche Pauschale und hat keine
+    per-slot-Komponente. Introduced in API v5."""
 
     enwg14a_grid_fee_with_vat: dict[str, float]
-    """§14a EnWG Modul-1-Netzentgelt including VAT per slot, keyed by
-    ISO-8601 timestamp, in EUR/kWh. Empty when Modul 1 is not provisioned.
-    Introduced in API v5."""
+    """§14a-EnWG-Modul-3-Netzentgelt pro 15-Min-Slot als Dict
+    ``{slot_end_iso: eur_per_kwh}`` (brutto), slot-aligned zu ``prices``.
+    Leer bei Sites, die noch kein Modul 3 beziehen (Modul 1 oder nicht
+    provisioniert). Modul 1 ist eine jährliche Pauschale und hat keine
+    per-slot-Komponente. Introduced in API v5."""
 
     # ------------------------------------------------------------------
     # Grid cost constants

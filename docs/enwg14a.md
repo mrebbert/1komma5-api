@@ -42,18 +42,19 @@ backend tick.
 ### Per-slot Netzentgelt on `MarketPrices`
 
 Since API v5 of `/charts/market-prices`, every timeseries slot also
-carries the Modul-1 Netzentgelt that applies to **that specific
-slot** in EUR/kWh:
+carries the Modul-3 Netzentgelt (HT/NT) that applies to **that specific
+slot** in EUR/kWh. Modul 1 is an annual flat rebate and has no per-slot
+component:
 
 | Attribute | Type | Semantics |
 |---|---|---|
-| `MarketPrices.enwg14a_grid_fee` | `dict[str, float]` | Modul-1 Netzentgelt per ISO-8601 timestamp, before VAT. Empty on non-participating sites. |
-| `MarketPrices.enwg14a_grid_fee_with_vat` | `dict[str, float]` | Same, VAT-inclusive. Empty on non-participating sites. |
+| `MarketPrices.enwg14a_grid_fee` | `dict[str, float]` | Modul-3 Netzentgelt per ISO-8601 timestamp, before VAT. Empty on sites without Modul 3. |
+| `MarketPrices.enwg14a_grid_fee_with_vat` | `dict[str, float]` | Same, VAT-inclusive. Empty on sites without Modul 3. |
 
-These complement the window-aggregated Modul-1 fields on
+These complement the window-aggregated fields on
 `HeartbeatPriceWindow`: the heartbeat-prices view gives you
-"how much did Modul 1 save over this window?", the per-slot
-market-prices view gives you "what is the Modul-1 Netzentgelt
+"how much did §14a save over this window?", the per-slot
+market-prices view gives you "what is the Modul-3 Netzentgelt
 for each specific hour / 15-min slot?". A slot whose JSON value
 is `null` drops out of the mapping entirely, so iterating the
 dict is safe and `.get(ts)` returns `None` for unprovisioned
