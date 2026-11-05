@@ -1061,6 +1061,35 @@ def make_subscriptions_data() -> dict:
                 "siteId": FAKE_SYSTEM_ID,
                 "type": "DYNAMIC_PULSE",
                 "features": [],
+                "agreedTerms": [
+                    {
+                        "id": "terms-0001-0000-0000-0000-000000000001",
+                        "productSubscriptionId": "sub-dp-0000-0000-0000-000000000001",
+                        "billingFrequency": "MONTHLY",
+                        "createdAt": "2025-01-23T08:19:55.953Z",
+                        "updatedAt": "2025-01-23T08:19:55.953Z",
+                        "effectiveFrom": "2025-01-23T08:19:55.881Z",
+                        "effectiveUntil": None,
+                        "entitlements": [],
+                        "noticePeriodInterval": "MONTHS",
+                        "noticePeriodNumber": 1,
+                        "planId": None,
+                        "planRevision": None,
+                        "priceAmountMinor": 0,
+                        "priceCurrency": "EUR",
+                        "productTerms": None,
+                        "reason": "INITIAL",
+                        "renewal": "AUTOMATIC",
+                        "revision": 1,
+                        "termsAndConditions": [
+                            {
+                                "documentVersion": "2025-01",
+                                "link": "https://1k5.link/tos-dynamic-pulse",
+                                "name": "GENERAL",
+                            }
+                        ],
+                    }
+                ],
             },
             {
                 "id": "sub-sm-0000-0000-0000-000000000002",

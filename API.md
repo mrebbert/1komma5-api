@@ -310,6 +310,32 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 
       "termsAndConditionsLink": "https://1k5.link/tos-dynamic-pulse",
 
+      "agreedTerms": [
+        {
+          "id": "<uuid>",
+          "productSubscriptionId": "<uuid>",
+          "revision": 1,
+          "reason": "<enum>",
+          "priceAmountMinor": 0,
+          "priceCurrency": "EUR",
+          "billingFrequency": "MONTHLY",
+          "renewal": "AUTOMATIC",
+          "noticePeriodInterval": "MONTHS",
+          "noticePeriodNumber": 1,
+          "effectiveFrom": "ISO8601",
+          "effectiveUntil": null,
+          "planId": null,
+          "planRevision": null,
+          "productTerms": null,
+          "entitlements": [],
+          "termsAndConditions": [
+            { "name": "<name>", "link": "<url>", "documentVersion": "<version>" }
+          ],
+          "createdAt": "ISO8601",
+          "updatedAt": "ISO8601"
+        }
+      ],
+
       "statusHistory": [ /* contract state-transition history */ ],
       "metadata": {
         "version": "1",
@@ -343,6 +369,7 @@ Other contract types share the universal fields (`id`, `type`, `status`, `price`
 - Lives on the `customer-identity` host.
 - `$CUSTOMER_ID` comes from the `customerId` field of `/api/v1/systems/{id}/details`.
 - **PII handling**: the response mixes universal contract metadata with heavy PII — `paymentIban`, complete delivery/billing addresses, CRM identifiers (`crmDealId`, `zohoReferenceId`, `lumenazaContractId`, `lumenazaConsumerId`, `crmInstallationId`), a `statusHistory` block, and an embedded `metadata.payload` with the full Zoho booking record (IBAN again, former supplier, feature flags, hardware selection). Callers building dashboards should stick to the universal fields; PII should never be logged or shared.
+- **`agreedTerms`** (observed from 2026-11-05): one entry per revision of the commercial terms (price in minor units, notice period, renewal, terms documents). The current revision has `effectiveUntil: null`. Contains no PII; the SDK maps it to `Subscription.agreed_terms` (`AgreedTerm`). The exact `reason` enum values are not yet known.
 - **SMART_METER duplication**: the same meter details are also served by `/sites/{id}/smart-meter`. Prefer that endpoint if you only need meter data.
 - **Invoices endpoint** (`GET /api/v1/customers/{cid}/subscriptions/{sub_id}/invoices`) exists but returns an empty list on accounts without generated invoices. Not documented here until a populated response is available for reference.
 
