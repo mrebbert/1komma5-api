@@ -5,6 +5,79 @@ from typing import Any
 
 
 @dataclass
+class AgreedTerm:
+    """One revision of the commercial terms agreed for a subscription.
+
+    Element of :attr:`Subscription.agreed_terms`. Observed from
+    2026-11-05 on ``GET /api/v1/customers/{cid}/subscriptions``: each
+    contract carries a list of such revisions, the current one has
+    ``effective_until=None``.
+    """
+
+    id: str
+    """Terms revision UUID."""
+
+    product_subscription_id: str | None
+    """UUID of the subscription these terms belong to."""
+
+    revision: int | None
+    """Revision counter, increasing per change of terms."""
+
+    reason: str | None
+    """Reason for this revision (enum string as sent by the API)."""
+
+    price_amount_minor: int | None
+    """Price in minor currency units (cent)."""
+
+    price_currency: str | None
+    """Currency code of the price."""
+
+    billing_frequency: str | None
+    """Billing frequency, e.g. ``"MONTHLY"``."""
+
+    renewal: str | None
+    """Renewal mode, e.g. ``"AUTOMATIC"``."""
+
+    notice_period_interval: str | None
+    """Notice-period unit, e.g. ``"MONTHS"``."""
+
+    notice_period_number: int | None
+    """Notice-period value."""
+
+    effective_from: str | None
+    """ISO-8601 start of validity."""
+
+    effective_until: str | None
+    """ISO-8601 end of validity; ``None`` for the current revision."""
+
+    terms_and_conditions: list[dict[str, str]]
+    """Documents of this revision as ``{"name", "link", "documentVersion"}``."""
+
+    raw: dict[str, Any] = field(repr=False)
+    """The complete raw terms dictionary (incl. ``planId``, ``planRevision``,
+    ``productTerms``, ``entitlements``, timestamps)."""
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "AgreedTerm":
+        return cls(
+            id=data["id"],
+            product_subscription_id=data.get("productSubscriptionId"),
+            revision=data.get("revision"),
+            reason=data.get("reason"),
+            price_amount_minor=data.get("priceAmountMinor"),
+            price_currency=data.get("priceCurrency"),
+            billing_frequency=data.get("billingFrequency"),
+            renewal=data.get("renewal"),
+            notice_period_interval=data.get("noticePeriodInterval"),
+            notice_period_number=data.get("noticePeriodNumber"),
+            effective_from=data.get("effectiveFrom"),
+            effective_until=data.get("effectiveUntil"),
+            terms_and_conditions=list(data.get("termsAndConditions") or []),
+            raw=data,
+        )
+
+
+@dataclass
 class Subscription:
     """One customer contract — a subscription to a 1KOMMA5° service.
 
@@ -108,6 +181,10 @@ class Subscription:
     """The full raw contract record, including all PII-heavy fields
     (paymentIban, addresses, CRM IDs, metadata.payload, statusHistory)."""
 
+    agreed_terms: list[AgreedTerm] = field(default_factory=list)
+    """Revisions of the agreed commercial terms (price, notice period,
+    terms documents). Empty on responses that predate the field."""
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Subscription":
         return cls(
@@ -136,6 +213,9 @@ class Subscription:
             price_guarantee_version=data.get("priceGuaranteeVersion"),
             terms_and_conditions_url=data.get("termsAndConditionsLink"),
             raw=data,
+            agreed_terms=[
+                AgreedTerm.from_dict(t) for t in data.get("agreedTerms") or []
+            ],
         )
 
 

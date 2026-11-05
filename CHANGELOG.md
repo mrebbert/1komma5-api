@@ -8,6 +8,20 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-11-05
+
+Observatory follow-up: `GET /customers/{cid}/subscriptions` began
+returning an `agreedTerms` list per contract on 2026-11-05.
+
+### Added
+- `Subscription.agreed_terms: list[AgreedTerm]` and the new
+  `AgreedTerm` dataclass (price in minor units, billing frequency,
+  renewal, notice period, validity window, terms documents). Empty
+  list when the API omits the field.
+- `API.md` documents `agreedTerms` in the Subscriptions section.
+- `1k5 subscriptions` prints the current revision of the agreed terms
+  (revision, price, start date) per contract.
+
 ## [1.2.3] - 2026-10-26
 
 ### Changed
@@ -273,6 +287,7 @@ package; CI, docs and tests only. Safe to upgrade.
   `onekommafive<1.0`.
 
 [Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...HEAD
+[1.2.4]: https://github.com/mrebbert/1komma5-api/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/mrebbert/1komma5-api/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/mrebbert/1komma5-api/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/mrebbert/1komma5-api/compare/v1.2.0...v1.2.1

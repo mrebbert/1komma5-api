@@ -24,6 +24,7 @@ from .errors import ApiError, AuthenticationError, RequestError
 from .ev_charger import EVCharger
 from .models import (
     WEATHER_SYMBOLS,
+    AgreedTerm,
     Asset,
     ChargingMode,
     ComparisonPrice,
@@ -100,6 +101,7 @@ __all__ = [
     "SelfSufficiencyEvents",
     "SmartMeter",
     "SiteDetails",
+    "AgreedTerm",
     "Subscription",
     "SubscriptionEligibilityList",
     "SubscriptionEligibility",

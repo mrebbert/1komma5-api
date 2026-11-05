@@ -36,6 +36,7 @@ from .sites import (
     SmartMeter,
 )
 from .subscriptions import (
+    AgreedTerm,
     Subscription,
     SubscriptionEligibility,
     SubscriptionEligibilityList,
@@ -80,6 +81,7 @@ __all__ = [
     "SiteStatus",
     "SiteSystemInfo",
     "SmartMeter",
+    "AgreedTerm",
     "Subscription",
     "SubscriptionEligibilityList",
     "SubscriptionEligibility",

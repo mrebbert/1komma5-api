@@ -38,7 +38,7 @@ a short real-world example per group.
 | `system-info` | — | Compact site availability + §14a module enrolment. |
 | `features` | `--customer-id UUID` | Active per-customer+site feature flags. |
 | `customer` | — | Full customer record (v3). |
-| `subscriptions` | — | Contracts / subscriptions with monthly cost. |
+| `subscriptions` | — | Contracts / subscriptions with monthly cost and the current revision of the agreed terms. |
 | `me` | — | Authenticated user profile + connected systems. |
 | `versions` | — | API compatibility (b2b/b2c target + minimum). |
 

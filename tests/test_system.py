@@ -1495,6 +1495,32 @@ class TestGetSubscriptions:
                 "ENERGY_TRADER",
             }
 
+    async def test_agreed_terms_parsed(self) -> None:
+        with aioresponses() as m:
+            m.get(_u(self._URL), payload=make_subscriptions_data(), status=200)
+            subs = {
+                s.type: s
+                for s in (
+                    await _make_system().get_subscriptions(self._CUSTOMER_ID)
+                ).subscriptions
+            }
+            [term] = subs["DYNAMIC_PULSE"].agreed_terms
+            assert term.id == "terms-0001-0000-0000-0000-000000000001"
+            assert term.product_subscription_id == "sub-dp-0000-0000-0000-000000000001"
+            assert term.revision == 1
+            assert term.reason == "INITIAL"
+            assert term.price_amount_minor == 0
+            assert term.price_currency == "EUR"
+            assert term.billing_frequency == "MONTHLY"
+            assert term.renewal == "AUTOMATIC"
+            assert term.notice_period_interval == "MONTHS"
+            assert term.notice_period_number == 1
+            assert term.effective_until is None
+            assert term.terms_and_conditions[0]["name"] == "GENERAL"
+            assert term.raw["productTerms"] is None
+            # Contracts without the field yield an empty list.
+            assert subs["HEARTBEAT"].agreed_terms == []
+
     async def test_universal_fields_parsed(self) -> None:
         with aioresponses() as m:
             m.get(_u(self._URL), payload=make_subscriptions_data(), status=200)
