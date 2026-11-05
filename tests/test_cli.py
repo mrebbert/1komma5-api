@@ -1327,6 +1327,20 @@ class TestCmdSubscriptions:
         assert "12 ct/kWh" in out
         assert "DE_PRICE_GUARANTEE_V2" in out
 
+    def test_prints_current_agreed_terms(self, mock_system, capsys) -> None:
+        mock_system.get_subscriptions.return_value = SubscriptionsList.from_dict(
+            make_subscriptions_data()
+        )
+        _run("subscriptions", "--customer-id", "cust-0001")
+        out = capsys.readouterr().out
+        line = next(
+            ln
+            for ln in out.splitlines()
+            if ln.strip().startswith("DYNAMIC_PULSE") and "rev 1" in ln
+        )
+        assert "0.00 EUR" in line
+        assert "since 2025-01-23" in line
+
 
 # ---------------------------------------------------------------------------
 # notifications

@@ -564,6 +564,27 @@ def cmd_subscriptions(args: argparse.Namespace) -> None:
             )
             break
 
+    # Current revision of the agreed terms (open-ended validity window)
+    current_terms = [
+        (s, t)
+        for s in result.subscriptions
+        for t in s.agreed_terms
+        if t.effective_until is None
+    ]
+    if current_terms:
+        print()
+        print("Agreed terms (current revision):")
+        for s, t in current_terms:
+            price = (
+                f"{t.price_amount_minor / 100:.2f} {t.price_currency or ''}".strip()
+                if t.price_amount_minor is not None
+                else "-"
+            )
+            since = t.effective_from[:10] if t.effective_from else "-"
+            print(
+                f"  {s.type:<18} rev {t.revision if t.revision is not None else '-'}  {price:>10}  since {since}"
+            )
+
     print()
     print(f"Total monthly: {monthly_total:.2f} €")
 

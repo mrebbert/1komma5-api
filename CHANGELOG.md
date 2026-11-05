@@ -19,6 +19,8 @@ returning an `agreedTerms` list per contract on 2026-11-05.
   renewal, notice period, validity window, terms documents). Empty
   list when the API omits the field.
 - `API.md` documents `agreedTerms` in the Subscriptions section.
+- `1k5 subscriptions` prints the current revision of the agreed terms
+  (revision, price, start date) per contract.
 
 ## [1.2.3] - 2026-10-26
 
