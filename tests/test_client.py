@@ -232,6 +232,69 @@ class TestRefreshToken:
 
 
 # ---------------------------------------------------------------------------
+# gateway option
+# ---------------------------------------------------------------------------
+
+
+class TestGateway:
+    """The ``gateway`` option reroutes API URLs to the BFF host."""
+
+    _BFF = "https://heartbeat-bff.1komma5grad.com"
+
+    def test_default_is_direct(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("ONEKOMMAFIVE_GATEWAY", raising=False)
+        client = Client("u", "p")
+        assert client.gateway == "direct"
+        url = "https://heartbeat.1komma5grad.com/api/v1/sites"
+        assert client._gateway_url(url) == url
+
+    def test_env_variable_selects_bff(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ONEKOMMAFIVE_GATEWAY", "bff")
+        assert Client("u", "p").gateway == "bff"
+
+    def test_argument_beats_env_variable(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ONEKOMMAFIVE_GATEWAY", "bff")
+        assert Client("u", "p", gateway="direct").gateway == "direct"
+
+    def test_invalid_value_raises(self) -> None:
+        with pytest.raises(ValueError, match="gateway must be"):
+            Client("u", "p", gateway="proxy")  # type: ignore[arg-type]
+
+    def test_rewrites_heartbeat_and_identity_urls(self) -> None:
+        client = Client("u", "p", gateway="bff")
+        assert (
+            client._gateway_url(
+                "https://heartbeat.1komma5grad.com/api/v3/systems/s/live-overview"
+            )
+            == f"{self._BFF}/heartbeat/v3/systems/s/live-overview"
+        )
+        assert (
+            client._gateway_url(
+                "https://customer-identity.1komma5grad.com/api/v3/customers/c"
+            )
+            == f"{self._BFF}/customer-identity/v3/customers/c"
+        )
+
+    def test_foreign_urls_pass_through(self) -> None:
+        client = Client("u", "p", gateway="bff")
+        url = "https://auth.1komma5grad.com/oauth/token"
+        assert client._gateway_url(url) == url
+
+    async def test_requests_hit_the_gateway(self) -> None:
+        with aioresponses() as m:
+            m.get(
+                f"{self._BFF}/customer-identity/v1/users/me",
+                payload={"id": "user-123", "email": "u@example.com", "name": "T"},
+                status=200,
+            )
+            client = make_client()
+            client._gateway = "bff"
+            user = await client.get_user()
+            assert user.id == "user-123"
+            await client.close()
+
+
+# ---------------------------------------------------------------------------
 # get_user
 # ---------------------------------------------------------------------------
 

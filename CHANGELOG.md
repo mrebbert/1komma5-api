@@ -8,6 +8,22 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-10
+
+The vendor's web app reaches both API hosts through one gateway,
+`heartbeat-bff.1komma5grad.com`, since 2026-11-10. Both routes answer
+identically (verified for 9 endpoints). This release adds an opt-in
+switch; the default route does not change.
+
+### Added
+- `Client(gateway="direct" | "bff")` (also on the sync `Client`).
+  `"bff"` rewrites `<host>/api/vN/...` to
+  `heartbeat-bff.1komma5grad.com/<service>/vN/...` in one place
+  (`Client._request`). `None` (default) reads the environment variable
+  `ONEKOMMAFIVE_GATEWAY` and falls back to `"direct"`; any other value
+  raises `ValueError`.
+- `Client.gateway` property.
+
 ## [1.2.4] - 2026-11-05
 
 Observatory follow-up: `GET /customers/{cid}/subscriptions` began
@@ -287,6 +303,7 @@ package; CI, docs and tests only. Safe to upgrade.
   `onekommafive<1.0`.
 
 [Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...HEAD
+[1.3.0]: https://github.com/mrebbert/1komma5-api/compare/v1.2.4...v1.3.0
 [1.2.4]: https://github.com/mrebbert/1komma5-api/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/mrebbert/1komma5-api/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/mrebbert/1komma5-api/compare/v1.2.1...v1.2.2

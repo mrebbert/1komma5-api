@@ -21,11 +21,12 @@ import datetime
 import hashlib
 import json
 import logging
+import os
 import re
 import secrets
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Self, cast
+from typing import Any, Literal, Self, cast
 
 import aiohttp
 import jwt
@@ -68,6 +69,13 @@ _REDIRECT_URI = (
 # Public API base URLs
 HEARTBEAT_API = "https://heartbeat.1komma5grad.com"
 _IDENTITY_API = "https://customer-identity.1komma5grad.com"
+
+# The vendor's web app reaches both API hosts through one gateway since
+# 2026-11: ``<gateway>/<service>/vN/...`` instead of ``<service-host>/api/vN/...``.
+# Both routes answer identically; ``gateway="bff"`` selects the gateway.
+_BFF_API = "https://heartbeat-bff.1komma5grad.com"
+_GATEWAY_ENV = "ONEKOMMAFIVE_GATEWAY"
+Gateway = Literal["direct", "bff"]
 
 _DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=30)
 
@@ -154,6 +162,15 @@ class Client:
             every successful login or refresh. The file is created with
             ``chmod 600`` and bound to ``username``; cached tokens belonging
             to a different user are ignored.
+        retry_on_rate_limit: Retry vendor rate-limit responses (see
+            :meth:`_request`).
+        gateway: ``"direct"`` (default) talks to the per-service hosts
+            ``heartbeat.1komma5grad.com`` and ``customer-identity.1komma5grad.com``;
+            ``"bff"`` routes the same calls through the gateway
+            ``heartbeat-bff.1komma5grad.com``, which the vendor's web app
+            uses. ``None`` reads the environment variable
+            ``ONEKOMMAFIVE_GATEWAY`` and falls back to ``"direct"``.
+            Raises :class:`ValueError` for any other value.
 
     Example::
 
@@ -175,7 +192,12 @@ class Client:
         session: aiohttp.ClientSession | None = None,
         token_cache: Path | str | None = None,
         retry_on_rate_limit: bool = True,
+        gateway: Gateway | None = None,
     ) -> None:
+        resolved = gateway or os.environ.get(_GATEWAY_ENV) or "direct"
+        if resolved not in ("direct", "bff"):
+            raise ValueError(f"gateway must be 'direct' or 'bff', got {resolved!r}")
+        self._gateway: Gateway = resolved  # type: ignore[assignment]
         self._username = username
         self._password = password
         self._token_set: dict[str, Any] | None = None
@@ -188,6 +210,24 @@ class Client:
         self._retry_on_rate_limit = retry_on_rate_limit
         if self._token_cache_path is not None:
             self._load_token_cache()
+
+    @property
+    def gateway(self) -> Gateway:
+        """The selected API route, ``"direct"`` or ``"bff"``."""
+        return self._gateway
+
+    def _gateway_url(self, url: str) -> str:
+        """Rewrite a direct-host URL to the BFF gateway form when selected."""
+        if self._gateway != "bff":
+            return url
+        for host, service in (
+            (self.HEARTBEAT_API, "heartbeat"),
+            (self.IDENTITY_API, "customer-identity"),
+        ):
+            prefix = f"{host}/api/"
+            if url.startswith(prefix):
+                return f"{_BFF_API}/{service}/{url[len(prefix) :]}"
+        return url
 
     async def __aenter__(self) -> Self:
         return self
@@ -309,6 +349,7 @@ class Client:
         """
         session = await self._ensure_session()
         headers = await self._auth_headers()
+        url = self._gateway_url(url)
 
         max_retries = _RATE_LIMIT_MAX_RETRIES if self._retry_on_rate_limit else 0
         for attempt in range(max_retries + 1):
