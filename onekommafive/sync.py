@@ -131,6 +131,7 @@ class Client:
         *,
         session: aiohttp.ClientSession | None = None,
         token_cache: Path | str | None = None,
+        gateway: _client_module.Gateway | None = None,
     ) -> None:
         self._runner = _LoopRunner()
         self._async = _client_module.Client(
@@ -138,6 +139,7 @@ class Client:
             password,
             session=session,
             token_cache=token_cache,
+            gateway=gateway,
         )
         self._closed = False
         Client._live.add(self)
