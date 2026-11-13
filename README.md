@@ -47,6 +47,9 @@ export ONEKOMMAFIVE_PASSWORD="s3cr3t"
 
 # Optional — pin to a specific system (default: first system on the account)
 export ONEKOMMAFIVE_SYSTEM="<system-uuid>"
+
+# Optional — API route: "bff" (default, the vendor web app's gateway) or "direct"
+export ONEKOMMAFIVE_GATEWAY="bff"
 ```
 
 ### Command-line interface

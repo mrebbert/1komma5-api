@@ -8,6 +8,17 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-13
+
+### Changed
+- The default API route is now the gateway `heartbeat-bff.1komma5grad.com`,
+  the route the vendor's web app has used since 2026-11-10 (both routes
+  answer identically; HAR evidence 10.-13.11.). Callers that need the
+  per-service hosts set `Client(gateway="direct")` or
+  `ONEKOMMAFIVE_GATEWAY=direct`. The library API is otherwise unchanged.
+- `Client.HEARTBEAT_API` / `IDENTITY_API` keep naming the direct hosts;
+  the rewrite to the gateway happens in `Client._request`.
+
 ## [1.3.0] - 2026-11-10
 
 The vendor's web app reaches both API hosts through one gateway,
@@ -303,6 +314,7 @@ package; CI, docs and tests only. Safe to upgrade.
   `onekommafive<1.0`.
 
 [Unreleased]: https://github.com/mrebbert/1komma5-api/compare/v1.1.10...HEAD
+[1.4.0]: https://github.com/mrebbert/1komma5-api/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/mrebbert/1komma5-api/compare/v1.2.4...v1.3.0
 [1.2.4]: https://github.com/mrebbert/1komma5-api/compare/v1.2.3...v1.2.4
 [1.2.3]: https://github.com/mrebbert/1komma5-api/compare/v1.2.2...v1.2.3
