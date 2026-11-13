@@ -2,6 +2,9 @@
 """
 Probe for newer API versions than currently used in the client.
 
+Requests go to the BFF gateway (heartbeat-bff.1komma5grad.com), the route the
+web app and the SDK use.
+
 Usage:
     # First run: log in once; token + system ID are cached for re-use.
     ONEKOMMAFIVE_USERNAME=... ONEKOMMAFIVE_PASSWORD=... python scripts/probe_versions.py
@@ -31,8 +34,9 @@ import jwt
 # Configuration
 # ---------------------------------------------------------------------------
 
-HEARTBEAT_BASE = "https://heartbeat.1komma5grad.com"
-IDENTITY_BASE = "https://customer-identity.1komma5grad.com"
+# The web app (and the SDK default since 1.4.0) reaches the API through the BFF
+# gateway: ``<BFF_BASE>/<service>/vN/...`` replaces ``<service host>/api/vN/...``.
+BFF_BASE = "https://heartbeat-bff.1komma5grad.com"
 MAX_VERSION = 7  # probe up to this version number
 SOURCE_DIR = Path(__file__).parent.parent / "onekommafive"
 CACHE_FILE = Path.home() / ".cache" / "onekommafive" / "probe_token.json"
@@ -191,8 +195,8 @@ def get_credentials() -> tuple[str, str]:
 
 def _make_url(v: int, path_template: str, system_id: str) -> str:
     path = path_template.replace("{id}", system_id)
-    base = IDENTITY_BASE if "users/me" in path else HEARTBEAT_BASE
-    return f"{base}/api/v{v}/{path}"
+    service = "customer-identity" if "users/me" in path else "heartbeat"
+    return f"{BFF_BASE}/{service}/v{v}/{path}"
 
 
 def _http_get(url: str, token: str) -> tuple[int, bytes]:

@@ -76,3 +76,5 @@ POSSIBLE NEW VERSIONS FOUND:
 - Endpoints returning 401/403 are treated as non-existent (token scope issue, not a new version).
 - The diff compares the top-level and nested JSON key structure of the current vs. newest version. It does not diff individual values.
 - `MAX_VERSION` (default: 7) can be raised in the script if needed.
+
+The probe sends its requests to the BFF gateway (`https://heartbeat-bff.1komma5grad.com/<service>/vN/…`), the route the web app and the SDK default use. The source parse above still reads the `/api/vN/…` paths in `onekommafive/`; the gateway rewrite happens at request time.
