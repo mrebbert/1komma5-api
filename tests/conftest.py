@@ -10,6 +10,7 @@ from typing import Any
 from unittest.mock import Mock
 
 import aiohttp
+import pytest
 
 # aiohttp 3.14 added a required keyword-only ``stream_writer`` argument to
 # ``ClientResponse.__init__``. aioresponses (<=0.7.8) builds mocked responses
@@ -33,3 +34,18 @@ if "stream_writer" in inspect.signature(_response_init).parameters:
         _response_init(self, *args, **kwargs)
 
     aiohttp.ClientResponse.__init__ = _patched_response_init  # type: ignore[method-assign]
+
+
+@pytest.fixture(autouse=True)
+def _direct_gateway(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Keep the suite's mocked per-service URLs valid.
+
+    The client defaults to the BFF gateway; most tests mock the direct
+    ``/api/vN`` URLs. ``TestGateway`` removes the variable to exercise the
+    real default; the live integration tests keep the default route.
+    """
+    if request.module.__name__.endswith("test_integration"):
+        return
+    monkeypatch.setenv("ONEKOMMAFIVE_GATEWAY", "direct")

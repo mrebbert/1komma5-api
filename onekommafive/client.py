@@ -72,7 +72,7 @@ _IDENTITY_API = "https://customer-identity.1komma5grad.com"
 
 # The vendor's web app reaches both API hosts through one gateway since
 # 2026-11: ``<gateway>/<service>/vN/...`` instead of ``<service-host>/api/vN/...``.
-# Both routes answer identically; ``gateway="bff"`` selects the gateway.
+# Both routes answer identically; ``gateway`` selects one (default ``"bff"``).
 _BFF_API = "https://heartbeat-bff.1komma5grad.com"
 _GATEWAY_ENV = "ONEKOMMAFIVE_GATEWAY"
 Gateway = Literal["direct", "bff"]
@@ -164,13 +164,13 @@ class Client:
             to a different user are ignored.
         retry_on_rate_limit: Retry vendor rate-limit responses (see
             :meth:`_request`).
-        gateway: ``"direct"`` (default) talks to the per-service hosts
-            ``heartbeat.1komma5grad.com`` and ``customer-identity.1komma5grad.com``;
-            ``"bff"`` routes the same calls through the gateway
-            ``heartbeat-bff.1komma5grad.com``, which the vendor's web app
-            uses. ``None`` reads the environment variable
-            ``ONEKOMMAFIVE_GATEWAY`` and falls back to ``"direct"``.
-            Raises :class:`ValueError` for any other value.
+        gateway: ``"bff"`` (default) routes calls through the gateway
+            ``heartbeat-bff.1komma5grad.com``, the route the vendor's web app
+            uses; ``"direct"`` talks to the per-service hosts
+            ``heartbeat.1komma5grad.com`` and ``customer-identity.1komma5grad.com``.
+            ``None`` reads the environment variable ``ONEKOMMAFIVE_GATEWAY``
+            and falls back to ``"bff"``. Raises :class:`ValueError` for any
+            other value.
 
     Example::
 
@@ -194,7 +194,7 @@ class Client:
         retry_on_rate_limit: bool = True,
         gateway: Gateway | None = None,
     ) -> None:
-        resolved = gateway or os.environ.get(_GATEWAY_ENV) or "direct"
+        resolved = gateway or os.environ.get(_GATEWAY_ENV) or "bff"
         if resolved not in ("direct", "bff"):
             raise ValueError(f"gateway must be 'direct' or 'bff', got {resolved!r}")
         self._gateway: Gateway = resolved  # type: ignore[assignment]

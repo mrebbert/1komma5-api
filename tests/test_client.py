@@ -241,20 +241,28 @@ class TestGateway:
 
     _BFF = "https://heartbeat-bff.1komma5grad.com"
 
-    def test_default_is_direct(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_default_is_bff(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv("ONEKOMMAFIVE_GATEWAY", raising=False)
         client = Client("u", "p")
-        assert client.gateway == "direct"
+        assert client.gateway == "bff"
+        assert (
+            client._gateway_url("https://heartbeat.1komma5grad.com/api/v1/sites")
+            == f"{self._BFF}/heartbeat/v1/sites"
+        )
+
+    def test_direct_leaves_urls_untouched(self) -> None:
+        client = Client("u", "p", gateway="direct")
         url = "https://heartbeat.1komma5grad.com/api/v1/sites"
+        assert client.gateway == "direct"
         assert client._gateway_url(url) == url
 
-    def test_env_variable_selects_bff(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("ONEKOMMAFIVE_GATEWAY", "bff")
-        assert Client("u", "p").gateway == "bff"
+    def test_env_variable_selects_direct(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("ONEKOMMAFIVE_GATEWAY", "direct")
+        assert Client("u", "p").gateway == "direct"
 
     def test_argument_beats_env_variable(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        monkeypatch.setenv("ONEKOMMAFIVE_GATEWAY", "bff")
-        assert Client("u", "p", gateway="direct").gateway == "direct"
+        monkeypatch.setenv("ONEKOMMAFIVE_GATEWAY", "direct")
+        assert Client("u", "p", gateway="bff").gateway == "bff"
 
     def test_invalid_value_raises(self) -> None:
         with pytest.raises(ValueError, match="gateway must be"):
