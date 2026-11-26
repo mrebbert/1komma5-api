@@ -125,7 +125,7 @@ Car-travel equiv.: 1 150 km
 |---|---|---|
 | `ev` | — | EV charger status. |
 | `ev-modes` | — | Available charging modes for this site. |
-| `set-ev-mode MODE` | `--ev EV_ID`, `--all-evs` | `SMART_CHARGE`, `QUICK_CHARGE`, `SOLAR_CHARGE`. |
+| `set-ev-mode MODE` | `--ev EV_ID`, `--all-evs` | A mode from `1k5 ev-modes` (for example `SMART_CHARGE`, `QUICK_CHARGE`, `SOLAR_CHARGE`, `PROGRAM_CHARGE`). The command rejects a mode the site does not list. |
 | `set-ev-target-soc SOC` | `--ev EV_ID`, `--all-evs` | Target state-of-charge in percent (0–100). |
 | `set-ev-departure HH:MM` | `--ev EV_ID`, `--all-evs` | Primary departure time, e.g. `07:30`. |
 | `wallboxes` | — | Physical wallbox hardware. |

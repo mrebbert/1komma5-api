@@ -91,6 +91,9 @@ def mock_system():
     """Patch _get_system so command handlers see a mock instead of a live call."""
     system = MagicMock()
     system.id.return_value = FAKE_SYSTEM_ID
+    # An empty answer defers mode validation to the server; tests that need a
+    # site-specific list override this.
+    system.get_displayed_ev_charging_modes.return_value = []
     with patch("onekommafive.cli._get_system", return_value=system):
         yield system
 
@@ -405,9 +408,31 @@ class TestCmdSetEvMode:
         with pytest.raises(SystemExit):
             _run("set-ev-mode", "SMART_CHARGE")
 
-    def test_invalid_mode_rejected_by_argparse(self, mock_system) -> None:
-        with pytest.raises(SystemExit):
-            _run("set-ev-mode", "TURBO_CHARGE")
+    def test_mode_missing_at_site_is_rejected_with_available_list(
+        self, mock_system
+    ) -> None:
+        mock_system.get_displayed_ev_charging_modes.return_value = [
+            ChargingMode.PROGRAM_CHARGE,
+            ChargingMode.SOLAR_CHARGE,
+        ]
+        ev = make_ev_charger_mock()
+        mock_system.get_ev_chargers.return_value = [ev]
+        with pytest.raises(SystemExit) as exc:
+            _run("set-ev-mode", "SMART_CHARGE")
+        msg = str(exc.value)
+        assert "not available at this site" in msg
+        assert "PROGRAM_CHARGE" in msg
+        ev.set_charging_mode.assert_not_called()
+
+    def test_site_specific_mode_is_accepted(self, mock_system, capsys) -> None:
+        mock_system.get_displayed_ev_charging_modes.return_value = [
+            ChargingMode("FUTURE_CHARGE")
+        ]
+        ev = make_ev_charger_mock()
+        mock_system.get_ev_chargers.return_value = [ev]
+        _run("set-ev-mode", "future_charge")
+        ev.set_charging_mode.assert_called_once_with(ChargingMode("FUTURE_CHARGE"))
+        assert "FUTURE_CHARGE" in capsys.readouterr().out
 
     def test_multi_ev_without_flag_exits_with_listing(
         self, mock_system, capsys

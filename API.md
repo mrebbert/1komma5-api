@@ -1187,6 +1187,7 @@ curl -s -H "Authorization: Bearer $BEARER_TOKEN" \
 **Notes**
 
 - `emsMode: "TOU"` = time-of-use (Dynamic Pulse tariff active, exchange prices drive charging decisions).
+- The site decides which modes it lists. Sites in an early registration stage report `PROGRAM_CHARGE` instead of `SMART_CHARGE` (1komma5-ha discussion 83), and `emsMode` can read `SELF_CONSUMPTION`. Treat `type` as an open set and offer only entries with `"disabled": false`. The SDK's `ChargingMode` converts values it does not list.
 
 ---
 

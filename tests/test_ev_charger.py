@@ -71,6 +71,19 @@ class TestEvChargerProperties:
         charger = _make_charger(charging_mode="SMART_CHARGE")
         assert charger.charging_mode() == ChargingMode.SMART_CHARGE
 
+    def test_charging_mode_reports_program_charge(self) -> None:
+        charger = _make_charger(charging_mode="PROGRAM_CHARGE")
+        assert charger.charging_mode() is ChargingMode.PROGRAM_CHARGE
+
+    def test_charging_mode_keeps_unknown_value(self) -> None:
+        mode = _make_charger(charging_mode="FUTURE_CHARGE").charging_mode()
+        assert mode.value == "FUTURE_CHARGE"
+        assert mode not in (
+            ChargingMode.SMART_CHARGE,
+            ChargingMode.SOLAR_CHARGE,
+            ChargingMode.QUICK_CHARGE,
+        )
+
     def test_repr_contains_id_and_mode(self) -> None:
         charger = _make_charger()
         r = repr(charger)

@@ -21,10 +21,14 @@ class TestChargingMode:
         assert ChargingMode("SMART_CHARGE") == ChargingMode.SMART_CHARGE
         assert ChargingMode("QUICK_CHARGE") == ChargingMode.QUICK_CHARGE
         assert ChargingMode("SOLAR_CHARGE") == ChargingMode.SOLAR_CHARGE
+        assert ChargingMode("PROGRAM_CHARGE") == ChargingMode.PROGRAM_CHARGE
 
-    def test_invalid_value_raises(self) -> None:
+    def test_unknown_value_is_kept(self) -> None:
+        assert ChargingMode("UNKNOWN_MODE").value == "UNKNOWN_MODE"
+
+    def test_empty_value_raises(self) -> None:
         with pytest.raises(ValueError):
-            ChargingMode("UNKNOWN_MODE")
+            ChargingMode("")
 
 
 class TestUser:
