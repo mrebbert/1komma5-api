@@ -1,12 +1,20 @@
 """EV / wallbox related models."""
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 
-class ChargingMode(Enum):
-    """Charging strategy for an EV charger."""
+class ChargingMode(StrEnum):
+    """Charging strategy for an EV charger.
+
+    The vendor decides which modes a site offers (see
+    :meth:`~onekommafive.System.get_displayed_ev_charging_modes`), so the
+    members below are the values seen so far, not a closed set. A value the
+    library does not know yet still converts: ``ChargingMode("NEW_MODE")``
+    returns a member whose ``value`` is ``"NEW_MODE"``. Only the empty string
+    raises ``ValueError``.
+    """
 
     SMART_CHARGE = "SMART_CHARGE"
     """Charge according to the energy-management system's optimisation."""
@@ -16,6 +24,19 @@ class ChargingMode(Enum):
 
     SOLAR_CHARGE = "SOLAR_CHARGE"
     """Charge only when surplus solar power is available."""
+
+    PROGRAM_CHARGE = "PROGRAM_CHARGE"
+    """Offered instead of ``SMART_CHARGE`` by sites in an early registration stage."""
+
+    @classmethod
+    def _missing_(cls, value: object) -> "ChargingMode | None":
+        """Create (and cache) a member for a value the enum does not list."""
+        if not isinstance(value, str) or not value:
+            return None
+        member = str.__new__(cls, value)
+        member._name_ = value
+        member._value_ = value
+        return cls._value2member_map_.setdefault(value, member)  # type: ignore[return-value]
 
 
 @dataclass

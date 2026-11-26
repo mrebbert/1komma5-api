@@ -943,8 +943,15 @@ def cmd_set_ev_mode(args: argparse.Namespace) -> None:
     try:
         mode = ChargingMode(args.mode.upper())
     except ValueError:
-        valid = ", ".join(m.value for m in ChargingMode)
-        sys.exit(f"Error: invalid mode {args.mode!r}. Valid values: {valid}")
+        sys.exit(f"Error: invalid mode {args.mode!r}.")
+
+    # The site decides which modes exist; an empty answer defers to the server.
+    available = _get_system().get_displayed_ev_charging_modes()
+    if available and mode not in available:
+        valid = ", ".join(m.value for m in available)
+        sys.exit(
+            f"Error: mode {mode.value} is not available at this site. Available: {valid}"
+        )
 
     for ev in _resolve_evs(args):
         ev.set_charging_mode(mode)
@@ -1260,8 +1267,7 @@ def main() -> None:
     set_ev_p.add_argument(
         "mode",
         metavar="MODE",
-        choices=[m.value for m in ChargingMode],
-        help=f"Charging mode: {', '.join(m.value for m in ChargingMode)}",
+        help="Charging mode; `1k5 ev-modes` lists the modes of this site",
     )
     _add_ev_selector_args(set_ev_p)
     set_ev_p.set_defaults(func=cmd_set_ev_mode)

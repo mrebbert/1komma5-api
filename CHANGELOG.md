@@ -8,6 +8,23 @@ Full per-commit history: <https://github.com/mrebbert/1komma5-api/commits/main>.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-26
+
+### Added
+- `ChargingMode.PROGRAM_CHARGE`: sites in an early registration stage report
+  it instead of `SMART_CHARGE` (1komma5-ha discussion 83).
+
+### Changed
+- `ChargingMode` is a `StrEnum` and converts values it does not list:
+  `ChargingMode("NEW_MODE")` returns a member with that value instead of
+  raising `ValueError`. Only the empty string raises. The vendor decides which
+  modes a site offers, so `EVCharger.charging_mode()` and
+  `System.get_displayed_ev_charging_modes()` no longer fail on a new mode.
+  Existing code that compares members or reads `.value` keeps working.
+- CLI: `set-ev-mode` takes any mode and checks it against
+  `get_displayed_ev_charging_modes()` (the argparse `choices` list is gone).
+  A site that reports no modes leaves the check to the server.
+
 ## [1.4.0] - 2026-11-13
 
 ### Changed

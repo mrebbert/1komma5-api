@@ -308,6 +308,33 @@ class TestGetDisplayedEvChargingModes:
             assert ChargingMode.SOLAR_CHARGE in modes
             assert ChargingMode.QUICK_CHARGE not in modes  # disabled=True in fixture
 
+    async def test_returns_modes_the_enum_does_not_list(self) -> None:
+        from onekommafive.models import ChargingMode
+
+        payload = {
+            "displayedEvChargingModes": [
+                {"type": "PROGRAM_CHARGE", "disabled": False},
+                {"type": "SOLAR_CHARGE", "disabled": False},
+                {"type": "FUTURE_CHARGE", "disabled": False},
+                {"type": "QUICK_CHARGE", "disabled": True},
+            ],
+            "emsMode": "SELF_CONSUMPTION",
+        }
+        with aioresponses() as m:
+            m.get(
+                _u(f"{_SITES_BASE}/assets/evs/displayed-ev-charging-modes"),
+                payload=payload,
+                status=200,
+            )
+            modes = await _make_system().get_displayed_ev_charging_modes()
+
+        assert [mode.value for mode in modes] == [
+            "PROGRAM_CHARGE",
+            "SOLAR_CHARGE",
+            "FUTURE_CHARGE",
+        ]
+        assert modes[0] is ChargingMode.PROGRAM_CHARGE
+
     async def test_raises_on_server_error(self) -> None:
         with aioresponses() as m:
             m.get(
